@@ -1,0 +1,16 @@
+# see https://www.gitpod.io/docs/references/gitpod-yml
+tasks:
+  - name: Setup & Build
+    before: go mod download
+    init: make build
+    command: make run
+
+ports:
+  - port: 8080
+    onOpen: notify
+    name: Extension
+    description: Extension HTTP interface
+
+vscode:
+  extensions:
+    - "anweber.vscode-httpyac"
