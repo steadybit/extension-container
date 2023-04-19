@@ -91,5 +91,5 @@ func (c *Client) Version(ctx context.Context) (string, error) {
 }
 
 func (c *Client) Close() error {
-	return c.Close()
+	return c.docker.Close()
 }

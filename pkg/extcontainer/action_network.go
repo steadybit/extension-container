@@ -5,6 +5,7 @@ package extcontainer
 
 import (
 	"context"
+	"encoding/json"
 	"github.com/google/uuid"
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
 	"github.com/steadybit/action-kit/go/action_kit_sdk"
@@ -14,26 +15,76 @@ import (
 	"github.com/steadybit/extension-kit/extutil"
 	"net/url"
 	"strconv"
-	"strings"
 )
 
-type networkOptsProvider func(ctx context.Context, request action_kit_api.PrepareActionRequestBody) (network.BlackholeOpts, error)
+type networkOptsProvider func(ctx context.Context, request action_kit_api.PrepareActionRequestBody) (network.Opts, error)
+
+type networkOptsDecoder func(data json.RawMessage) (network.Opts, error)
 
 type networkAction struct {
 	runc         runc.Runc
 	description  action_kit_api.ActionDescription
 	optsProvider networkOptsProvider
+	optsDecoder  networkOptsDecoder
 }
 
 type NetworkActionState struct {
 	ContainerId string
-	NetworkOpts network.BlackholeOpts //FIXME polymorphism use NetworkOps
 	ExecutionId uuid.UUID
+	NetworkOpts json.RawMessage
 }
 
 // Make sure networkAction implements all required interfaces
 var _ action_kit_sdk.Action[NetworkActionState] = (*networkAction)(nil)
 var _ action_kit_sdk.ActionWithStop[NetworkActionState] = (*networkAction)(nil)
+
+var commonNetworkParameters = []action_kit_api.ActionParameter{
+	{
+		Name:         "duration",
+		Label:        "Duration",
+		Description:  extutil.Ptr("How long should the traffic be blocked?"),
+		Type:         action_kit_api.Duration,
+		DefaultValue: extutil.Ptr("30s"),
+		Required:     extutil.Ptr(true),
+		Order:        extutil.Ptr(0),
+	},
+	{
+		Name:         "failOnHostNetwork",
+		Label:        "Fail on Host Network",
+		Description:  extutil.Ptr("Should the action fail if the container is using host network?"),
+		Type:         action_kit_api.Boolean,
+		DefaultValue: extutil.Ptr("true"),
+		Required:     extutil.Ptr(true),
+		Order:        extutil.Ptr(100),
+	},
+	{
+		Name:         "hostname",
+		Label:        "Hostname",
+		Description:  extutil.Ptr("Restrict to/from which hosts the traffic is affected."),
+		Type:         action_kit_api.StringArray,
+		DefaultValue: extutil.Ptr(""),
+		Advanced:     extutil.Ptr(true),
+		Order:        extutil.Ptr(101),
+	},
+	{
+		Name:         "ip",
+		Label:        "IP Address",
+		Description:  extutil.Ptr("Restrict to/from which IP addresses the traffic is affected."),
+		Type:         action_kit_api.StringArray,
+		DefaultValue: extutil.Ptr(""),
+		Advanced:     extutil.Ptr(true),
+		Order:        extutil.Ptr(102),
+	},
+	{
+		Name:         "port",
+		Label:        "Ports",
+		Description:  extutil.Ptr("Restrict to/from which ports the traffic is affected."),
+		Type:         action_kit_api.StringArray,
+		DefaultValue: extutil.Ptr(""),
+		Advanced:     extutil.Ptr(true),
+		Order:        extutil.Ptr(103),
+	},
+}
 
 func (a *networkAction) NewEmptyState() NetworkActionState {
 	return NetworkActionState{}
@@ -45,7 +96,7 @@ func (a *networkAction) Describe() action_kit_api.ActionDescription {
 
 func (a *networkAction) Prepare(ctx context.Context, state *NetworkActionState, request action_kit_api.PrepareActionRequestBody) (*action_kit_api.PrepareResult, error) {
 	containerId := request.Target.Attributes["container.id"]
-	if containerId == nil || len(containerId) == 0 {
+	if len(containerId) == 0 {
 		return nil, extension_kit.ToError("Target is missing the 'container.id' attribute.", nil)
 	}
 
@@ -69,8 +120,13 @@ func (a *networkAction) Prepare(ctx context.Context, state *NetworkActionState, 
 		return nil, extension_kit.ToError("Failed to prepare network settings.", err)
 	}
 
+	rawOpts, err := json.Marshal(opts)
+	if err != nil {
+		return nil, extension_kit.ToError("Failed to serialize network settings.", err)
+	}
+
 	state.ContainerId = containerId[0]
-	state.NetworkOpts = opts
+	state.NetworkOpts = rawOpts
 	return nil, nil
 }
 
@@ -83,35 +139,21 @@ func (a *networkAction) hasHostNetwork(ctx context.Context, containerId string) 
 }
 
 func (a *networkAction) Start(ctx context.Context, state *NetworkActionState) (*action_kit_api.StartResult, error) {
-	err := network.Apply(ctx, a.runc, RemovePrefix(state.ContainerId), &state.NetworkOpts)
+	opts, err := a.optsDecoder(state.NetworkOpts)
 	if err != nil {
-		return nil, extension_kit.ToError("Failed to apply network settings.", err)
+		return nil, extension_kit.ToError("Failed to deserialize network settings.", err)
 	}
 
-	var sb strings.Builder
-	sb.WriteString("Blocking traffic for container ")
-	sb.WriteString(state.ContainerId)
-	sb.WriteString("\nto/from:")
-	for _, inc := range state.NetworkOpts.Include {
-		sb.WriteString(" ")
-		sb.WriteString(inc.String())
-		sb.WriteString("\n")
-	}
-	if len(state.NetworkOpts.Exclude) > 0 {
-		sb.WriteString("but not from/to:")
-		sb.WriteString("\n")
-		for _, exc := range state.NetworkOpts.Exclude {
-			sb.WriteString(" ")
-			sb.WriteString(exc.String())
-			sb.WriteString("\n")
-		}
+	err = network.Apply(ctx, a.runc, RemovePrefix(state.ContainerId), opts)
+	if err != nil {
+		return nil, extension_kit.ToError("Failed to apply network settings.", err)
 	}
 
 	return &action_kit_api.StartResult{
 		Messages: extutil.Ptr([]action_kit_api.Message{
 			{
 				Level:   extutil.Ptr(action_kit_api.Info),
-				Message: sb.String(),
+				Message: opts.String(),
 			},
 		}),
 	}, nil
@@ -119,7 +161,12 @@ func (a *networkAction) Start(ctx context.Context, state *NetworkActionState) (*
 }
 
 func (a *networkAction) Stop(ctx context.Context, state *NetworkActionState) (*action_kit_api.StopResult, error) {
-	err := network.Revert(ctx, a.runc, RemovePrefix(state.ContainerId), &state.NetworkOpts)
+	opts, err := a.optsDecoder(state.NetworkOpts)
+	if err != nil {
+		return nil, extension_kit.ToError("Failed to deserialize network settings.", err)
+	}
+
+	err = network.Revert(ctx, a.runc, RemovePrefix(state.ContainerId), opts)
 	if err != nil {
 		return nil, extension_kit.ToError("Failed to revert network settings.", err)
 	}
@@ -135,19 +182,66 @@ func parsePortRanges(raw []string) ([]network.PortRange, error) {
 	var ranges []network.PortRange
 
 	for _, r := range raw {
-		r, err := network.ParsePortRange(r)
+		parsed, err := network.ParsePortRange(r)
 		if err != nil {
 			return nil, err
 		}
-		ranges = append(ranges, r)
+		ranges = append(ranges, parsed)
 	}
 
 	return ranges, nil
 }
 
+func mapToNetworkFilter(ctx context.Context, r runc.Runc, containerId string, config map[string]interface{}) (network.Filter, error) {
+	toResolve := append(
+		toStrings(config["ip"]),
+		toStrings(config["hostname"])...,
+	)
+	includeCidrs, err := network.ResolveHostnames(ctx, r, RemovePrefix(containerId), toResolve...)
+	if err != nil {
+		return network.Filter{}, err
+	}
+	if len(includeCidrs) == 0 {
+		//if no hostname/ip specified we affect all ips
+		includeCidrs = []string{"::/0", "0.0.0.0/0"}
+	}
+
+	portRanges, err := parsePortRanges(toStrings(config["port"]))
+	if err != nil {
+		return network.Filter{}, err
+	}
+	if len(portRanges) == 0 {
+		//if no hostname/ip specified we affect all ports
+		portRanges = []network.PortRange{network.PortRangeAny}
+	}
+
+	includes := network.NewCidrWithPortRanges(includeCidrs, portRanges...)
+	var excludes []network.CidrWithPortRange
+
+	//FIXME use restricted urls
+	//if request.ExecutionContext.RestrictedUrls != nil {
+	//	for _, restrictedUrl := range *request.ExecutionContext.RestrictedUrls {
+	//		ips, port, err := resolveUrl(ctx, runc, containerId, restrictedUrl)
+	//		if err != nil {
+	//			return network.Filter{}, err
+	//		}
+	//
+	//		excludes = append(excludes, network.NewCidrWithPortRanges(ips, network.PortRange{From: port, To: port})...)
+	//	}
+	//}
+
+	return network.Filter{
+		Include: includes,
+		Exclude: excludes,
+	}, nil
+}
+
 func resolveUrl(ctx context.Context, runc runc.Runc, containerId string, raw string) ([]string, int, error) {
 	port := 0
 	u, err := url.Parse(raw)
+	if err != nil {
+		return nil, port, err
+	}
 
 	ips, err := network.ResolveHostnames(ctx, runc, containerId, u.Hostname())
 	if err != nil {

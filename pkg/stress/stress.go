@@ -9,7 +9,6 @@ import (
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/rs/zerolog/log"
 	"github.com/steadybit/extension-container/pkg/container/runc"
-	"os"
 	"strconv"
 	"sync/atomic"
 	"time"
@@ -64,13 +63,13 @@ func New(r runc.Runc, targetId string, opts StressOpts) (*Stress, error) {
 		return nil, fmt.Errorf("could not load state of target container: %w", err)
 	}
 
-	id := fmt.Sprintf("sb-stress-%d", counter.Add(1))
-	bundleDir, err := r.PrepareBundle(ctx, id)
+	id := getNextContainerId()
+	bundle, cleanupBundle, err := r.PrepareBundle(ctx, "sidecar.tar", id)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := runc.EditSpec(bundleDir, func(spec *specs.Spec) {
+	if err := runc.EditSpec(bundle, func(spec *specs.Spec) {
 		spec.Hostname = id
 		spec.Annotations = map[string]string{
 			"com.steadybit.sidecar": "true",
@@ -100,7 +99,7 @@ func New(r runc.Runc, targetId string, opts StressOpts) (*Stress, error) {
 			Strs("args", opts.Args()).
 			Msg("Starting stress-ng")
 		go func() {
-			wait <- r.Run(ctx, id, bundleDir, runc.InheritStdIo())
+			wait <- r.Run(ctx, id, bundle, runc.InheritStdIo())
 		}()
 		return nil
 	}
@@ -111,7 +110,7 @@ func New(r runc.Runc, targetId string, opts StressOpts) (*Stress, error) {
 			Msg("Stopping stress-ng")
 		cancel()
 		_ = r.Delete(context.Background(), id, true)
-		_ = os.RemoveAll(bundleDir)
+		_ = cleanupBundle()
 	}
 
 	return &Stress{
@@ -119,6 +118,10 @@ func New(r runc.Runc, targetId string, opts StressOpts) (*Stress, error) {
 		stop:  stop,
 		err:   wait,
 	}, nil
+}
+
+func getNextContainerId() string {
+	return fmt.Sprintf("sb-stress-%d", counter.Add(1))
 }
 
 func (s *Stress) Wait() <-chan error {

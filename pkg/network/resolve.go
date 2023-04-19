@@ -11,7 +11,6 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/steadybit/extension-container/pkg/container/runc"
 	"net"
-	"os"
 	"strings"
 )
 
@@ -37,25 +36,25 @@ func ResolveHostnames(ctx context.Context, r runc.Runc, targetId string, ipOrHos
 	}
 
 	id := fmt.Sprintf("sb-network-%d", counter.Add(1))
-	bundleDir, err := r.PrepareBundle(ctx, id)
-	defer func() { _ = os.RemoveAll(bundleDir) }()
+	bundle, cleanup, err := r.PrepareBundle(ctx, "sidecar.tar", id)
+	defer func() { _ = cleanup() }()
 	if err != nil {
 		return nil, err
 	}
 
-	umount, err := runc.MountFileOf(ctx, bundleDir, state.Pid, "/etc/hosts")
+	umount, err := runc.MountFileOf(ctx, bundle, state.Pid, "/etc/hosts")
 	defer func() { _ = umount() }()
 	if err != nil {
 		return nil, err
 	}
 
-	umount, err = runc.MountFileOf(ctx, bundleDir, state.Pid, "/etc/resolv.conf")
+	umount, err = runc.MountFileOf(ctx, bundle, state.Pid, "/etc/resolv.conf")
 	defer func() { _ = umount() }()
 	if err != nil {
 		return nil, err
 	}
 
-	if err := runc.EditSpec(bundleDir, func(spec *specs.Spec) {
+	if err := runc.EditSpec(bundle, func(spec *specs.Spec) {
 		spec.Hostname = id
 		spec.Annotations = map[string]string{
 			"com.steadybit.sidecar": "true",
@@ -73,7 +72,7 @@ func ResolveHostnames(ctx context.Context, r runc.Runc, targetId string, ipOrHos
 	}
 
 	var outb bytes.Buffer
-	err = r.Run(ctx, id, bundleDir, runc.IoOpts{
+	err = r.Run(ctx, id, bundle, runc.IoOpts{
 		Stdin:  stdin,
 		Stdout: &outb,
 		Stderr: &outb,

@@ -16,7 +16,7 @@ import (
 	"time"
 )
 
-// CriClient implements the engines.Client interface for CRI-O
+// Client implements the engines.Client interface for CRI-O
 type Client struct {
 	cri        criapi.RuntimeServiceClient
 	connection *grpc.ClientConn

@@ -84,7 +84,7 @@ func (a *stopAction) Describe() action_kit_api.ActionDescription {
 
 func (a *stopAction) Prepare(_ context.Context, state *StopActionState, request action_kit_api.PrepareActionRequestBody) (*action_kit_api.PrepareResult, error) {
 	containerId := request.Target.Attributes["container.id"]
-	if containerId == nil || len(containerId) == 0 {
+	if len(containerId) == 0 {
 		return nil, extension_kit.ToError("Target is missing the 'container.id' attribute.", nil)
 	}
 

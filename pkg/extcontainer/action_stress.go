@@ -23,7 +23,7 @@ type stressAction struct {
 	runc         runc.Runc
 	description  action_kit_api.ActionDescription
 	optsProvider stressOptsProvider
-	stresses     map[uuid.UUID]*stress.Stress
+	stresses     map[uuid.UUID]*stress.Stress //FIXME don't use the local state
 }
 
 type StressActionState struct {
@@ -62,7 +62,7 @@ func (a *stressAction) Describe() action_kit_api.ActionDescription {
 
 func (a *stressAction) Prepare(_ context.Context, state *StressActionState, request action_kit_api.PrepareActionRequestBody) (*action_kit_api.PrepareResult, error) {
 	containerId := request.Target.Attributes["container.id"]
-	if containerId == nil || len(containerId) == 0 {
+	if len(containerId) == 0 {
 		return nil, extension_kit.ToError("Target is missing the 'container.id' attribute.", nil)
 	}
 

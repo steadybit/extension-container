@@ -18,8 +18,15 @@ const (
 	FamilyV6   Family = "inet6"
 )
 
-type NetworkOpts interface {
-	Statements(family Family, mode Mode) (io.Reader, error)
+type Opts interface {
+	IpCommands(family Family, mode Mode) (io.Reader, error)
+	TcCommands(mode Mode) (io.Reader, error)
+	String() string
+}
+
+type Filter struct {
+	Include []CidrWithPortRange
+	Exclude []CidrWithPortRange
 }
 
 var (
@@ -27,13 +34,13 @@ var (
 )
 
 type PortRange struct {
-	From int
-	To   int
+	From uint16
+	To   uint16
 }
 
 func (p *PortRange) String() string {
 	if p.From == p.To {
-		return strconv.Itoa(p.From)
+		return strconv.Itoa(int(p.From))
 	}
 	return fmt.Sprintf("%d-%d", p.From, p.To)
 }
@@ -57,7 +64,11 @@ func ParsePortRange(raw string) (PortRange, error) {
 		}
 	}
 
-	return PortRange{From: from, To: to}, nil
+	if from < 1 || to > 65534 || from > to {
+		return PortRange{}, errors.New("invalid port range")
+	}
+
+	return PortRange{From: uint16(from), To: uint16(to)}, nil
 }
 
 type CidrWithPortRange struct {

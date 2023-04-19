@@ -14,7 +14,7 @@ import (
 )
 
 func AutoDetect() (runtime types.Runtime) {
-	for _, r := range types.Runtimes {
+	for _, r := range types.AllRuntimes {
 		if _, err := os.Stat(r.DefaultSocket()); err == nil {
 			return r
 		}

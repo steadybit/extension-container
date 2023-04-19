@@ -4,18 +4,26 @@
 package e2e
 
 import (
+	"bufio"
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"github.com/go-resty/resty/v2"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/steadybit/extension-container/pkg/container/types"
+	"github.com/steadybit/extension-kit/extutil"
 	"github.com/stretchr/testify/require"
 	"io"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	acorev1 "k8s.io/client-go/applyconfigurations/core/v1"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/tools/remotecommand"
 	"k8s.io/client-go/util/homedir"
 	"os"
 	"os/exec"
@@ -27,8 +35,7 @@ import (
 )
 
 var (
-	configMutex sync.Mutex
-	runtimes    = []types.Runtime{types.RuntimeContainerd, types.RuntimeCrio, types.RuntimeDocker}
+	globalMinikubeMutex sync.Mutex
 )
 
 type Minikube struct {
@@ -37,33 +44,38 @@ type Minikube struct {
 	stdout  io.Writer
 	stderr  io.Writer
 
-	clientOnce sync.Once
-	client     *kubernetes.Clientset
-	config     *rest.Config
+	clientOnce   sync.Once
+	client       *kubernetes.Clientset
+	clientConfig *rest.Config
 }
 
-func startMinikube(runtime types.Runtime) (*Minikube, error) {
+func newMinikube(runtime types.Runtime) *Minikube {
+	profile := "e2e-" + string(runtime)
 	stdout := prefixWriter{prefix: "🧊", w: os.Stdout}
 	stderr := prefixWriter{prefix: "🧊", w: os.Stderr}
 
-	configMutex.Lock()
-	defer configMutex.Unlock()
-	profile := "e2e-" + string(runtime)
+	return &Minikube{
+		runtime: runtime,
+		profile: profile,
+		stdout:  &stdout,
+		stderr:  &stderr,
+	}
+}
 
-	_ = exec.Command("minikube", "-p", profile, "delete").Run()
+func (m *Minikube) start() error {
+	globalMinikubeMutex.Lock()
+	defer globalMinikubeMutex.Unlock()
 
-	args := []string{"-p", profile, "start", "--keep-context", fmt.Sprintf("--container-runtime=%s", string(runtime)), "--ports=8080"}
-	if runtime == "cri-o" {
+	args := []string{"start", "--keep-context", fmt.Sprintf("--container-runtime=%s", string(m.runtime)), "--ports=8080"}
+	if m.runtime == "cri-o" {
 		args = append(args, "--cni=bridge")
 	}
-	cmd := exec.Command("minikube", args...)
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
-		return nil, err
+
+	if err := m.command(args...).Run(); err != nil {
+		return err
 	}
 
-	return &Minikube{runtime: runtime, profile: profile}, nil
+	return nil
 }
 
 func (m *Minikube) Client() *kubernetes.Clientset {
@@ -74,17 +86,17 @@ func (m *Minikube) Client() *kubernetes.Clientset {
 				log.Fatal().Err(err).Msg("failed to create kubernetes client")
 			}
 			m.client = client
-			m.config = config
+			m.clientConfig = config
 		})
 	}
 	return m.client
 }
 
 func (m *Minikube) Config() *rest.Config {
-	if m.config == nil {
+	if m.clientConfig == nil {
 		m.Client()
 	}
-	return m.config
+	return m.clientConfig
 }
 
 func (m *Minikube) Runtime() types.Runtime {
@@ -108,33 +120,32 @@ func (m *Minikube) waitForDefaultServiceaccount() error {
 }
 
 func (m *Minikube) delete() error {
-	configMutex.Lock()
-	defer configMutex.Unlock()
-	cmd := exec.Command("minikube", "-p", m.profile, "delete")
-	cmd.Stdout = m.stdout
-	cmd.Stderr = m.stderr
-	return cmd.Run()
+	globalMinikubeMutex.Lock()
+	defer globalMinikubeMutex.Unlock()
+	return m.command("delete").Run()
 }
 
 func (m *Minikube) cp(src, dst string) error {
-	cmd := exec.Command("minikube", "-p", m.profile, "cp", src, dst)
-	cmd.Stdout = m.stdout
-	cmd.Stderr = m.stderr
-	return cmd.Run()
+	return m.command(m.profile, "cp", src, dst).Run()
 }
 
 func (m *Minikube) exec(arg ...string) *exec.Cmd {
-	cmd := exec.Command("minikube", append([]string{"-p", m.profile, "ssh", "--"}, arg...)...)
-	cmd.Stdout = m.stdout
-	cmd.Stderr = m.stderr
-	return cmd
+	return m.command(append([]string{"ssh", "--"}, arg...)...)
 }
 
 func (m *Minikube) LoadImage(image string) error {
-	cmd := exec.Command("minikube", "-p", m.profile, "image", "load", image)
+	return m.command("image", "load", image).Run()
+}
+
+func (m *Minikube) command(arg ...string) *exec.Cmd {
+	return m.commandContext(context.Background(), arg...)
+}
+
+func (m *Minikube) commandContext(ctx context.Context, arg ...string) *exec.Cmd {
+	cmd := exec.CommandContext(ctx, "minikube", append([]string{"-p", m.profile}, arg...)...)
 	cmd.Stdout = m.stdout
 	cmd.Stderr = m.stderr
-	return cmd.Run()
+	return cmd
 }
 
 type WithMinikubeTestCase struct {
@@ -142,7 +153,7 @@ type WithMinikubeTestCase struct {
 	Test func(t *testing.T, minikube *Minikube, e *Extension)
 }
 
-func WithMinikube(t *testing.T, testCases []WithMinikubeTestCase) {
+func WithMinikube(t *testing.T, runtimes []types.Runtime, testCases []WithMinikubeTestCase) {
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 
 	imageName := ""
@@ -151,7 +162,7 @@ func WithMinikube(t *testing.T, testCases []WithMinikubeTestCase) {
 	go func() {
 		s, err := createExtensionContainer()
 		if err != nil {
-			t.Fatalf("failed to create extension executable: %v", err)
+			log.Fatal().Msgf("failed to create extension executable: %v", err)
 		}
 		imageName = s
 		wg.Done()
@@ -160,9 +171,11 @@ func WithMinikube(t *testing.T, testCases []WithMinikubeTestCase) {
 	for _, runtime := range runtimes {
 		t.Run(string(runtime), func(t *testing.T) {
 
-			minikube, err := startMinikube(runtime)
+			minikube := newMinikube(runtime)
+			_ = minikube.delete()
+			err := minikube.start()
 			if err != nil {
-				t.Fatalf("failed to start minikube: %v", err)
+				log.Fatal().Msgf("failed to start minikube: %v", err)
 			}
 			defer func() { _ = minikube.delete() }()
 
@@ -215,4 +228,160 @@ func (w *prefixWriter) Write(p []byte) (n int, err error) {
 		}
 	}
 	return len(p), nil
+}
+
+type ServiceClient struct {
+	resty.Client
+	close func()
+}
+
+func (c *ServiceClient) Close() {
+	c.close()
+}
+
+func (m *Minikube) NewRestClientForService(service metav1.Object) (*ServiceClient, error) {
+	url, cancel, err := m.TunnelService(service)
+	if err != nil {
+		return nil, err
+	}
+
+	client := resty.New()
+	client.SetBaseURL(url)
+	client.SetTimeout(3 * time.Second)
+
+	return &ServiceClient{
+		Client: *client,
+		close:  cancel,
+	}, nil
+}
+
+func (m *Minikube) TunnelService(service metav1.Object) (string, func(), error) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cmd := m.commandContext(ctx, "service", "--namespace", service.GetNamespace(), service.GetName(), "--url")
+	cmd.Stdout = nil
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		cancel()
+		return "", nil, err
+	}
+
+	chUrl := make(chan string)
+	go func(r io.Reader) {
+		scanner := bufio.NewScanner(r)
+		for {
+			if !scanner.Scan() {
+				return
+			}
+			line := scanner.Text()
+			_, _ = m.stdout.Write([]byte(line))
+			if strings.HasPrefix(line, "http") {
+				chUrl <- line
+				return
+			}
+		}
+	}(stdout)
+
+	err = cmd.Start()
+	if err != nil {
+		cancel()
+		return "", nil, err
+	}
+
+	chErr := make(chan error)
+	go func() { chErr <- cmd.Wait() }()
+
+	select {
+	case url := <-chUrl:
+		return url, cancel, nil
+	case <-time.After(10 * time.Second):
+		cancel()
+		return "", nil, fmt.Errorf("timed out to tunnel service")
+	case err = <-chErr:
+		cancel()
+		return "", nil, fmt.Errorf("failed to tunnel service: %w", err)
+	}
+}
+
+func (m *Minikube) CreatePod(pod *acorev1.PodApplyConfiguration) (metav1.Object, error) {
+	applied, err := m.Client().CoreV1().Pods("default").Apply(context.Background(), pod, metav1.ApplyOptions{FieldManager: "application/apply-patch"})
+	if err != nil {
+		return nil, err
+	}
+	if err = m.WaitForPodPhase(applied.GetObjectMeta(), corev1.PodRunning, 30*time.Second); err != nil {
+		return nil, err
+	}
+	return applied.GetObjectMeta(), nil
+}
+
+func (m *Minikube) GetPod(pod metav1.Object) (*corev1.Pod, error) {
+	return m.Client().CoreV1().Pods(pod.GetNamespace()).Get(context.Background(), pod.GetName(), metav1.GetOptions{})
+}
+
+func (m *Minikube) DeletePod(pod metav1.Object) error {
+	if pod == nil {
+		return nil
+	}
+	return m.Client().CoreV1().Pods(pod.GetNamespace()).Delete(context.Background(), pod.GetName(), metav1.DeleteOptions{GracePeriodSeconds: extutil.Ptr(int64(0))})
+}
+
+func (m *Minikube) WaitForPodPhase(pod metav1.Object, phase corev1.PodPhase, duration time.Duration) error {
+	ctx, cancel := context.WithTimeout(context.Background(), duration)
+	defer cancel()
+
+	var lastStatus corev1.PodPhase
+	for {
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("pod %s/%s did not reach phase %s. last status %s", pod.GetNamespace(), pod.GetName(), phase, lastStatus)
+		case <-time.After(200 * time.Millisecond):
+			p, err := m.Client().CoreV1().Pods(pod.GetNamespace()).Get(context.Background(), pod.GetName(), metav1.GetOptions{})
+			if err == nil && p.Status.Phase == phase {
+				return nil
+			}
+			lastStatus = p.Status.Phase
+		}
+	}
+}
+
+func (m *Minikube) CreateService(service *acorev1.ServiceApplyConfiguration) (metav1.Object, error) {
+	applied, err := m.Client().CoreV1().Services("default").Apply(context.Background(), service, metav1.ApplyOptions{FieldManager: "application/apply-patch"})
+	if err != nil {
+		return nil, err
+	}
+	return applied.GetObjectMeta(), nil
+}
+
+func (m *Minikube) DeleteService(service metav1.Object) error {
+	if service == nil {
+		return nil
+	}
+	return m.Client().CoreV1().Services(service.GetNamespace()).Delete(context.Background(), service.GetName(), metav1.DeleteOptions{GracePeriodSeconds: extutil.Ptr(int64(0))})
+}
+
+func (m *Minikube) Exec(pod metav1.Object, containername string, cmd ...string) (string, error) {
+	req := m.Client().CoreV1().RESTClient().Post().
+		Namespace(pod.GetNamespace()).
+		Resource("pods").
+		Name(pod.GetName()).
+		SubResource("exec").
+		VersionedParams(&corev1.PodExecOptions{
+			Container: containername,
+			Command:   cmd,
+			Stdout:    true,
+			Stderr:    true,
+			TTY:       true,
+		}, scheme.ParameterCodec)
+
+	executor, err := remotecommand.NewSPDYExecutor(m.Config(), "POST", req.URL())
+	if err != nil {
+		return "", err
+	}
+
+	var outb bytes.Buffer
+	err = executor.StreamWithContext(context.Background(), remotecommand.StreamOptions{
+		Stdout: &outb,
+		Stderr: &outb,
+		Tty:    true,
+	})
+	return outb.String(), err
 }

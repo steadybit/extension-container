@@ -4,27 +4,28 @@
 package e2e
 
 import (
+	"bufio"
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
+	"github.com/rs/zerolog/log"
+	"github.com/steadybit/action-kit/go/action_kit_api/v2"
 	"github.com/steadybit/discovery-kit/go/discovery_kit_api"
 	"github.com/steadybit/extension-container/pkg/container/types"
 	"github.com/steadybit/extension-container/pkg/extcontainer"
-	"github.com/steadybit/extension-kit/extutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	appv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	acorev1 "k8s.io/client-go/applyconfigurations/core/v1"
-	ametav1 "k8s.io/client-go/applyconfigurations/meta/v1"
-	"k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/client-go/tools/remotecommand"
+	"k8s.io/apimachinery/pkg/labels"
 	"strings"
 	"testing"
 	"time"
 )
 
-func assertProcessRunningInContainer(t *testing.T, m *Minikube, podname, containername string, comm string) {
+func assertProcessRunningInContainer(t *testing.T, m *Minikube, pod metav1.Object, containername string, comm string) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
@@ -32,148 +33,48 @@ func assertProcessRunningInContainer(t *testing.T, m *Minikube, podname, contain
 	for {
 		select {
 		case <-ctx.Done():
-			assert.Failf(t, "process not found", "process %s not found in container %s/%s.\n%s", comm, podname, containername, lastOutput)
+			assert.Failf(t, "process not found", "process %s not found in container %s/%s.\n%s", comm, pod.GetName(), containername, lastOutput)
 			return
 
 		case <-time.After(200 * time.Millisecond):
-			req := m.Client().CoreV1().RESTClient().Post().
-				Namespace("default").
-				Resource("pods").
-				Name(podname).
-				SubResource("exec").
-				VersionedParams(&corev1.PodExecOptions{
-					Container: containername,
-					Command:   []string{"ps", "-opid,comm"},
-					Stdout:    true,
-					Stderr:    true,
-					TTY:       true,
-				}, scheme.ParameterCodec)
+			out, err := m.Exec(pod, containername, "ps", "-opid,comm")
+			require.NoError(t, err, "failed to exec ps -o=pid,comm: %s", out)
 
-			exec, err := remotecommand.NewSPDYExecutor(m.Config(), "POST", req.URL())
-			require.NoError(t, err)
-
-			var outb bytes.Buffer
-			err = exec.StreamWithContext(context.Background(), remotecommand.StreamOptions{
-				Stdout: &outb,
-				Stderr: &outb,
-				Tty:    true,
-			})
-			require.NoError(t, err, "failed to exec ps -o=pid,comm: %s", outb.String())
-
-			for _, line := range strings.Split(outb.String(), "\n") {
+			for _, line := range strings.Split(out, "\n") {
 				fields := strings.Fields(line)
 				if len(fields) >= 2 && fields[1] == comm {
 					return
 				}
 			}
-			lastOutput = outb.String()
+			lastOutput = out
 		}
 	}
 }
 
-func waitForPodPhase(m *Minikube, pod metav1.Object, phase corev1.PodPhase, duration time.Duration) error {
-	ctx, cancel := context.WithTimeout(context.Background(), duration)
-	defer cancel()
-
-	var lastStatus corev1.PodPhase
-	for {
-		select {
-		case <-ctx.Done():
-			return fmt.Errorf("pod %s/%s did not reach phase %s. last status %s", pod.GetNamespace(), pod.GetName(), phase, lastStatus)
-		case <-time.After(200 * time.Millisecond):
-			p, err := m.Client().CoreV1().Pods(pod.GetNamespace()).Get(context.Background(), pod.GetName(), metav1.GetOptions{})
-			if err == nil && p.Status.Phase == phase {
-				return nil
-			}
-			lastStatus = p.Status.Phase
-		}
+func NewContainerTarget(m *Minikube, pod metav1.Object, containername string) (*action_kit_api.Target, error) {
+	status, err := GetContainerStatus(m, pod, containername)
+	if err != nil {
+		return nil, err
 	}
+	return &action_kit_api.Target{
+		Attributes: map[string][]string{
+			"container.id": {status.ContainerID},
+		},
+	}, nil
 }
 
-func getContainerStatus(m *Minikube, pod metav1.Object, containerName string) (*corev1.ContainerStatus, error) {
-	r, err := m.Client().CoreV1().Pods(pod.GetNamespace()).Get(context.Background(), pod.GetName(), metav1.GetOptions{})
+func GetContainerStatus(m *Minikube, pod metav1.Object, containername string) (*corev1.ContainerStatus, error) {
+	r, err := m.GetPod(pod)
 	if err != nil {
 		return nil, err
 	}
 
 	for _, status := range r.Status.ContainerStatuses {
-		if status.Name == containerName {
+		if status.Name == containername {
 			return &status, nil
 		}
 	}
-	return nil, nil
-}
-
-func createBusyBoxPod(m *Minikube, podName string) (metav1.Object, error) {
-	pod := &acorev1.PodApplyConfiguration{
-		TypeMetaApplyConfiguration: ametav1.TypeMetaApplyConfiguration{
-			Kind:       extutil.Ptr("Pod"),
-			APIVersion: extutil.Ptr("v1"),
-		},
-		ObjectMetaApplyConfiguration: &ametav1.ObjectMetaApplyConfiguration{
-			Name: &podName,
-		},
-		Spec: &acorev1.PodSpecApplyConfiguration{
-			RestartPolicy: extutil.Ptr(corev1.RestartPolicyNever),
-			Containers: []acorev1.ContainerApplyConfiguration{
-				{
-					Name:  extutil.Ptr("busybox"),
-					Image: extutil.Ptr("busybox:1"),
-					Args:  []string{"sleep", "600"},
-				},
-			},
-		},
-		Status: nil,
-	}
-
-	return createPod(m, pod)
-}
-
-func createNginxPod(m *Minikube, podName string) (metav1.Object, error) {
-	pod := &acorev1.PodApplyConfiguration{
-		TypeMetaApplyConfiguration: ametav1.TypeMetaApplyConfiguration{
-			Kind:       extutil.Ptr("Pod"),
-			APIVersion: extutil.Ptr("v1"),
-		},
-		ObjectMetaApplyConfiguration: &ametav1.ObjectMetaApplyConfiguration{
-			Name: &podName,
-		},
-		Spec: &acorev1.PodSpecApplyConfiguration{
-			RestartPolicy: extutil.Ptr(corev1.RestartPolicyNever),
-			Containers: []acorev1.ContainerApplyConfiguration{
-				{
-					Name:  extutil.Ptr("nginx"),
-					Image: extutil.Ptr("nginx:stable-alpine"),
-					Ports: []acorev1.ContainerPortApplyConfiguration{
-						{
-							ContainerPort: extutil.Ptr(int32(80)),
-						},
-					},
-				},
-			},
-		},
-		Status: nil,
-	}
-
-	return createPod(m, pod)
-}
-
-func createPod(m *Minikube, pod *acorev1.PodApplyConfiguration) (metav1.Object, error) {
-	applied, err := m.Client().CoreV1().Pods("default").Apply(context.Background(), pod, metav1.ApplyOptions{FieldManager: "application/apply-patch"})
-	if err != nil {
-		return nil, err
-	}
-	if err = waitForPodPhase(m, applied.GetObjectMeta(), corev1.PodRunning, 30*time.Second); err != nil {
-		return nil, err
-	}
-	return applied.GetObjectMeta(), nil
-}
-
-func deletePod(m *Minikube, pod metav1.Object) error {
-	if pod == nil {
-		return nil
-	}
-	return m.Client().CoreV1().Pods(pod.GetNamespace()).Delete(context.Background(), pod.GetName(), metav1.DeleteOptions{GracePeriodSeconds: extutil.Ptr(int64(0))})
+	return nil, errors.New("container not found")
 }
 
 func waitForContainerStatusUsingContainerEngine(m *Minikube, containerId string, wantedStatus string) error {
@@ -257,4 +158,50 @@ func hasAttribute(target discovery_kit_api.Target, key, value string) bool {
 		}
 	}
 	return false
+}
+
+func waitForPods(minikube *Minikube, daemonSet *appv1.DaemonSet) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(200 * time.Millisecond):
+		}
+
+		pods, err := minikube.Client().CoreV1().Pods(daemonSet.GetNamespace()).List(ctx, metav1.ListOptions{
+			LabelSelector: labels.Set(daemonSet.Spec.Selector.MatchLabels).String(),
+		})
+		if err != nil {
+			log.Warn().Err(err).Msg("failed to list pods for extension")
+		}
+
+		for _, pod := range pods.Items {
+			if err := minikube.WaitForPodPhase(pod.GetObjectMeta(), corev1.PodRunning, 10*time.Second); err != nil {
+				log.Warn().Err(err).Msg("pod is not running")
+			}
+			go tailLog(minikube, pod.GetObjectMeta())
+		}
+		if len(pods.Items) > 0 {
+			break
+		}
+	}
+}
+
+func tailLog(minikube *Minikube, pod metav1.Object) {
+	reader, err := minikube.Client().CoreV1().
+		Pods(pod.GetNamespace()).
+		GetLogs(pod.GetName(), &corev1.PodLogOptions{
+			Follow: true,
+		}).Stream(context.Background())
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to tail logs")
+	}
+	defer func() { _ = reader.Close() }()
+	scanner := bufio.NewScanner(reader)
+	for scanner.Scan() {
+		fmt.Printf("📦%s\n", scanner.Text())
+	}
 }

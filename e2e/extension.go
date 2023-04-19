@@ -4,7 +4,6 @@
 package e2e
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"errors"
@@ -17,10 +16,8 @@ import (
 	"github.com/steadybit/discovery-kit/go/discovery_kit_api"
 	"github.com/steadybit/extension-kit/extconversion"
 	"github.com/steadybit/extension-kit/extutil"
-	"k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	aappsv1 "k8s.io/client-go/applyconfigurations/apps/v1"
 	acorev1 "k8s.io/client-go/applyconfigurations/core/v1"
 	ametav1 "k8s.io/client-go/applyconfigurations/meta/v1"
@@ -48,17 +45,17 @@ func (e *Extension) DiscoverTargets(targetId string) ([]discovery_kit_api.Target
 	return nil, fmt.Errorf("discovery not found: %s", targetId)
 }
 
-func (e *Extension) RunAction(actionId string, target action_kit_api.Target, config interface{}) *ActionExecution {
+func (e *Extension) RunAction(actionId string, target action_kit_api.Target, config interface{}) (*ActionExecution, error) {
 	actions, err := e.describeActions()
 	if err != nil {
-		return errorExecution(fmt.Errorf("failed to get action descriptions: %w", err))
+		return nil, fmt.Errorf("failed to get action descriptions: %w", err)
 	}
 	for _, action := range actions {
 		if action.Id == actionId {
 			return e.execAction(action, target, config)
 		}
 	}
-	return errorExecution(fmt.Errorf("action not found: %s", actionId))
+	return nil, fmt.Errorf("action not found: %s", actionId)
 }
 
 func (e *Extension) listDiscoveries() (discovery_kit_api.DiscoveryList, error) {
@@ -169,19 +166,12 @@ func (a *ActionExecution) Cancel() error {
 	return nil
 }
 
-func errorExecution(err error) *ActionExecution {
-	ch := make(chan error)
-	ch <- err
-	close(ch)
-	return &ActionExecution{ch: ch}
-}
-
-func (e *Extension) execAction(action action_kit_api.ActionDescription, target action_kit_api.Target, config interface{}) *ActionExecution {
+func (e *Extension) execAction(action action_kit_api.ActionDescription, target action_kit_api.Target, config interface{}) (*ActionExecution, error) {
 	executionId := uuid.New()
 
 	state, duration, err := e.prepareAction(action, target, config, executionId)
 	if err != nil {
-		return errorExecution(err)
+		return nil, err
 	}
 	log.Info().Str("actionId", action.Id).
 		Interface("config", config).
@@ -193,7 +183,7 @@ func (e *Extension) execAction(action action_kit_api.ActionDescription, target a
 		if action.Stop != nil {
 			_ = e.stopAction(action, executionId, state)
 		}
-		return errorExecution(err)
+		return nil, err
 	}
 	log.Info().Str("actionId", action.Id).
 		Interface("state", state).
@@ -220,7 +210,7 @@ func (e *Extension) execAction(action action_kit_api.ActionDescription, target a
 		if action.Stop != nil {
 			stopErr := e.stopAction(action, executionId, state)
 			if stopErr != nil {
-				err = errors.Join(err, stopErr)
+				ch <- errors.Join(err, stopErr)
 			} else {
 				log.Info().Str("actionId", action.Id).Msg("Action stopped")
 			}
@@ -235,7 +225,7 @@ func (e *Extension) execAction(action action_kit_api.ActionDescription, target a
 	return &ActionExecution{
 		ch:     ch,
 		cancel: cancel,
-	}
+	}, nil
 }
 
 func (e *Extension) prepareAction(action action_kit_api.ActionDescription, target action_kit_api.Target, config interface{}, executionId uuid.UUID) (action_kit_api.ActionState, time.Duration, error) {
@@ -274,7 +264,7 @@ func (e *Extension) startAction(action action_kit_api.ActionDescription, executi
 		State:       state,
 	}
 	var startResult action_kit_api.StartResult
-	res, err := e.client.R().SetBody(startBody).Execute(string(action.Start.Method), action.Start.Path)
+	res, err := e.client.R().SetBody(startBody).SetResult(&startResult).Execute(string(action.Start.Method), action.Start.Path)
 	if err != nil {
 		return state, fmt.Errorf("failed to start action: %w", err)
 	}
@@ -512,52 +502,6 @@ func startExtension(minikube *Minikube, image string) (*Extension, error) {
 	client := resty.New().SetBaseURL(fmt.Sprintf("http://%s", address))
 	log.Info().Msgf("extension is available at %s", address)
 	return &Extension{client: client, stop: stop}, nil
-}
-
-func waitForPods(minikube *Minikube, daemonSet *v1.DaemonSet) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-time.After(200 * time.Millisecond):
-		}
-
-		pods, err := minikube.Client().CoreV1().Pods(daemonSet.GetNamespace()).List(ctx, metav1.ListOptions{
-			LabelSelector: labels.Set(daemonSet.Spec.Selector.MatchLabels).String(),
-		})
-		if err != nil {
-			log.Warn().Err(err).Msg("failed to list pods for extension")
-		}
-
-		for _, pod := range pods.Items {
-			if err := waitForPodPhase(minikube, pod.GetObjectMeta(), corev1.PodRunning, 10*time.Second); err != nil {
-				log.Warn().Err(err).Msg("pod is not running")
-			}
-			go tailLog(minikube, pod.GetObjectMeta())
-		}
-		if len(pods.Items) > 0 {
-			break
-		}
-	}
-}
-
-func tailLog(minikube *Minikube, pod metav1.Object) {
-	reader, err := minikube.Client().CoreV1().
-		Pods(pod.GetNamespace()).
-		GetLogs(pod.GetName(), &corev1.PodLogOptions{
-			Follow: true,
-		}).Stream(context.Background())
-	if err != nil {
-		log.Fatal().Err(err).Msg("failed to tail logs")
-	}
-	defer func() { _ = reader.Close() }()
-	scanner := bufio.NewScanner(reader)
-	for scanner.Scan() {
-		fmt.Printf("📦%s\n", scanner.Text())
-	}
 }
 
 func createExtensionContainer() (string, error) {

@@ -50,7 +50,7 @@ USER $USERNAME
 
 WORKDIR /
 
-COPY  ./*.tar /
+COPY  ./sidecar.tar /sidecar.tar
 COPY --from=build /app/extension /extension
 
 EXPOSE 8080

@@ -14,7 +14,7 @@ import (
 	"github.com/steadybit/extension-container/pkg/container"
 	"github.com/steadybit/extension-container/pkg/container/runc"
 	"github.com/steadybit/extension-container/pkg/container/types"
-	extcontainer2 "github.com/steadybit/extension-container/pkg/extcontainer"
+	"github.com/steadybit/extension-container/pkg/extcontainer"
 	"github.com/steadybit/extension-kit/extbuild"
 	"github.com/steadybit/extension-kit/exthttp"
 	"github.com/steadybit/extension-kit/extlogging"
@@ -49,13 +49,14 @@ func main() {
 
 	r := runc.Runc{Root: client.Runtime().DefaultRuncRoot()}
 
-	extcontainer2.RegisterDiscoveryHandlers(client)
-	action_kit_sdk.RegisterAction(extcontainer2.NewPauseContainerAction(client))
-	action_kit_sdk.RegisterAction(extcontainer2.NewStopContainerAction(client))
-	action_kit_sdk.RegisterAction(extcontainer2.NewStressCpuContainerAction(client, r))
-	action_kit_sdk.RegisterAction(extcontainer2.NewStressMemoryContainerAction(client, r))
-	action_kit_sdk.RegisterAction(extcontainer2.NewStressIoContainerAction(client, r))
-	action_kit_sdk.RegisterAction(extcontainer2.NewNetworkBlackholeContainerAction(r))
+	extcontainer.RegisterDiscoveryHandlers(client)
+	action_kit_sdk.RegisterAction(extcontainer.NewPauseContainerAction(client))
+	action_kit_sdk.RegisterAction(extcontainer.NewStopContainerAction(client))
+	action_kit_sdk.RegisterAction(extcontainer.NewStressCpuContainerAction(client, r))
+	action_kit_sdk.RegisterAction(extcontainer.NewStressMemoryContainerAction(client, r))
+	action_kit_sdk.RegisterAction(extcontainer.NewStressIoContainerAction(client, r))
+	action_kit_sdk.RegisterAction(extcontainer.NewNetworkBlackholeContainerAction(r))
+	action_kit_sdk.RegisterAction(extcontainer.NewNetworkDelayContainerAction(r))
 
 	exthttp.Listen(exthttp.ListenOpts{
 		Port: 8080,
@@ -71,6 +72,6 @@ type ExtensionListResponse struct {
 func getExtensionList() ExtensionListResponse {
 	return ExtensionListResponse{
 		ActionList:    action_kit_sdk.GetActionList(),
-		DiscoveryList: extcontainer2.GetDiscoveryList(),
+		DiscoveryList: extcontainer.GetDiscoveryList(),
 	}
 }

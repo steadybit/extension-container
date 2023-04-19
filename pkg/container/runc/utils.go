@@ -19,15 +19,17 @@ import (
 	syscall "syscall"
 )
 
-func EditSpec(bundleDir string, f func(spec *specs.Spec)) error {
-	spec, err := readSpec(filepath.Join(bundleDir, "config.json"))
+type SpecEditor func(spec *specs.Spec)
+
+func EditSpec(bundle string, editor SpecEditor) error {
+	spec, err := readSpec(filepath.Join(bundle, "config.json"))
 	if err != nil {
 		return err
 	}
 
-	f(spec)
+	editor(spec)
 
-	return writeSpec(filepath.Join(bundleDir, "config.json"), spec)
+	return writeSpec(filepath.Join(bundle, "config.json"), spec)
 }
 
 func readSpec(file string) (*specs.Spec, error) {
@@ -132,6 +134,10 @@ func UseNamespacesOf(spec *specs.Spec, pid int) {
 		{
 			Type: specs.CgroupNamespace,
 			Path: fmt.Sprintf("/proc/%d/ns/cgroup", pid),
+		},
+		{
+			Type: specs.NetworkNamespace,
+			Path: fmt.Sprintf("/proc/%d/ns/net", pid),
 		},
 	}
 }

@@ -23,7 +23,7 @@ tidy:
 .PHONY: audit
 audit:
 	go vet ./...
-	go run honnef.co/go/tools/cmd/staticcheck@latest -checks=all,-ST1000,-U1000 ./...
+	go run honnef.co/go/tools/cmd/staticcheck@latest -checks=all,-ST1000,-U1000,-ST1003 ./...
 	go test -race -vet=off -coverprofile=coverage.out ./...
 	go mod verify
 
@@ -58,6 +58,5 @@ run: tidy build
 ## container: build the container image
 .PHONY: container
 container:
-	DOCKER_BUILDKIT=1 docker build -f Dockerfile.iproute2 --output type=tar,dest=iproute2.tar .
-	DOCKER_BUILDKIT=1 docker build -f Dockerfile.stress-ng --output type=tar,dest=stress-ng.tar .
+	DOCKER_BUILDKIT=1 docker build -f Dockerfile.sidecar --output type=tar,dest=sidecar.tar .
 	DOCKER_BUILDKIT=1 docker build -t extension-container:latest .

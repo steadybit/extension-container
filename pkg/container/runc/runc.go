@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/rs/zerolog/log"
 	"io"
 	"os"
 	"os/exec"
@@ -34,6 +35,9 @@ func (r *Runc) State(ctx context.Context, id string) (*Container, error) {
 	if err != nil {
 		return nil, fmt.Errorf("%s: %s", err, output)
 	}
+
+	log.Trace().Str("output", string(output)).Msg("runc state")
+
 	var c Container
 	if err := json.Unmarshal(output, &c); err != nil {
 		return nil, err
@@ -71,6 +75,8 @@ func (o IoOpts) WithStdin(reader io.Reader) IoOpts {
 }
 
 func (r *Runc) Run(ctx context.Context, id, bundle string, ioOpts IoOpts) error {
+	log.Debug().Str("bundle", bundle).Msg("running container")
+
 	cmd := r.command(ctx, "run", "--bundle", bundle, id)
 	cmd.Stdin = ioOpts.Stdin
 	cmd.Stdout = ioOpts.Stdout
@@ -98,26 +104,32 @@ func (r *Runc) Delete(ctx context.Context, id string, force bool) error {
 	if err != nil {
 		return fmt.Errorf("%s: %s", err, output)
 	}
+	log.Debug().Str("id", id).Msg("deleted container")
 	return nil
 }
 
-func (r *Runc) PrepareBundle(ctx context.Context, id string) (string, error) {
-	bundleDir := filepath.Join("/tmp/steadybit/containers", id)
-	rootfs := filepath.Join(bundleDir, "rootfs")
+func (r *Runc) PrepareBundle(ctx context.Context, image string, id string) (string, func() error, error) {
+	bundle := filepath.Join("/tmp/steadybit/containers", id)
+	rootfs := filepath.Join(bundle, "rootfs")
 
-	_ = os.RemoveAll(bundleDir)
+	_ = os.RemoveAll(bundle)
 
 	if err := os.MkdirAll(rootfs, 0775); err != nil {
-		return "", fmt.Errorf("failed to create bundle dir: %w", err)
+		return "", nil, fmt.Errorf("failed to create bundle dir: %w", err)
 	}
 
-	if out, err := exec.Command("tar", "-xf", "iproute2.tar", "-C", rootfs).CombinedOutput(); err != nil {
-		return "", fmt.Errorf("failed to prepare rootfs dir: %s %w", out, err)
+	if out, err := exec.Command("tar", "-xf", image, "-C", rootfs).CombinedOutput(); err != nil {
+		return "", nil, fmt.Errorf("failed to prepare rootfs dir: %s %w", out, err)
 	}
 
-	if err := r.Spec(ctx, bundleDir); err != nil {
-		return "", err
+	if err := r.Spec(ctx, bundle); err != nil {
+		return "", nil, err
 	}
 
-	return bundleDir, nil
+	cleanup := func() error {
+		return os.RemoveAll(bundle)
+	}
+
+	log.Debug().Str("bundle", bundle).Str("id", id).Msg("prepared bundle")
+	return bundle, cleanup, nil
 }

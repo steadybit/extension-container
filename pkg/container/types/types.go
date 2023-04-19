@@ -27,7 +27,7 @@ const (
 )
 
 var (
-	Runtimes = []Runtime{RuntimeDocker, RuntimeContainerd, RuntimeCrio}
+	AllRuntimes = []Runtime{RuntimeDocker, RuntimeContainerd, RuntimeCrio}
 )
 
 type Runtime string
