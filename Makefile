@@ -24,7 +24,7 @@ tidy:
 audit:
 	go vet ./...
 	go run honnef.co/go/tools/cmd/staticcheck@latest -checks=all,-ST1000,-U1000 ./...
-	go test -race -vet=off ./...
+	go test -race -vet=off -coverprofile=coverage.out ./...
 	go mod verify
 
 ## charttesting: Run Helm chart unit tests
@@ -32,8 +32,13 @@ audit:
 charttesting:
 	for dir in charts/steadybit-extension-*; do \
     echo "Unit Testing $$dir"; \
-    helm unittest --helm3 $$dir; \
+    helm unittest $$dir; \
   done
+
+## chartlint: Lint charts
+.PHONY: chartlint
+chartlint:
+	ct lint --config chartTesting.yaml
 
 # ==================================================================================== #
 # BUILD
@@ -56,20 +61,3 @@ container:
 	DOCKER_BUILDKIT=1 docker build -f Dockerfile.iproute2 --output type=tar,dest=iproute2.tar .
 	DOCKER_BUILDKIT=1 docker build -f Dockerfile.stress-ng --output type=tar,dest=stress-ng.tar .
 	DOCKER_BUILDKIT=1 docker build -t extension-container:latest .
-
-# ==================================================================================== #
-# EJECT
-# ==================================================================================== #
-
-## eject: remove / clear up files associated with the scaffold repository
-.PHONY: eject
-eject:
-	rm .github/workflows/cla.yml
-	rm CHANGELOG.md
-	mv CHANGELOG.SCAFFOLD.md CHANGELOG.md
-	rm CONTRIBUTING.md
-	mv CONTRIBUTING.SCAFFOLD.md CONTRIBUTING.md
-	rm README.md
-	mv README.SCAFFOLD.md README.md
-	rm LICENSE
-	mv LICENSE.SCAFFOLD LICENSE
