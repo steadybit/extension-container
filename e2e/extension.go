@@ -413,6 +413,13 @@ func startExtension(minikube *Minikube, image string) (*Extension, error) {
 									Value: extutil.Ptr("debug"),
 								},
 							},
+							Ports: []acorev1.ContainerPortApplyConfiguration{
+								{
+									Name:          extutil.Ptr("http"),
+									ContainerPort: extutil.Ptr(int32(8080)),
+									HostPort:      extutil.Ptr(int32(8080)),
+								},
+							},
 							VolumeMounts: []acorev1.VolumeMountApplyConfiguration{
 								{
 									Name:      extutil.Ptr("cgroup-root"),
@@ -433,8 +440,7 @@ func startExtension(minikube *Minikube, image string) (*Extension, error) {
 							},
 						},
 					},
-					HostPID:     extutil.Ptr(true),
-					HostNetwork: extutil.Ptr(true), //FIXME
+					HostPID: extutil.Ptr(true),
 					SecurityContext: &acorev1.PodSecurityContextApplyConfiguration{
 						RunAsUser:    extutil.Ptr(int64(10000)),
 						RunAsGroup:   extutil.Ptr(int64(10000)),
