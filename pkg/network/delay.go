@@ -55,6 +55,8 @@ func (o *DelayOpts) String() string {
 	sb.WriteString(o.Delay.String())
 	sb.WriteString(", Jitter: ")
 	sb.WriteString(o.Jitter.String())
+	sb.WriteString(", Interfaces: ")
+	sb.WriteString(strings.Join(o.Interfaces, ", "))
 	sb.WriteString(")")
 	sb.WriteString("\nto/from:\n")
 	for _, inc := range o.Include {

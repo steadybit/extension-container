@@ -30,56 +30,20 @@ func ResolveHostnames(ctx context.Context, r runc.Runc, targetId string, ipOrHos
 	}
 	stdin := strings.NewReader(sb.String())
 
-	state, err := r.State(ctx, targetId)
-	if err != nil {
-		return nil, fmt.Errorf("could not load state of target container: %w", err)
-	}
-
-	id := fmt.Sprintf("sb-network-%d", counter.Add(1))
-	bundle, cleanup, err := r.PrepareBundle(ctx, "sidecar.tar", id)
+	id := getNextContainerId()
+	bundle, cleanup, err := createBundleAndSpec(ctx, r, id, targetId, func(spec *specs.Spec) {
+		spec.Process.Args = []string{"dig", "-f-", "+timeout=4", "+short", "+nottlid", "+noclass"}
+	})
 	defer func() { _ = cleanup() }()
 	if err != nil {
 		return nil, err
 	}
 
-	umount, err := runc.MountFileOf(ctx, bundle, state.Pid, "/etc/hosts")
-	defer func() { _ = umount() }()
-	if err != nil {
-		return nil, err
-	}
-
-	umount, err = runc.MountFileOf(ctx, bundle, state.Pid, "/etc/resolv.conf")
-	defer func() { _ = umount() }()
-	if err != nil {
-		return nil, err
-	}
-
-	if err := runc.EditSpec(bundle, func(spec *specs.Spec) {
-		spec.Hostname = id
-		spec.Annotations = map[string]string{
-			"com.steadybit.sidecar": "true",
-		}
-		spec.Root.Path = "rootfs"
-		spec.Root.Readonly = true
-		spec.Process.Args = []string{"dig", "-f-", "+timeout=4", "+short", "+nottlid", "+noclass"}
-		spec.Process.Terminal = false
-		spec.Process.Cwd = "/tmp"
-
-		runc.UseCgroupOf(spec, state.Pid, "network")
-		runc.UseNamespacesOf(spec, state.Pid)
-	}); err != nil {
-		return nil, err
-	}
-
-	var outb bytes.Buffer
-	err = r.Run(ctx, id, bundle, runc.IoOpts{
-		Stdin:  stdin,
-		Stdout: &outb,
-		Stderr: &outb,
-	})
+	var outb, errb bytes.Buffer
+	err = r.Run(ctx, id, bundle, runc.IoOpts{Stdin: stdin, Stdout: &outb, Stderr: &errb})
 	defer func() { _ = r.Delete(context.Background(), id, true) }()
 	if err != nil {
-		return nil, fmt.Errorf("could not resolve hostnames: %w: %s", err, outb.String())
+		return nil, fmt.Errorf("could not resolve hostnames: %w: %s", err, errb.String())
 	}
 
 	for _, ip := range strings.Split(outb.String(), "\n") {

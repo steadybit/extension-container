@@ -62,6 +62,7 @@ func testNetworkDelay(t *testing.T, m *Minikube, e *Extension) {
 		ip          []string
 		hostname    []string
 		port        []string
+		interfaces  []string
 		WantedDelay bool
 	}{
 		{
@@ -71,6 +72,7 @@ func testNetworkDelay(t *testing.T, m *Minikube, e *Extension) {
 		{
 			name:        "should delay only port 5000 traffic",
 			port:        []string{"5000"},
+			interfaces:  []string{"eth0"},
 			WantedDelay: true,
 		},
 		{
@@ -82,19 +84,21 @@ func testNetworkDelay(t *testing.T, m *Minikube, e *Extension) {
 
 	for _, tt := range tests {
 		config := struct {
-			Duration int      `json:"duration"`
-			Delay    int      `json:"networkDelay"`
-			Jitter   bool     `json:"networkDelayJitter"`
-			Ip       []string `json:"ip"`
-			Hostname []string `json:"hostname"`
-			Port     []string `json:"port"`
+			Duration     int      `json:"duration"`
+			Delay        int      `json:"networkDelay"`
+			Jitter       bool     `json:"networkDelayJitter"`
+			Ip           []string `json:"ip"`
+			Hostname     []string `json:"hostname"`
+			Port         []string `json:"port"`
+			NetInterface []string `json:"networkInterface"`
 		}{
-			Duration: 10000,
-			Delay:    200,
-			Jitter:   false,
-			Ip:       tt.ip,
-			Hostname: tt.hostname,
-			Port:     tt.port,
+			Duration:     10000,
+			Delay:        200,
+			Jitter:       false,
+			Ip:           tt.ip,
+			Hostname:     tt.hostname,
+			Port:         tt.port,
+			NetInterface: tt.interfaces,
 		}
 
 		t.Run(tt.name, func(t *testing.T) {

@@ -59,7 +59,14 @@ func getNetworkDelayDescription() action_kit_api.ActionDescription {
 				Required:     extutil.Ptr(true),
 				Order:        extutil.Ptr(2),
 			},
-			//FIXME add interfaces
+			action_kit_api.ActionParameter{
+				Name:        "networkInterface",
+				Label:       "Network Interface",
+				Description: extutil.Ptr("Target Network Interface which should be attacked."),
+				Type:        action_kit_api.StringArray,
+				Required:    extutil.Ptr(false),
+				Order:       extutil.Ptr(104),
+			},
 		),
 	}
 }
@@ -67,8 +74,8 @@ func getNetworkDelayDescription() action_kit_api.ActionDescription {
 func delay(r runc.Runc) networkOptsProvider {
 	return func(ctx context.Context, request action_kit_api.PrepareActionRequestBody) (network.Opts, error) {
 		containerId := request.Target.Attributes["container.id"][0]
-		delay := time.Duration(int(request.Config["networkDelay"].(float64))) * time.Millisecond
-		hasJitter := request.Config["networkDelayJitter"] == true
+		delay := time.Duration(extutil.ToInt64(request.Config["networkDelay"])) * time.Millisecond
+		hasJitter := extutil.ToBool(request.Config["networkDelayJitter"])
 
 		jitter := 0 * time.Millisecond
 		if hasJitter {
@@ -80,11 +87,23 @@ func delay(r runc.Runc) networkOptsProvider {
 			return nil, err
 		}
 
+		interfaces := toStringArray(request.Config["networkInterface"])
+		if len(interfaces) == 0 {
+			interfaces, err = readNetworkInterfaces(ctx, r, RemovePrefix(containerId))
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		if len(interfaces) == 0 {
+			return nil, fmt.Errorf("no network interfaces specified")
+		}
+
 		return &network.DelayOpts{
 			Filter:     filter,
 			Delay:      delay,
 			Jitter:     jitter,
-			Interfaces: []string{"eth0"}, //FIXME read from config - if empty use all
+			Interfaces: interfaces,
 		}, nil
 	}
 }

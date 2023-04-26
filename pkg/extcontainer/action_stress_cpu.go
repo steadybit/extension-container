@@ -69,8 +69,8 @@ func getStressCpuDescription() action_kit_api.ActionDescription {
 
 func stressCpu(request action_kit_api.PrepareActionRequestBody) (stress.StressOpts, error) {
 	return stress.StressOpts{
-		CpuWorkers: extutil.Ptr(int(request.Config["workers"].(float64))),
-		CpuLoad:    int(request.Config["cpuLoad"].(float64)),
-		Timeout:    time.Duration(int(request.Config["duration"].(float64))) * time.Millisecond,
+		CpuWorkers: extutil.Ptr(extutil.ToInt(request.Config["workers"])),
+		CpuLoad:    extutil.ToInt(request.Config["cpuLoad"]),
+		Timeout:    time.Duration(extutil.ToInt64(request.Config["duration"])) * time.Millisecond,
 	}, nil
 }

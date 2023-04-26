@@ -86,16 +86,13 @@ func executeIpCommands(ctx context.Context, r runc.Runc, targetId string, family
 	bundle, cleanup, err := createBundleAndSpec(ctx, r, id, targetId, func(spec *specs.Spec) {
 		spec.Process.Args = []string{"ip", "-family", string(family), "-force", "-batch", "-"}
 	})
+	defer func() { _ = cleanup() }()
 	if err != nil {
-		_ = cleanup()
 		return err
 	}
 
 	err = r.Run(ctx, id, bundle, runc.InheritStdIo().WithStdin(batch))
-	defer func() {
-		_ = cleanup()
-		_ = r.Delete(context.Background(), id, true)
-	}()
+	defer func() { _ = r.Delete(context.Background(), id, true) }()
 	return err
 }
 
@@ -108,25 +105,17 @@ func executeTcCommands(ctx context.Context, r runc.Runc, targetId string, batch 
 	bundle, cleanup, err := createBundleAndSpec(ctx, r, id, targetId, func(spec *specs.Spec) {
 		spec.Process.Args = []string{"tc", "-force", "-batch", "-"}
 	})
+	defer func() { _ = cleanup() }()
 	if err != nil {
-		_ = cleanup()
 		return err
 	}
 
 	err = r.Run(ctx, id, bundle, runc.InheritStdIo().WithStdin(batch))
-	defer func() {
-		_ = cleanup()
-		_ = r.Delete(context.Background(), id, true)
-	}()
+	defer func() { _ = r.Delete(context.Background(), id, true) }()
 	return err
 }
 
 func createBundleAndSpec(ctx context.Context, r runc.Runc, id, targetId string, editFn runc.SpecEditor) (string, func() error, error) {
-	state, err := r.State(ctx, targetId)
-	if err != nil {
-		return "", nil, fmt.Errorf("could not load state of target container: %w", err)
-	}
-
 	var finalizers []func() error
 	cleanup := func() error {
 		var errs []error
@@ -138,11 +127,15 @@ func createBundleAndSpec(ctx context.Context, r runc.Runc, id, targetId string, 
 		return errors.Join(errs...)
 	}
 
+	state, err := r.State(ctx, targetId)
+	if err != nil {
+		return "", cleanup, fmt.Errorf("could not load state of target container: %w", err)
+	}
+
 	bundle, cleanupBundle, err := r.PrepareBundle(ctx, "sidecar.tar", id)
 	finalizers = append(finalizers, cleanupBundle)
 	if err != nil {
-		_ = cleanup()
-		return "", nil, err
+		return "", cleanup, err
 	}
 
 	if err := runc.EditSpec(bundle, func(spec *specs.Spec) {
@@ -161,21 +154,19 @@ func createBundleAndSpec(ctx context.Context, r runc.Runc, id, targetId string, 
 
 		editFn(spec)
 	}); err != nil {
-		return "", nil, err
+		return "", cleanup, err
 	}
 
 	unmount, err := runc.MountFileOf(ctx, bundle, state.Pid, "/etc/hosts")
 	finalizers = append(finalizers, unmount)
 	if err != nil {
-		_ = cleanup()
-		return "", nil, err
+		return "", cleanup, err
 	}
 
 	unmount, err = runc.MountFileOf(ctx, bundle, state.Pid, "/etc/resolv.conf")
 	finalizers = append(finalizers, unmount)
 	if err != nil {
-		_ = cleanup()
-		return "", nil, err
+		return "", cleanup, err
 	}
 
 	return bundle, cleanup, nil

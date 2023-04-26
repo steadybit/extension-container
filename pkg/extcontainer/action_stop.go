@@ -88,13 +88,8 @@ func (a *stopAction) Prepare(_ context.Context, state *StopActionState, request 
 		return nil, extension_kit.ToError("Target is missing the 'container.id' attribute.", nil)
 	}
 
-	graceful := request.Config["graceful"]
-	if graceful == nil {
-		graceful = true
-	}
-
 	state.ContainerId = containerId[0]
-	state.Graceful = graceful.(bool)
+	state.Graceful = extutil.ToBool(request.Config["graceful"])
 	state.ExecutionId = request.ExecutionId
 	return nil, nil
 }

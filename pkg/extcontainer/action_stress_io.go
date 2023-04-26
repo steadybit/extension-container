@@ -78,10 +78,10 @@ func getStressIoDescription() action_kit_api.ActionDescription {
 
 func stressIo(request action_kit_api.PrepareActionRequestBody) (stress.StressOpts, error) {
 	return stress.StressOpts{
-		HddWorkers: extutil.Ptr(int(request.Config["workers"].(float64))),
+		HddWorkers: extutil.Ptr(extutil.ToInt(request.Config["workers"])),
 		HddBytes:   fmt.Sprintf("%d%%", int(request.Config["percentage"].(float64))),
-		IoWorkers:  extutil.Ptr(int(request.Config["workers"].(float64))),
-		TempPath:   request.Config["path"].(string),
-		Timeout:    time.Duration(int(request.Config["duration"].(float64))) * time.Millisecond,
+		IoWorkers:  extutil.Ptr(extutil.ToInt(request.Config["workers"])),
+		TempPath:   extutil.ToString(request.Config["path"]),
+		Timeout:    time.Duration(extutil.ToInt64(request.Config["duration"])) * time.Millisecond,
 	}, nil
 }

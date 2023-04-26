@@ -100,7 +100,7 @@ func (a *networkAction) Prepare(ctx context.Context, state *NetworkActionState, 
 		return nil, extension_kit.ToError("Target is missing the 'container.id' attribute.", nil)
 	}
 
-	if failOnHostNetwork, ok := request.Config["failOnHostNetwork"].(bool); ok && failOnHostNetwork {
+	if extutil.ToBool(request.Config["failOnHostNetwork"]) {
 		hasHostNetwork, err := a.hasHostNetwork(ctx, containerId[0])
 		if err != nil {
 			return nil, extension_kit.ToError("Failed to check if container is using host network.", err)
@@ -194,8 +194,8 @@ func parsePortRanges(raw []string) ([]network.PortRange, error) {
 
 func mapToNetworkFilter(ctx context.Context, r runc.Runc, containerId string, config map[string]interface{}) (network.Filter, error) {
 	toResolve := append(
-		toStrings(config["ip"]),
-		toStrings(config["hostname"])...,
+		toStringArray(config["ip"]),
+		toStringArray(config["hostname"])...,
 	)
 	includeCidrs, err := network.ResolveHostnames(ctx, r, RemovePrefix(containerId), toResolve...)
 	if err != nil {
@@ -206,7 +206,7 @@ func mapToNetworkFilter(ctx context.Context, r runc.Runc, containerId string, co
 		includeCidrs = []string{"::/0", "0.0.0.0/0"}
 	}
 
-	portRanges, err := parsePortRanges(toStrings(config["port"]))
+	portRanges, err := parsePortRanges(toStringArray(config["port"]))
 	if err != nil {
 		return network.Filter{}, err
 	}
@@ -234,6 +234,21 @@ func mapToNetworkFilter(ctx context.Context, r runc.Runc, containerId string, co
 		Include: includes,
 		Exclude: excludes,
 	}, nil
+}
+
+func readNetworkInterfaces(ctx context.Context, r runc.Runc, containerId string) ([]string, error) {
+	ifcs, err := network.ListInterfaces(ctx, r, containerId)
+	if err != nil {
+		return nil, err
+	}
+
+	var ifcNames []string
+	for _, ifc := range ifcs {
+		if ifc.HasFlag("UP") && !ifc.HasFlag("LOOPBACK") {
+			ifcNames = append(ifcNames, ifc.Name)
+		}
+	}
+	return ifcNames, nil
 }
 
 func resolveUrl(ctx context.Context, runc runc.Runc, containerId string, raw string) ([]string, int, error) {

@@ -63,6 +63,6 @@ func stressMemory(request action_kit_api.PrepareActionRequestBody) (stress.Stres
 		VmWorkers: extutil.Ptr(1),
 		VmBytes:   fmt.Sprintf("%d%%", int(request.Config["percentage"].(float64))),
 		VmHang:    0,
-		Timeout:   time.Duration(int(request.Config["duration"].(float64))) * time.Millisecond,
+		Timeout:   time.Duration(extutil.ToInt64(request.Config["duration"])) * time.Millisecond,
 	}, nil
 }
