@@ -128,7 +128,20 @@ func (n *netperf) Target() (*action_kit_api.Target, error) {
 
 func (n *netperf) MeasureLatency() (time.Duration, error) {
 	service := fmt.Sprintf("%s.%s.svc.cluster.local", n.Service.GetName(), n.Service.GetNamespace())
-	out, err := n.minikube.Exec(n.ClientPod, "netperf", "netperf", "-H", service, "-l2", "-tTCP_RR", "--", "-P5000", "-r", "1,1", "-o", "mean_latency")
+
+	var out string
+	var err error
+	for attempt := 0; attempt < 5; attempt++ {
+		out, err = n.minikube.Exec(n.ClientPod, "netperf", "netperf", "-H", service, "-l2", "-tTCP_RR", "--", "-P5000", "-r", "1,1", "-o", "mean_latency")
+		if err == nil {
+			break
+		} else {
+			if !strings.Contains(out, "Cannot assign requested address") {
+				return 0, fmt.Errorf("%s: %s", err, out)
+			}
+			time.Sleep(100 * time.Millisecond)
+		}
+	}
 	if err != nil {
 		return 0, fmt.Errorf("%s: %s", err, out)
 	}
