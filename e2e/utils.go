@@ -137,7 +137,7 @@ func pollForTarget(ctx context.Context, e *Extension, predicate func(target disc
 		case <-ctx.Done():
 			return discovery_kit_api.Target{}, fmt.Errorf("timed out waiting for target. last error: %w", lastErr)
 		case <-time.After(200 * time.Millisecond):
-			targets, err := e.DiscoverTargets("com.github.steadybit.extension_container.container")
+			targets, err := e.DiscoverTargets("container")
 			if err != nil {
 				lastErr = err
 				continue

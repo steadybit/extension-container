@@ -105,7 +105,7 @@ func testNetworkDelay(t *testing.T, m *Minikube, e *Extension) {
 			unaffectedLatency, err := netperf.MeasureLatency()
 			require.NoError(t, err)
 
-			action, err := e.RunAction("com.github.steadybit.extension_container.container.network_delay", *target, config)
+			action, err := e.RunAction("container.network_delay", *target, config)
 			require.NoError(t, err)
 
 			latency, err := netperf.MeasureLatency()
@@ -183,7 +183,7 @@ func testNetworkBlackhole(t *testing.T, m *Minikube, e *Extension) {
 			require.NoError(t, nginx.IsReachable(), "service should be reachable before blackhole")
 			require.NoError(t, nginx.CanReach("https://google.com"), "service should reach url before blackhole")
 
-			action, err := e.RunAction("com.github.steadybit.extension_container.container.network_blackhole", *target, config)
+			action, err := e.RunAction("container.network_blackhole", *target, config)
 			require.NoError(t, err)
 
 			if tt.WantedReachable {
@@ -220,7 +220,7 @@ func testStressCpu(t *testing.T, m *Minikube, e *Extension) {
 		Workers  int `json:"workers"`
 	}{Duration: 5000, Workers: 0, CpuLoad: 50}
 
-	action, err := e.RunAction("com.github.steadybit.extension_container.container.stress_cpu", *target, config)
+	action, err := e.RunAction("container.stress_cpu", *target, config)
 	require.NoError(t, err)
 	assertProcessRunningInContainer(t, m, nginx.Pod, "nginx", "stress-ng")
 	require.NoError(t, action.Cancel())
@@ -240,7 +240,7 @@ func testStressMemory(t *testing.T, m *Minikube, e *Extension) {
 		Percentage int `json:"percentage"`
 	}{Duration: 5000, Percentage: 50}
 
-	action, err := e.RunAction("com.github.steadybit.extension_container.container.stress_mem", *target, config)
+	action, err := e.RunAction("container.stress_mem", *target, config)
 	require.NoError(t, err)
 	assertProcessRunningInContainer(t, m, nginx.Pod, "nginx", "stress-ng")
 	require.NoError(t, action.Cancel())
@@ -261,7 +261,7 @@ func testStressIo(t *testing.T, m *Minikube, e *Extension) {
 		Percentage int    `json:"percentage"`
 		Workers    int    `json:"workers"`
 	}{Duration: 5000, Workers: 1, Percentage: 50, Path: "/tmp"}
-	action, err := e.RunAction("com.github.steadybit.extension_container.container.stress_io", *target, config)
+	action, err := e.RunAction("container.stress_io", *target, config)
 	require.NoError(t, err)
 	assertProcessRunningInContainer(t, m, nginx.Pod, "nginx", "stress-ng")
 	require.NoError(t, action.Cancel())
@@ -295,7 +295,7 @@ func testPauseContainer(t *testing.T, m *Minikube, e *Extension) {
 	config := struct {
 		Duration int `json:"duration"`
 	}{Duration: 5000}
-	action, err := e.RunAction("com.github.steadybit.extension_container.container.pause", *target, config)
+	action, err := e.RunAction("container.pause", *target, config)
 	require.NoError(t, err)
 	err = action.Wait()
 	require.NoError(t, err)
@@ -329,7 +329,7 @@ func testStopContainer(t *testing.T, m *Minikube, e *Extension) {
 	config := struct {
 		Graceful bool `json:"graceful"`
 	}{Graceful: true}
-	action, err := e.RunAction("com.github.steadybit.extension_container.container.stop", *target, config)
+	action, err := e.RunAction("container.stop", *target, config)
 	require.NoError(t, err)
 	require.NoError(t, action.Wait())
 
@@ -354,5 +354,5 @@ func testDiscovery(t *testing.T, m *Minikube, e *Extension) {
 	})
 
 	require.NoError(t, err)
-	assert.Equal(t, target.TargetType, "com.github.steadybit.extension_container.container")
+	assert.Equal(t, target.TargetType, "container")
 }
