@@ -5,6 +5,7 @@ package e2e
 
 import (
 	"errors"
+	"fmt"
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
 	"github.com/steadybit/extension-kit/extutil"
 	corev1 "k8s.io/api/core/v1"
@@ -97,8 +98,11 @@ func (n *Nginx) IsReachable() error {
 }
 
 func (n *Nginx) CanReach(url string) error {
-	_, err := n.minikube.Exec(n.Pod, "nginx", "curl", "--max-time", "2", url)
-	return err
+	out, err := n.minikube.Exec(n.Pod, "nginx", "curl", "--max-time", "2", url)
+	if err != nil {
+		return fmt.Errorf("%s: %s", err, out)
+	}
+	return nil
 }
 
 func (n *Nginx) ContainerStatus() (*corev1.ContainerStatus, error) {

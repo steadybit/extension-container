@@ -15,16 +15,16 @@ import (
 	"github.com/steadybit/extension-kit/extutil"
 )
 
-func NewNetworkCorruptContainerAction(r runc.Runc) action_kit_sdk.Action[NetworkActionState] {
+func NewNetworkCorruptPackagesContainerAction(r runc.Runc) action_kit_sdk.Action[NetworkActionState] {
 	return &networkAction{
 		optsProvider: corruptPackages(r),
 		optsDecoder:  corruptPackagesDecode,
-		description:  getNetworkCorruptDescription(),
+		description:  getNetworkCorruptPackagesDescription(),
 		runc:         r,
 	}
 }
 
-func getNetworkCorruptDescription() action_kit_api.ActionDescription {
+func getNetworkCorruptPackagesDescription() action_kit_api.ActionDescription {
 	return action_kit_api.ActionDescription{
 		Id:          fmt.Sprintf("%s.network_package_corruption", targetID),
 		Label:       "Package Corruption",
@@ -64,7 +64,7 @@ func getNetworkCorruptDescription() action_kit_api.ActionDescription {
 func corruptPackages(r runc.Runc) networkOptsProvider {
 	return func(ctx context.Context, request action_kit_api.PrepareActionRequestBody) (networkutils.Opts, error) {
 		containerId := request.Target.Attributes["container.id"][0]
-		corruption := extutil.ToUInt(request.Config["networkCorrupt"])
+		corruption := extutil.ToUInt(request.Config["networkCorruption"])
 
 		var restrictedUrls []string
 		if request.ExecutionContext != nil && request.ExecutionContext.RestrictedUrls != nil {

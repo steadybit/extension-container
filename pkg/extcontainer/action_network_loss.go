@@ -15,16 +15,16 @@ import (
 	"github.com/steadybit/extension-kit/extutil"
 )
 
-func NewNetworkLossContainerAction(r runc.Runc) action_kit_sdk.Action[NetworkActionState] {
+func NewNetworkPackageLossContainerAction(r runc.Runc) action_kit_sdk.Action[NetworkActionState] {
 	return &networkAction{
 		optsProvider: packageLoss(r),
 		optsDecoder:  packageLossDecode,
-		description:  getNetworkLossDescription(),
+		description:  getNetworkPackageLossDescription(),
 		runc:         r,
 	}
 }
 
-func getNetworkLossDescription() action_kit_api.ActionDescription {
+func getNetworkPackageLossDescription() action_kit_api.ActionDescription {
 	return action_kit_api.ActionDescription{
 		Id:          fmt.Sprintf("%s.network_package_loss", targetID),
 		Label:       "Drop Outgoing Traffic",

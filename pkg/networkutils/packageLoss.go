@@ -25,7 +25,7 @@ func (o *PackageLossOpts) TcCommands(mode Mode) (io.Reader, error) {
 
 	for _, ifc := range o.Interfaces {
 		cmds = append(cmds, fmt.Sprintf("qdisc %s dev %s root handle 1: prio", mode, ifc))
-		cmds = append(cmds, fmt.Sprintf("qdisc %s dev %s parent %s handle 30: netem loss random %d%", mode, ifc, handleInclude, o.Loss))
+		cmds = append(cmds, fmt.Sprintf("qdisc %s dev %s parent %s handle 30: netem loss random %d%%", mode, ifc, handleInclude, o.Loss))
 
 		filterCmds, err := tcCommandsForFilter(mode, &o.Filter, ifc)
 		if err != nil {
@@ -41,7 +41,7 @@ func (o *PackageLossOpts) TcCommands(mode Mode) (io.Reader, error) {
 func (o *PackageLossOpts) String() string {
 	var sb strings.Builder
 	sb.WriteString("Loosing traffic (loss: ")
-	sb.WriteString(fmt.Sprintf("%d%", o.Loss))
+	sb.WriteString(fmt.Sprintf("%d%%", o.Loss))
 	sb.WriteString(", Interfaces: ")
 	sb.WriteString(strings.Join(o.Interfaces, ", "))
 	sb.WriteString(")")

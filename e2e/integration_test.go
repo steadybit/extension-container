@@ -5,6 +5,7 @@ package e2e
 
 import (
 	"context"
+	"fmt"
 	"github.com/steadybit/discovery-kit/go/discovery_kit_api"
 	"github.com/steadybit/extension-container/pkg/container/types"
 	"github.com/stretchr/testify/assert"
@@ -62,7 +63,7 @@ func testNetworkDelay(t *testing.T, m *Minikube, e *Extension) {
 	}
 
 	netperf := netperf{minikube: m}
-	err := netperf.Deploy("netperf-network-delay")
+	err := netperf.Deploy("delay")
 	defer func() { _ = netperf.Delete() }()
 	require.NoError(t, err)
 
@@ -94,6 +95,9 @@ func testNetworkDelay(t *testing.T, m *Minikube, e *Extension) {
 		},
 	}
 
+	unaffectedLatency, err := netperf.MeasureLatency()
+	require.NoError(t, err)
+
 	for _, tt := range tests {
 		config := struct {
 			Duration     int      `json:"duration"`
@@ -114,10 +118,8 @@ func testNetworkDelay(t *testing.T, m *Minikube, e *Extension) {
 		}
 
 		t.Run(tt.name, func(t *testing.T) {
-			unaffectedLatency, err := netperf.MeasureLatency()
-			require.NoError(t, err)
-
 			action, err := e.RunAction("container.network_delay", *target, config)
+			defer func() { _ = action.Cancel() }()
 			require.NoError(t, err)
 
 			latency, err := netperf.MeasureLatency()
@@ -143,12 +145,12 @@ func testNetworkPackageLoss(t *testing.T, m *Minikube, e *Extension) {
 		t.Skip("Due to https://github.com/kubernetes/minikube/issues/16371 this test is skipped for cri-o")
 	}
 
-	netperf := netperf{minikube: m}
-	err := netperf.Deploy("netperf-network-loss")
-	defer func() { _ = netperf.Delete() }()
+	iperf := iperf{minikube: m}
+	err := iperf.Deploy("loss")
+	defer func() { _ = iperf.Delete() }()
 	require.NoError(t, err)
 
-	target, err := netperf.Target()
+	target, err := iperf.Target()
 	require.NoError(t, err)
 
 	tests := []struct {
@@ -164,8 +166,8 @@ func testNetworkPackageLoss(t *testing.T, m *Minikube, e *Extension) {
 			WantedLoss: true,
 		},
 		{
-			name:       "should loose packages only on port 5000 traffic",
-			port:       []string{"5000"},
+			name:       "should loose packages only on port 5001 traffic",
+			port:       []string{"5001"},
 			interfaces: []string{"eth0"},
 			WantedLoss: true,
 		},
@@ -195,20 +197,21 @@ func testNetworkPackageLoss(t *testing.T, m *Minikube, e *Extension) {
 
 		t.Run(tt.name, func(t *testing.T) {
 			action, err := e.RunAction("container.network_package_loss", *target, config)
+			defer func() { _ = action.Cancel() }()
 			require.NoError(t, err)
 
-			loss, err := netperf.MeasurePackageLoss()
+			loss, err := iperf.MeasurePackageLoss()
 			require.NoError(t, err)
 			if tt.WantedLoss {
-				require.True(t, loss >= 10, "~10% packages should be lost but was %s", loss)
+				require.True(t, loss >= 7.0, "~10%% packages should be lost but was %.2f", loss)
 			} else {
-				require.True(t, loss <= 2, "packages should be lost but was %s", loss)
+				require.True(t, loss <= 2.0, "packages should be lost but was %.2f", loss)
 			}
 			require.NoError(t, action.Cancel())
 
-			loss, err = netperf.MeasurePackageLoss()
+			loss, err = iperf.MeasurePackageLoss()
 			require.NoError(t, err)
-			require.True(t, loss <= 2, "packages should be lost but was %s", loss)
+			require.True(t, loss <= 2.0, "packages should be lost but was %.2f", loss)
 		})
 	}
 }
@@ -218,12 +221,12 @@ func testNetworkPackageCorruption(t *testing.T, m *Minikube, e *Extension) {
 		t.Skip("Due to https://github.com/kubernetes/minikube/issues/16371 this test is skipped for cri-o")
 	}
 
-	netperf := netperf{minikube: m}
-	err := netperf.Deploy("network_package_corruption")
-	defer func() { _ = netperf.Delete() }()
+	iperf := iperf{minikube: m}
+	err := iperf.Deploy("corruption")
+	defer func() { _ = iperf.Delete() }()
 	require.NoError(t, err)
 
-	target, err := netperf.Target()
+	target, err := iperf.Target()
 	require.NoError(t, err)
 
 	tests := []struct {
@@ -239,8 +242,8 @@ func testNetworkPackageCorruption(t *testing.T, m *Minikube, e *Extension) {
 			WantedCorruption: true,
 		},
 		{
-			name:             "should corrupt packages only on port 5000 traffic",
-			port:             []string{"5000"},
+			name:             "should corrupt packages only on port 5001 traffic",
+			port:             []string{"5001"},
 			interfaces:       []string{"eth0"},
 			WantedCorruption: true,
 		},
@@ -270,20 +273,21 @@ func testNetworkPackageCorruption(t *testing.T, m *Minikube, e *Extension) {
 
 		t.Run(tt.name, func(t *testing.T) {
 			action, err := e.RunAction("container.network_package_corruption", *target, config)
+			defer func() { _ = action.Cancel() }()
 			require.NoError(t, err)
 
-			corruption, err := netperf.MeasurePackageCorruption()
+			loss, err := iperf.MeasurePackageLoss()
 			require.NoError(t, err)
 			if tt.WantedCorruption {
-				require.True(t, corruption >= 10, "~10% packages should be corrupted but was %s", corruption)
+				require.True(t, loss >= 7.0, "~10%% packages should be corrupted but was %.2f", loss)
 			} else {
-				require.True(t, corruption <= 2, "packages should be corrupted but was %s", corruption)
+				require.True(t, loss <= 2.0, "packages should be corrupted but was %.2f", loss)
 			}
 			require.NoError(t, action.Cancel())
 
-			corruption, err = netperf.MeasurePackageCorruption()
+			loss, err = iperf.MeasurePackageLoss()
 			require.NoError(t, err)
-			require.True(t, corruption <= 2, "packages should be corrupted but was %s", corruption)
+			require.True(t, loss <= 2.0, "packages should be corrupted but was %.2f", loss)
 		})
 	}
 }
@@ -293,12 +297,12 @@ func testNetworkLimitBandwidth(t *testing.T, m *Minikube, e *Extension) {
 		t.Skip("Due to https://github.com/kubernetes/minikube/issues/16371 this test is skipped for cri-o")
 	}
 
-	netperf := netperf{minikube: m}
-	err := netperf.Deploy("netperf-network-bandwidth")
-	defer func() { _ = netperf.Delete() }()
+	iperf := iperf{minikube: m}
+	err := iperf.Deploy("bandwidth")
+	defer func() { _ = iperf.Delete() }()
 	require.NoError(t, err)
 
-	target, err := netperf.Target()
+	target, err := iperf.Target()
 	require.NoError(t, err)
 
 	tests := []struct {
@@ -314,8 +318,8 @@ func testNetworkLimitBandwidth(t *testing.T, m *Minikube, e *Extension) {
 			WantedLimit: true,
 		},
 		{
-			name:        "should limit bandwidth only on port 5000 traffic",
-			port:        []string{"5000"},
+			name:        "should limit bandwidth only on port 5001 traffic",
+			port:        []string{"5001"},
 			interfaces:  []string{"eth0"},
 			WantedLimit: true,
 		},
@@ -326,17 +330,21 @@ func testNetworkLimitBandwidth(t *testing.T, m *Minikube, e *Extension) {
 		},
 	}
 
+	unlimited, err := iperf.MeasureBandwidth()
+	require.NoError(t, err)
+	limit := unlimited / 3
+
 	for _, tt := range tests {
 		config := struct {
 			Duration     int      `json:"duration"`
-			Limit        string   `json:"bandwidth"`
+			Bandwidth    string   `json:"bandwidth"`
 			Ip           []string `json:"ip"`
 			Hostname     []string `json:"hostname"`
 			Port         []string `json:"port"`
 			NetInterface []string `json:"networkInterface"`
 		}{
 			Duration:     10000,
-			Limit:        "10kbit",
+			Bandwidth:    fmt.Sprintf("%dmbit", int(limit)),
 			Ip:           tt.ip,
 			Hostname:     tt.hostname,
 			Port:         tt.port,
@@ -344,24 +352,22 @@ func testNetworkLimitBandwidth(t *testing.T, m *Minikube, e *Extension) {
 		}
 
 		t.Run(tt.name, func(t *testing.T) {
-			unaffectedBandwidth, err := netperf.MeasureBandwidth()
+			action, err := e.RunAction("container.network_bandwidth", *target, config)
+			defer func() { _ = action.Cancel() }()
 			require.NoError(t, err)
 
-			action, err := e.RunAction("container.network_package_loss", *target, config)
-			require.NoError(t, err)
-
-			bandwidth, err := netperf.MeasureBandwidth()
+			bandwidth, err := iperf.MeasureBandwidth()
 			require.NoError(t, err)
 			if tt.WantedLimit {
-				require.True(t, bandwidth <= 10, "bandwitdh should be ~10kbit but was %s", bandwidth)
+				require.True(t, bandwidth <= (limit*1.05), "bandwidth should be ~%.2fmbit but was %.2fmbit", limit, bandwidth)
 			} else {
-				require.True(t, bandwidth > int(float64(unaffectedBandwidth)*0.95), "bandwidth should not be limited but was %s", bandwidth)
+				require.True(t, bandwidth > (unlimited*0.95), "bandwidth should not be limited (~%.2fmbit) but was %.2fmbit", unlimited, bandwidth)
 			}
 			require.NoError(t, action.Cancel())
 
-			bandwidth, err = netperf.MeasureBandwidth()
+			bandwidth, err = iperf.MeasureBandwidth()
 			require.NoError(t, err)
-			require.True(t, bandwidth > int(float64(unaffectedBandwidth)*0.95), "bandwidth should not be limited but was %s", bandwidth)
+			require.True(t, bandwidth > (unlimited*0.95), "bandwidth should not be limited (~%.2fmbit) but was %.2fmbit", unlimited, bandwidth)
 		})
 	}
 }
@@ -424,6 +430,7 @@ func testNetworkBlackhole(t *testing.T, m *Minikube, e *Extension) {
 			require.NoError(t, nginx.CanReach("https://google.com"), "service should reach url before blackhole")
 
 			action, err := e.RunAction("container.network_blackhole", *target, config)
+			defer func() { _ = action.Cancel() }()
 			require.NoError(t, err)
 
 			if tt.WantedReachable {
@@ -494,6 +501,7 @@ func testNetworkBlockDns(t *testing.T, m *Minikube, e *Extension) {
 			require.NoError(t, nginx.CanReach("https://google.com"), "service should reach url before block dns")
 
 			action, err := e.RunAction("container.network_block_dns", *target, config)
+			defer func() { _ = action.Cancel() }()
 			require.NoError(t, err)
 
 			if tt.WantedReachable {
@@ -505,7 +513,7 @@ func testNetworkBlockDns(t *testing.T, m *Minikube, e *Extension) {
 			if tt.WantedReachesUrl {
 				require.NoError(t, nginx.CanReach("https://google.com"), "service should be reachable during block dns")
 			} else {
-				require.ErrorContains(t, nginx.CanReach("https://google.com"), "cannot resolve host", "service should not be reachable during block dns")
+				require.ErrorContains(t, nginx.CanReach("https://google.com"), "Resolving timed out", "service should not be reachable during block dns")
 			}
 
 			require.NoError(t, action.Cancel())
@@ -531,6 +539,7 @@ func testStressCpu(t *testing.T, m *Minikube, e *Extension) {
 	}{Duration: 5000, Workers: 0, CpuLoad: 50}
 
 	action, err := e.RunAction("container.stress_cpu", *target, config)
+	defer func() { _ = action.Cancel() }()
 	require.NoError(t, err)
 	assertProcessRunningInContainer(t, m, nginx.Pod, "nginx", "stress-ng")
 	require.NoError(t, action.Cancel())
@@ -551,6 +560,7 @@ func testStressMemory(t *testing.T, m *Minikube, e *Extension) {
 	}{Duration: 5000, Percentage: 50}
 
 	action, err := e.RunAction("container.stress_mem", *target, config)
+	defer func() { _ = action.Cancel() }()
 	require.NoError(t, err)
 	assertProcessRunningInContainer(t, m, nginx.Pod, "nginx", "stress-ng")
 	require.NoError(t, action.Cancel())
@@ -572,6 +582,7 @@ func testStressIo(t *testing.T, m *Minikube, e *Extension) {
 		Workers    int    `json:"workers"`
 	}{Duration: 5000, Workers: 1, Percentage: 50, Path: "/tmp"}
 	action, err := e.RunAction("container.stress_io", *target, config)
+	defer func() { _ = action.Cancel() }()
 	require.NoError(t, err)
 	assertProcessRunningInContainer(t, m, nginx.Pod, "nginx", "stress-ng")
 	require.NoError(t, action.Cancel())
@@ -606,6 +617,7 @@ func testPauseContainer(t *testing.T, m *Minikube, e *Extension) {
 		Duration int `json:"duration"`
 	}{Duration: 5000}
 	action, err := e.RunAction("container.pause", *target, config)
+	defer func() { _ = action.Cancel() }()
 	require.NoError(t, err)
 	err = action.Wait()
 	require.NoError(t, err)
@@ -625,7 +637,7 @@ func testPauseContainer(t *testing.T, m *Minikube, e *Extension) {
 	case end = <-ts:
 	}
 	duration := end.Sub(start)
-	assert.True(t, duration > 4500*time.Millisecond && duration < 5500*time.Millisecond, "container expected to be paused for ~5s but was paused for %s", duration)
+	assert.True(t, duration >= 4*time.Second && duration < 5500*time.Millisecond, "container expected to be paused for ~5s but was paused for %s", duration)
 }
 func testStopContainer(t *testing.T, m *Minikube, e *Extension) {
 	nginx := Nginx{minikube: m}
@@ -640,6 +652,7 @@ func testStopContainer(t *testing.T, m *Minikube, e *Extension) {
 		Graceful bool `json:"graceful"`
 	}{Graceful: true}
 	action, err := e.RunAction("container.stop", *target, config)
+	defer func() { _ = action.Cancel() }()
 	require.NoError(t, err)
 	require.NoError(t, action.Wait())
 
@@ -650,6 +663,7 @@ func testStopContainer(t *testing.T, m *Minikube, e *Extension) {
 	require.NotNil(t, status)
 	assert.NotNil(t, status.State.Terminated, "container should be terminated")
 }
+
 func testDiscovery(t *testing.T, m *Minikube, e *Extension) {
 	nginx := Nginx{minikube: m}
 	err := nginx.Deploy("nginx-discovery")

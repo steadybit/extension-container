@@ -15,7 +15,7 @@ import (
 	"github.com/steadybit/extension-kit/extutil"
 )
 
-func NewNetworkBandwidthContainerAction(runc runc.Runc) action_kit_sdk.Action[NetworkActionState] {
+func NewNetworkLimitBandwidthContainerAction(runc runc.Runc) action_kit_sdk.Action[NetworkActionState] {
 	return &networkAction{
 		optsProvider: limitBandwidth(runc),
 		optsDecoder:  limitBandwidthDecode,

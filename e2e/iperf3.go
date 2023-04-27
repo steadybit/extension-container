@@ -4,27 +4,26 @@
 package e2e
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
 	"github.com/steadybit/extension-kit/extutil"
+	"github.com/yalp/jsonpath"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	acorev1 "k8s.io/client-go/applyconfigurations/core/v1"
 	ametav1 "k8s.io/client-go/applyconfigurations/meta/v1"
-	"strconv"
-	"strings"
-	"time"
 )
 
-type netperf struct {
+type iperf struct {
 	minikube  *Minikube
 	ServerPod metav1.Object
 	ClientPod metav1.Object
 	ServerIp  string
 }
 
-func (n *netperf) Deploy(name string) error {
+func (n *iperf) Deploy(name string) error {
 	serverPodName := fmt.Sprintf("%s-server", name)
 	pod, err := n.minikube.CreatePod(&acorev1.PodApplyConfiguration{
 		TypeMetaApplyConfiguration: ametav1.TypeMetaApplyConfiguration{
@@ -39,13 +38,13 @@ func (n *netperf) Deploy(name string) error {
 			RestartPolicy: extutil.Ptr(corev1.RestartPolicyNever),
 			Containers: []acorev1.ContainerApplyConfiguration{
 				{
-					Name:  extutil.Ptr("netserver"),
-					Image: extutil.Ptr("networkstatic/netserver:latest"),
-					Args:  []string{"-D"},
+					Name:  extutil.Ptr("iperf"),
+					Image: extutil.Ptr("networkstatic/iperf3:latest"),
+					Args:  []string{"-s", "-p", "5201"},
 					Ports: []acorev1.ContainerPortApplyConfiguration{
 						{
 							Name:          extutil.Ptr("control"),
-							ContainerPort: extutil.Ptr(int32(12865)),
+							ContainerPort: extutil.Ptr(int32(5201)),
 						},
 						{
 							Name:          extutil.Ptr("data-tcp"),
@@ -70,8 +69,8 @@ func (n *netperf) Deploy(name string) error {
 	if err != nil {
 		return err
 	}
-	n.ServerPod = pod
 	n.ServerIp = describe.Status.PodIP
+	n.ServerPod = pod
 
 	clientPodName := fmt.Sprintf("%s-client", name)
 	pod, err = n.minikube.CreatePod(&acorev1.PodApplyConfiguration{
@@ -87,8 +86,8 @@ func (n *netperf) Deploy(name string) error {
 			RestartPolicy: extutil.Ptr(corev1.RestartPolicyNever),
 			Containers: []acorev1.ContainerApplyConfiguration{
 				{
-					Name:    extutil.Ptr("netperf"),
-					Image:   extutil.Ptr("networkstatic/netperf:latest"),
+					Name:    extutil.Ptr("iperf"),
+					Image:   extutil.Ptr("networkstatic/iperf3:latest"),
 					Command: []string{"sleep", "infinity"},
 				},
 			},
@@ -102,50 +101,52 @@ func (n *netperf) Deploy(name string) error {
 	return nil
 }
 
-func (n *netperf) Target() (*action_kit_api.Target, error) {
-	return NewContainerTarget(n.minikube, n.ServerPod, "netserver")
+func (n *iperf) Target() (*action_kit_api.Target, error) {
+	return NewContainerTarget(n.minikube, n.ServerPod, "iperf")
 }
 
-func (n *netperf) MeasureLatency() (time.Duration, error) {
-	out, err := n.run("TCP_RR", "-P5000", "-r", "1,1", "-o", "mean_latency")
+func (n *iperf) MeasurePackageLoss() (float64, error) {
+	out, err := n.minikube.Exec(n.ClientPod, "iperf", "iperf3", "--client", n.ServerIp, "--port=5201", "--udp", "--time=2", "--length=1k", "--bind=0.0.0.0", "--reverse", "--cport=5001", "--no-delay", "--zerocopy", "--json")
 	if err != nil {
 		return 0, fmt.Errorf("%s: %s", err, out)
 	}
 
-	lines := strings.Split(out, "\n")
-	if len(lines) < 3 {
-		return 0, fmt.Errorf("unexpected output: %s", out)
-	}
-
-	latency, err := strconv.ParseFloat(strings.TrimSpace(lines[2]), 64)
+	var result interface{}
+	err = json.Unmarshal([]byte(out), &result)
 	if err != nil {
-		return 0, fmt.Errorf("unexpected output: %s", out)
+		return 0, fmt.Errorf("failed reading results: %w", err)
 	}
-	duration := time.Duration(latency) * time.Microsecond
-	return duration, nil
+
+	lost, err := jsonpath.Read(result, "$.end.sum.lost_percent")
+	if err != nil {
+		return 0, fmt.Errorf("failed reading lost_percent: %w", err)
+	}
+	return lost.(float64), nil
 }
 
-func (n *netperf) run(test string, args ...string) (string, error) {
-	var out string
-	var err error
-	cmd := append([]string{"netperf", "-H", n.ServerIp, "-l2", "-t", test, "--"}, args...)
-	for attempt := 0; attempt < 5; attempt++ {
-		out, err = n.minikube.Exec(n.ClientPod, "netperf", cmd...)
-		if err == nil {
-			break
-		} else {
-			if !strings.Contains(out, "Cannot assign requested address") {
-				return "", fmt.Errorf("%s: %s", err, out)
-			}
-			time.Sleep(100 * time.Millisecond)
-		}
-	}
-	return out, err
-}
-func (n *netperf) Delete() error {
+func (n *iperf) Delete() error {
 	return errors.Join(
 		n.minikube.DeletePod(n.ServerPod),
 		n.minikube.DeletePod(n.ClientPod),
 	)
 
+}
+
+func (n *iperf) MeasureBandwidth() (float64, error) {
+	out, err := n.minikube.Exec(n.ClientPod, "iperf", "iperf3", "--client", n.ServerIp, "--port=5201", "--udp", "--time=2", "--bind=0.0.0.0", "--reverse", "--cport=5001", "--bitrate=500M", "--no-delay", "--json")
+	if err != nil {
+		return 0, fmt.Errorf("%s: %s", err, out)
+	}
+
+	var result interface{}
+	err = json.Unmarshal([]byte(out), &result)
+	if err != nil {
+		return 0, fmt.Errorf("failed reading results: %w", err)
+	}
+
+	bps, err := jsonpath.Read(result, "$.end.sum.bits_per_second")
+	if err != nil {
+		return 0, fmt.Errorf("failed reading bits_per_second: %w", err)
+	}
+	return bps.(float64) / 1_000_000, nil
 }

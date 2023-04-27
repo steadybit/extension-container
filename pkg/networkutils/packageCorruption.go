@@ -25,7 +25,7 @@ func (o *CorruptPackagesOpts) TcCommands(mode Mode) (io.Reader, error) {
 
 	for _, ifc := range o.Interfaces {
 		cmds = append(cmds, fmt.Sprintf("qdisc %s dev %s root handle 1: prio", mode, ifc))
-		cmds = append(cmds, fmt.Sprintf("qdisc %s dev %s parent %s handle 30: netem corrupt %d%", mode, ifc, handleInclude, o.Corruption))
+		cmds = append(cmds, fmt.Sprintf("qdisc %s dev %s parent %s handle 30: netem corrupt %d%%", mode, ifc, handleInclude, o.Corruption))
 
 		filterCmds, err := tcCommandsForFilter(mode, &o.Filter, ifc)
 		if err != nil {
@@ -41,7 +41,7 @@ func (o *CorruptPackagesOpts) TcCommands(mode Mode) (io.Reader, error) {
 func (o *CorruptPackagesOpts) String() string {
 	var sb strings.Builder
 	sb.WriteString("Corrupting Packages (corruption: ")
-	sb.WriteString(fmt.Sprintf("%d%", o.Corruption))
+	sb.WriteString(fmt.Sprintf("%d%%", o.Corruption))
 	sb.WriteString(", Interfaces: ")
 	sb.WriteString(strings.Join(o.Interfaces, ", "))
 	sb.WriteString(")")

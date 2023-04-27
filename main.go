@@ -58,9 +58,9 @@ func main() {
 	action_kit_sdk.RegisterAction(extcontainer.NewNetworkBlackholeContainerAction(r))
 	action_kit_sdk.RegisterAction(extcontainer.NewNetworkBlockDnsContainerAction(r))
 	action_kit_sdk.RegisterAction(extcontainer.NewNetworkDelayContainerAction(r))
-	action_kit_sdk.RegisterAction(extcontainer.NewNetworkBandwidthContainerAction(r))
-	action_kit_sdk.RegisterAction(extcontainer.NewNetworkCorruptContainerAction(r))
-	action_kit_sdk.RegisterAction(extcontainer.NewNetworkLossContainerAction(r))
+	action_kit_sdk.RegisterAction(extcontainer.NewNetworkLimitBandwidthContainerAction(r))
+	action_kit_sdk.RegisterAction(extcontainer.NewNetworkCorruptPackagesContainerAction(r))
+	action_kit_sdk.RegisterAction(extcontainer.NewNetworkPackageLossContainerAction(r))
 
 	exthttp.Listen(exthttp.ListenOpts{
 		Port: 8080,
