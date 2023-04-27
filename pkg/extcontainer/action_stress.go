@@ -10,7 +10,6 @@ import (
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
 	"github.com/steadybit/action-kit/go/action_kit_sdk"
 	"github.com/steadybit/extension-container/pkg/container/runc"
-	"github.com/steadybit/extension-container/pkg/container/types"
 	"github.com/steadybit/extension-container/pkg/stress"
 	extension_kit "github.com/steadybit/extension-kit"
 	"github.com/steadybit/extension-kit/extutil"
@@ -19,7 +18,6 @@ import (
 type stressOptsProvider func(request action_kit_api.PrepareActionRequestBody) (stress.StressOpts, error)
 
 type stressAction struct {
-	client       types.Client
 	runc         runc.Runc
 	description  action_kit_api.ActionDescription
 	optsProvider stressOptsProvider
@@ -38,7 +36,6 @@ var _ action_kit_sdk.ActionWithStatus[StressActionState] = (*stressAction)(nil)
 var _ action_kit_sdk.ActionWithStop[StressActionState] = (*stressAction)(nil)
 
 func newStressAction(
-	client types.Client,
 	runc runc.Runc,
 	description func() action_kit_api.ActionDescription,
 	optsProvider stressOptsProvider,
@@ -46,7 +43,6 @@ func newStressAction(
 	return &stressAction{
 		description:  description(),
 		optsProvider: optsProvider,
-		client:       client,
 		runc:         runc,
 		stresses:     make(map[uuid.UUID]*stress.Stress),
 	}

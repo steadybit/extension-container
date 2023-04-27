@@ -10,7 +10,7 @@ import (
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
 	"github.com/steadybit/action-kit/go/action_kit_sdk"
 	"github.com/steadybit/extension-container/pkg/container/runc"
-	"github.com/steadybit/extension-container/pkg/network"
+	"github.com/steadybit/extension-container/pkg/networkutils"
 	"github.com/steadybit/extension-kit/extbuild"
 	"github.com/steadybit/extension-kit/extutil"
 )
@@ -43,7 +43,7 @@ func getNetworkBlackholeDescription() action_kit_api.ActionDescription {
 }
 
 func blackhole(r runc.Runc) networkOptsProvider {
-	return func(ctx context.Context, request action_kit_api.PrepareActionRequestBody) (network.Opts, error) {
+	return func(ctx context.Context, request action_kit_api.PrepareActionRequestBody) (networkutils.Opts, error) {
 		containerId := request.Target.Attributes["container.id"][0]
 
 		var restrictedUrls []string
@@ -56,12 +56,12 @@ func blackhole(r runc.Runc) networkOptsProvider {
 			return nil, err
 		}
 
-		return &network.BlackholeOpts{Filter: filter}, nil
+		return &networkutils.BlackholeOpts{Filter: filter}, nil
 	}
 }
 
-func blackholeDecode(data json.RawMessage) (network.Opts, error) {
-	var opts network.BlackholeOpts
+func blackholeDecode(data json.RawMessage) (networkutils.Opts, error) {
+	var opts networkutils.BlackholeOpts
 	err := json.Unmarshal(data, &opts)
 	return &opts, err
 }

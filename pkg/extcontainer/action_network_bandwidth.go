@@ -10,21 +10,21 @@ import (
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
 	"github.com/steadybit/action-kit/go/action_kit_sdk"
 	"github.com/steadybit/extension-container/pkg/container/runc"
-	"github.com/steadybit/extension-container/pkg/network"
+	"github.com/steadybit/extension-container/pkg/networkutils"
 	"github.com/steadybit/extension-kit/extbuild"
 	"github.com/steadybit/extension-kit/extutil"
 )
 
 func NewNetworkBandwidthContainerAction(runc runc.Runc) action_kit_sdk.Action[NetworkActionState] {
 	return &networkAction{
-		optsProvider: bandwidth(runc),
-		optsDecoder:  bandwidthDecode,
-		description:  getNetworkBandwidthDescription(),
+		optsProvider: limitBandwidth(runc),
+		optsDecoder:  limitBandwidthDecode,
+		description:  getNetworkLimitBandwidthDescription(),
 		runc:         runc,
 	}
 }
 
-func getNetworkBandwidthDescription() action_kit_api.ActionDescription {
+func getNetworkLimitBandwidthDescription() action_kit_api.ActionDescription {
 	return action_kit_api.ActionDescription{
 		Id:          fmt.Sprintf("%s.network_bandwidth", targetID),
 		Label:       "Limit Bandwidth",
@@ -61,8 +61,8 @@ func getNetworkBandwidthDescription() action_kit_api.ActionDescription {
 	}
 }
 
-func bandwidth(r runc.Runc) networkOptsProvider {
-	return func(ctx context.Context, request action_kit_api.PrepareActionRequestBody) (network.Opts, error) {
+func limitBandwidth(r runc.Runc) networkOptsProvider {
+	return func(ctx context.Context, request action_kit_api.PrepareActionRequestBody) (networkutils.Opts, error) {
 		containerId := request.Target.Attributes["container.id"][0]
 		bandwidth := extutil.ToString(request.Config["bandwidth"])
 
@@ -88,7 +88,7 @@ func bandwidth(r runc.Runc) networkOptsProvider {
 			return nil, fmt.Errorf("no network interfaces specified")
 		}
 
-		return &network.BandwidthOpts{
+		return &networkutils.LimitBandwidthOpts{
 			Filter:     filter,
 			Bandwidth:  bandwidth,
 			Interfaces: interfaces,
@@ -96,8 +96,8 @@ func bandwidth(r runc.Runc) networkOptsProvider {
 	}
 }
 
-func bandwidthDecode(data json.RawMessage) (network.Opts, error) {
-	var opts network.BandwidthOpts
+func limitBandwidthDecode(data json.RawMessage) (networkutils.Opts, error) {
+	var opts networkutils.LimitBandwidthOpts
 	err := json.Unmarshal(data, &opts)
 	return &opts, err
 }

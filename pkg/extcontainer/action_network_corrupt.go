@@ -13,23 +13,22 @@ import (
 	"github.com/steadybit/extension-container/pkg/networkutils"
 	"github.com/steadybit/extension-kit/extbuild"
 	"github.com/steadybit/extension-kit/extutil"
-	"time"
 )
 
-func NewNetworkDelayContainerAction(r runc.Runc) action_kit_sdk.Action[NetworkActionState] {
+func NewNetworkCorruptContainerAction(r runc.Runc) action_kit_sdk.Action[NetworkActionState] {
 	return &networkAction{
-		optsProvider: delay(r),
-		optsDecoder:  delayDecode,
-		description:  getNetworkDelayDescription(),
+		optsProvider: corruptPackages(r),
+		optsDecoder:  corruptPackagesDecode,
+		description:  getNetworkCorruptDescription(),
 		runc:         r,
 	}
 }
 
-func getNetworkDelayDescription() action_kit_api.ActionDescription {
+func getNetworkCorruptDescription() action_kit_api.ActionDescription {
 	return action_kit_api.ActionDescription{
-		Id:          fmt.Sprintf("%s.network_delay", targetID),
-		Label:       "Delay Traffic",
-		Description: "Inject latency into egress network traffic.",
+		Id:          fmt.Sprintf("%s.network_package_corruption", targetID),
+		Label:       "Package Corruption",
+		Description: "Inject corrupt packets by introducing single bit error at a random offset into network traffic.",
 		Version:     extbuild.GetSemverVersionStringOrUnknown(),
 		Icon:        extutil.Ptr(targetIcon),
 		TargetSelection: &action_kit_api.TargetSelection{
@@ -42,22 +41,13 @@ func getNetworkDelayDescription() action_kit_api.ActionDescription {
 		Parameters: append(
 			commonNetworkParameters,
 			action_kit_api.ActionParameter{
-				Name:         "networkDelay",
-				Label:        "Network Delay",
-				Description:  extutil.Ptr("How much should the traffic be delayed?"),
-				Type:         action_kit_api.Duration,
-				DefaultValue: extutil.Ptr("500ms"),
+				Name:         "networkCorruption",
+				Label:        "Package Corruption",
+				Description:  extutil.Ptr("How much of the traffic should be corrupted?"),
+				Type:         action_kit_api.Percentage,
+				DefaultValue: extutil.Ptr("15"),
 				Required:     extutil.Ptr(true),
 				Order:        extutil.Ptr(1),
-			},
-			action_kit_api.ActionParameter{
-				Name:         "networkDelayJitter",
-				Label:        "Jitter",
-				Description:  extutil.Ptr("Add random +/-30% jitter to network delay?"),
-				Type:         action_kit_api.Boolean,
-				DefaultValue: extutil.Ptr("true"),
-				Required:     extutil.Ptr(true),
-				Order:        extutil.Ptr(2),
 			},
 			action_kit_api.ActionParameter{
 				Name:        "networkInterface",
@@ -71,16 +61,10 @@ func getNetworkDelayDescription() action_kit_api.ActionDescription {
 	}
 }
 
-func delay(r runc.Runc) networkOptsProvider {
+func corruptPackages(r runc.Runc) networkOptsProvider {
 	return func(ctx context.Context, request action_kit_api.PrepareActionRequestBody) (networkutils.Opts, error) {
 		containerId := request.Target.Attributes["container.id"][0]
-		delay := time.Duration(extutil.ToInt64(request.Config["networkDelay"])) * time.Millisecond
-		hasJitter := extutil.ToBool(request.Config["networkDelayJitter"])
-
-		jitter := 0 * time.Millisecond
-		if hasJitter {
-			jitter = delay * 30 / 100
-		}
+		corruption := extutil.ToUInt(request.Config["networkCorrupt"])
 
 		var restrictedUrls []string
 		if request.ExecutionContext != nil && request.ExecutionContext.RestrictedUrls != nil {
@@ -104,17 +88,16 @@ func delay(r runc.Runc) networkOptsProvider {
 			return nil, fmt.Errorf("no network interfaces specified")
 		}
 
-		return &networkutils.DelayOpts{
+		return &networkutils.CorruptPackagesOpts{
 			Filter:     filter,
-			Delay:      delay,
-			Jitter:     jitter,
+			Corruption: corruption,
 			Interfaces: interfaces,
 		}, nil
 	}
 }
 
-func delayDecode(data json.RawMessage) (networkutils.Opts, error) {
-	var opts networkutils.DelayOpts
+func corruptPackagesDecode(data json.RawMessage) (networkutils.Opts, error) {
+	var opts networkutils.CorruptPackagesOpts
 	err := json.Unmarshal(data, &opts)
 	return &opts, err
 }

@@ -11,15 +11,16 @@ import (
 	"github.com/steadybit/action-kit/go/action_kit_sdk"
 	"github.com/steadybit/extension-container/pkg/container/runc"
 	"github.com/steadybit/extension-container/pkg/network"
+	"github.com/steadybit/extension-container/pkg/networkutils"
 	extension_kit "github.com/steadybit/extension-kit"
 	"github.com/steadybit/extension-kit/extutil"
 	"net/url"
 	"strconv"
 )
 
-type networkOptsProvider func(ctx context.Context, request action_kit_api.PrepareActionRequestBody) (network.Opts, error)
+type networkOptsProvider func(ctx context.Context, request action_kit_api.PrepareActionRequestBody) (networkutils.Opts, error)
 
-type networkOptsDecoder func(data json.RawMessage) (network.Opts, error)
+type networkOptsDecoder func(data json.RawMessage) (networkutils.Opts, error)
 
 type networkAction struct {
 	runc         runc.Runc
@@ -42,7 +43,7 @@ var commonNetworkParameters = []action_kit_api.ActionParameter{
 	{
 		Name:         "duration",
 		Label:        "Duration",
-		Description:  extutil.Ptr("How long should the traffic be blocked?"),
+		Description:  extutil.Ptr("How long should the network be affected?"),
 		Type:         action_kit_api.Duration,
 		DefaultValue: extutil.Ptr("30s"),
 		Required:     extutil.Ptr(true),
@@ -174,15 +175,15 @@ func (a *networkAction) Stop(ctx context.Context, state *NetworkActionState) (*a
 	return nil, nil
 }
 
-func parsePortRanges(raw []string) ([]network.PortRange, error) {
+func parsePortRanges(raw []string) ([]networkutils.PortRange, error) {
 	if raw == nil {
 		return nil, nil
 	}
 
-	var ranges []network.PortRange
+	var ranges []networkutils.PortRange
 
 	for _, r := range raw {
-		parsed, err := network.ParsePortRange(r)
+		parsed, err := networkutils.ParsePortRange(r)
 		if err != nil {
 			return nil, err
 		}
@@ -192,14 +193,14 @@ func parsePortRanges(raw []string) ([]network.PortRange, error) {
 	return ranges, nil
 }
 
-func mapToNetworkFilter(ctx context.Context, r runc.Runc, containerId string, config map[string]interface{}, restrictedUrls []string) (network.Filter, error) {
+func mapToNetworkFilter(ctx context.Context, r runc.Runc, containerId string, config map[string]interface{}, restrictedUrls []string) (networkutils.Filter, error) {
 	toResolve := append(
 		toStringArray(config["ip"]),
 		toStringArray(config["hostname"])...,
 	)
 	includeCidrs, err := network.ResolveHostnames(ctx, r, RemovePrefix(containerId), toResolve...)
 	if err != nil {
-		return network.Filter{}, err
+		return networkutils.Filter{}, err
 	}
 	if len(includeCidrs) == 0 {
 		//if no hostname/ip specified we affect all ips
@@ -208,26 +209,26 @@ func mapToNetworkFilter(ctx context.Context, r runc.Runc, containerId string, co
 
 	portRanges, err := parsePortRanges(toStringArray(config["port"]))
 	if err != nil {
-		return network.Filter{}, err
+		return networkutils.Filter{}, err
 	}
 	if len(portRanges) == 0 {
 		//if no hostname/ip specified we affect all ports
-		portRanges = []network.PortRange{network.PortRangeAny}
+		portRanges = []networkutils.PortRange{networkutils.PortRangeAny}
 	}
 
-	includes := network.NewCidrWithPortRanges(includeCidrs, portRanges...)
-	var excludes []network.CidrWithPortRange
+	includes := networkutils.NewCidrWithPortRanges(includeCidrs, portRanges...)
+	var excludes []networkutils.CidrWithPortRange
 
 	for _, restrictedUrl := range restrictedUrls {
 		ips, port, err := resolveUrl(ctx, r, containerId, restrictedUrl)
 		if err != nil {
-			return network.Filter{}, err
+			return networkutils.Filter{}, err
 		}
 
-		excludes = append(excludes, network.NewCidrWithPortRanges(ips, network.PortRange{From: port, To: port})...)
+		excludes = append(excludes, networkutils.NewCidrWithPortRanges(ips, networkutils.PortRange{From: port, To: port})...)
 	}
 
-	return network.Filter{
+	return networkutils.Filter{
 		Include: includes,
 		Exclude: excludes,
 	}, nil

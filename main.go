@@ -52,11 +52,15 @@ func main() {
 	extcontainer.RegisterDiscoveryHandlers(client)
 	action_kit_sdk.RegisterAction(extcontainer.NewPauseContainerAction(client))
 	action_kit_sdk.RegisterAction(extcontainer.NewStopContainerAction(client))
-	action_kit_sdk.RegisterAction(extcontainer.NewStressCpuContainerAction(client, r))
-	action_kit_sdk.RegisterAction(extcontainer.NewStressMemoryContainerAction(client, r))
-	action_kit_sdk.RegisterAction(extcontainer.NewStressIoContainerAction(client, r))
+	action_kit_sdk.RegisterAction(extcontainer.NewStressCpuContainerAction(r))
+	action_kit_sdk.RegisterAction(extcontainer.NewStressMemoryContainerAction(r))
+	action_kit_sdk.RegisterAction(extcontainer.NewStressIoContainerAction(r))
 	action_kit_sdk.RegisterAction(extcontainer.NewNetworkBlackholeContainerAction(r))
+	action_kit_sdk.RegisterAction(extcontainer.NewNetworkBlockDnsContainerAction(r))
 	action_kit_sdk.RegisterAction(extcontainer.NewNetworkDelayContainerAction(r))
+	action_kit_sdk.RegisterAction(extcontainer.NewNetworkBandwidthContainerAction(r))
+	action_kit_sdk.RegisterAction(extcontainer.NewNetworkCorruptContainerAction(r))
+	action_kit_sdk.RegisterAction(extcontainer.NewNetworkLossContainerAction(r))
 
 	exthttp.Listen(exthttp.ListenOpts{
 		Port: 8080,

@@ -8,15 +8,14 @@ import (
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
 	"github.com/steadybit/action-kit/go/action_kit_sdk"
 	"github.com/steadybit/extension-container/pkg/container/runc"
-	"github.com/steadybit/extension-container/pkg/container/types"
 	"github.com/steadybit/extension-container/pkg/stress"
 	"github.com/steadybit/extension-kit/extbuild"
 	"github.com/steadybit/extension-kit/extutil"
 	"time"
 )
 
-func NewStressIoContainerAction(client types.Client, runc runc.Runc) action_kit_sdk.Action[StressActionState] {
-	return newStressAction(client, runc, getStressIoDescription, stressIo)
+func NewStressIoContainerAction(r runc.Runc) action_kit_sdk.Action[StressActionState] {
+	return newStressAction(r, getStressIoDescription, stressIo)
 }
 
 func getStressIoDescription() action_kit_api.ActionDescription {

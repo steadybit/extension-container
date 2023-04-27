@@ -167,3 +167,15 @@ func (n *netperf) Delete() error {
 	)
 
 }
+
+func (n *netperf) MeasurePackageLoss() (int, error) {
+	panic("implement me")
+}
+
+func (n *netperf) MeasurePackageCorruption() (int, error) {
+	panic("implement me")
+}
+
+func (n *netperf) MeasureBandwidth() (int, error) {
+	panic("implement me")
+}

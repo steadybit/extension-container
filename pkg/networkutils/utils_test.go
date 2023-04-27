@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2023 Steadybit GmbH
 
-package network
+package networkutils
 
 import (
 	"reflect"
 	"testing"
 )
 
-func Test_mask(t *testing.T) {
+func Test_getMask(t *testing.T) {
 	tests := []struct {
 		name      string
 		portRange PortRange

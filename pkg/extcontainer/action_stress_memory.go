@@ -8,15 +8,14 @@ import (
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
 	"github.com/steadybit/action-kit/go/action_kit_sdk"
 	"github.com/steadybit/extension-container/pkg/container/runc"
-	"github.com/steadybit/extension-container/pkg/container/types"
 	"github.com/steadybit/extension-container/pkg/stress"
 	"github.com/steadybit/extension-kit/extbuild"
 	"github.com/steadybit/extension-kit/extutil"
 	"time"
 )
 
-func NewStressMemoryContainerAction(client types.Client, runc runc.Runc) action_kit_sdk.Action[StressActionState] {
-	return newStressAction(client, runc, getStressMemoryDescription, stressMemory)
+func NewStressMemoryContainerAction(r runc.Runc) action_kit_sdk.Action[StressActionState] {
+	return newStressAction(r, getStressMemoryDescription, stressMemory)
 }
 
 func getStressMemoryDescription() action_kit_api.ActionDescription {

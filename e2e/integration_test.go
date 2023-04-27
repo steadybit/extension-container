@@ -40,6 +40,18 @@ func TestWithMinikube(t *testing.T) {
 		}, {
 			Name: "network delay",
 			Test: testNetworkDelay,
+		}, {
+			Name: "network block dns",
+			Test: testNetworkBlockDns,
+		}, {
+			Name: "network limit bandwidth",
+			Test: testNetworkLimitBandwidth,
+		}, {
+			Name: "network package loss",
+			Test: testNetworkPackageLoss,
+		}, {
+			Name: "network package corruption",
+			Test: testNetworkPackageCorruption,
 		},
 	})
 }
@@ -126,6 +138,234 @@ func testNetworkDelay(t *testing.T, m *Minikube, e *Extension) {
 	}
 }
 
+func testNetworkPackageLoss(t *testing.T, m *Minikube, e *Extension) {
+	if m.runtime == "cri-o" {
+		t.Skip("Due to https://github.com/kubernetes/minikube/issues/16371 this test is skipped for cri-o")
+	}
+
+	netperf := netperf{minikube: m}
+	err := netperf.Deploy("netperf-network-loss")
+	defer func() { _ = netperf.Delete() }()
+	require.NoError(t, err)
+
+	target, err := netperf.Target()
+	require.NoError(t, err)
+
+	tests := []struct {
+		name       string
+		ip         []string
+		hostname   []string
+		port       []string
+		interfaces []string
+		WantedLoss bool
+	}{
+		{
+			name:       "should loose packages on all traffic",
+			WantedLoss: true,
+		},
+		{
+			name:       "should loose packages only on port 5000 traffic",
+			port:       []string{"5000"},
+			interfaces: []string{"eth0"},
+			WantedLoss: true,
+		},
+		{
+			name:       "should loose packages only on port 80 traffic",
+			port:       []string{"80"},
+			WantedLoss: false,
+		},
+	}
+
+	for _, tt := range tests {
+		config := struct {
+			Duration     int      `json:"duration"`
+			Loss         int      `json:"networkLoss"`
+			Ip           []string `json:"ip"`
+			Hostname     []string `json:"hostname"`
+			Port         []string `json:"port"`
+			NetInterface []string `json:"networkInterface"`
+		}{
+			Duration:     10000,
+			Loss:         10,
+			Ip:           tt.ip,
+			Hostname:     tt.hostname,
+			Port:         tt.port,
+			NetInterface: tt.interfaces,
+		}
+
+		t.Run(tt.name, func(t *testing.T) {
+			action, err := e.RunAction("container.network_package_loss", *target, config)
+			require.NoError(t, err)
+
+			loss, err := netperf.MeasurePackageLoss()
+			require.NoError(t, err)
+			if tt.WantedLoss {
+				require.True(t, loss >= 10, "~10% packages should be lost but was %s", loss)
+			} else {
+				require.True(t, loss <= 2, "packages should be lost but was %s", loss)
+			}
+			require.NoError(t, action.Cancel())
+
+			loss, err = netperf.MeasurePackageLoss()
+			require.NoError(t, err)
+			require.True(t, loss <= 2, "packages should be lost but was %s", loss)
+		})
+	}
+}
+
+func testNetworkPackageCorruption(t *testing.T, m *Minikube, e *Extension) {
+	if m.runtime == "cri-o" {
+		t.Skip("Due to https://github.com/kubernetes/minikube/issues/16371 this test is skipped for cri-o")
+	}
+
+	netperf := netperf{minikube: m}
+	err := netperf.Deploy("network_package_corruption")
+	defer func() { _ = netperf.Delete() }()
+	require.NoError(t, err)
+
+	target, err := netperf.Target()
+	require.NoError(t, err)
+
+	tests := []struct {
+		name             string
+		ip               []string
+		hostname         []string
+		port             []string
+		interfaces       []string
+		WantedCorruption bool
+	}{
+		{
+			name:             "should corrupt packages on all traffic",
+			WantedCorruption: true,
+		},
+		{
+			name:             "should corrupt packages only on port 5000 traffic",
+			port:             []string{"5000"},
+			interfaces:       []string{"eth0"},
+			WantedCorruption: true,
+		},
+		{
+			name:             "should corrupt packages only on port 80 traffic",
+			port:             []string{"80"},
+			WantedCorruption: false,
+		},
+	}
+
+	for _, tt := range tests {
+		config := struct {
+			Duration     int      `json:"duration"`
+			Corruption   int      `json:"networkCorruption"`
+			Ip           []string `json:"ip"`
+			Hostname     []string `json:"hostname"`
+			Port         []string `json:"port"`
+			NetInterface []string `json:"networkInterface"`
+		}{
+			Duration:     10000,
+			Corruption:   10,
+			Ip:           tt.ip,
+			Hostname:     tt.hostname,
+			Port:         tt.port,
+			NetInterface: tt.interfaces,
+		}
+
+		t.Run(tt.name, func(t *testing.T) {
+			action, err := e.RunAction("container.network_package_corruption", *target, config)
+			require.NoError(t, err)
+
+			corruption, err := netperf.MeasurePackageCorruption()
+			require.NoError(t, err)
+			if tt.WantedCorruption {
+				require.True(t, corruption >= 10, "~10% packages should be corrupted but was %s", corruption)
+			} else {
+				require.True(t, corruption <= 2, "packages should be corrupted but was %s", corruption)
+			}
+			require.NoError(t, action.Cancel())
+
+			corruption, err = netperf.MeasurePackageCorruption()
+			require.NoError(t, err)
+			require.True(t, corruption <= 2, "packages should be corrupted but was %s", corruption)
+		})
+	}
+}
+
+func testNetworkLimitBandwidth(t *testing.T, m *Minikube, e *Extension) {
+	if m.runtime == "cri-o" {
+		t.Skip("Due to https://github.com/kubernetes/minikube/issues/16371 this test is skipped for cri-o")
+	}
+
+	netperf := netperf{minikube: m}
+	err := netperf.Deploy("netperf-network-bandwidth")
+	defer func() { _ = netperf.Delete() }()
+	require.NoError(t, err)
+
+	target, err := netperf.Target()
+	require.NoError(t, err)
+
+	tests := []struct {
+		name        string
+		ip          []string
+		hostname    []string
+		port        []string
+		interfaces  []string
+		WantedLimit bool
+	}{
+		{
+			name:        "should limit bandwidth on all traffic",
+			WantedLimit: true,
+		},
+		{
+			name:        "should limit bandwidth only on port 5000 traffic",
+			port:        []string{"5000"},
+			interfaces:  []string{"eth0"},
+			WantedLimit: true,
+		},
+		{
+			name:        "should limit bandwidth only on port 80 traffic",
+			port:        []string{"80"},
+			WantedLimit: false,
+		},
+	}
+
+	for _, tt := range tests {
+		config := struct {
+			Duration     int      `json:"duration"`
+			Limit        string   `json:"bandwidth"`
+			Ip           []string `json:"ip"`
+			Hostname     []string `json:"hostname"`
+			Port         []string `json:"port"`
+			NetInterface []string `json:"networkInterface"`
+		}{
+			Duration:     10000,
+			Limit:        "10kbit",
+			Ip:           tt.ip,
+			Hostname:     tt.hostname,
+			Port:         tt.port,
+			NetInterface: tt.interfaces,
+		}
+
+		t.Run(tt.name, func(t *testing.T) {
+			unaffectedBandwidth, err := netperf.MeasureBandwidth()
+			require.NoError(t, err)
+
+			action, err := e.RunAction("container.network_package_loss", *target, config)
+			require.NoError(t, err)
+
+			bandwidth, err := netperf.MeasureBandwidth()
+			require.NoError(t, err)
+			if tt.WantedLimit {
+				require.True(t, bandwidth <= 10, "bandwitdh should be ~10kbit but was %s", bandwidth)
+			} else {
+				require.True(t, bandwidth > int(float64(unaffectedBandwidth)*0.95), "bandwidth should not be limited but was %s", bandwidth)
+			}
+			require.NoError(t, action.Cancel())
+
+			bandwidth, err = netperf.MeasureBandwidth()
+			require.NoError(t, err)
+			require.True(t, bandwidth > int(float64(unaffectedBandwidth)*0.95), "bandwidth should not be limited but was %s", bandwidth)
+		})
+	}
+}
+
 func testNetworkBlackhole(t *testing.T, m *Minikube, e *Extension) {
 	if m.runtime == "cri-o" {
 		t.Skip("Due to https://github.com/kubernetes/minikube/issues/16371 this test is skipped for cri-o")
@@ -201,6 +441,76 @@ func testNetworkBlackhole(t *testing.T, m *Minikube, e *Extension) {
 			require.NoError(t, action.Cancel())
 			require.NoError(t, nginx.IsReachable(), "service should be reachable after blackhole")
 			require.NoError(t, nginx.CanReach("https://google.com"), "service should reach url after blackhole")
+		})
+	}
+}
+
+func testNetworkBlockDns(t *testing.T, m *Minikube, e *Extension) {
+	if m.runtime == "cri-o" {
+		t.Skip("Due to https://github.com/kubernetes/minikube/issues/16371 this test is skipped for cri-o")
+	}
+
+	nginx := Nginx{minikube: m}
+	err := nginx.Deploy("nginx-network-block-dns")
+	require.NoError(t, err, "failed to create pod")
+	defer func() { _ = nginx.Delete() }()
+
+	target, err := nginx.Target()
+	require.NoError(t, err)
+
+	tests := []struct {
+		name             string
+		ip               []string
+		hostname         []string
+		dnsPort          uint
+		WantedReachable  bool
+		WantedReachesUrl bool
+	}{
+		{
+			name:             "should block dns traffic",
+			dnsPort:          53,
+			WantedReachable:  true,
+			WantedReachesUrl: false,
+		},
+		{
+			name:             "should block dns traffic on port 5353",
+			dnsPort:          5353,
+			WantedReachable:  true,
+			WantedReachesUrl: true,
+		},
+	}
+
+	for _, tt := range tests {
+		config := struct {
+			Duration int  `json:"duration"`
+			DnsPort  uint `json:"dnsPort"`
+		}{
+			Duration: 10000,
+			DnsPort:  tt.dnsPort,
+		}
+
+		t.Run(tt.name, func(t *testing.T) {
+			require.NoError(t, nginx.IsReachable(), "service should be reachable before block dns")
+			require.NoError(t, nginx.CanReach("https://google.com"), "service should reach url before block dns")
+
+			action, err := e.RunAction("container.network_block_dns", *target, config)
+			require.NoError(t, err)
+
+			if tt.WantedReachable {
+				require.NoError(t, nginx.IsReachable(), "service should be reachable during block dns")
+			} else {
+				require.Error(t, nginx.IsReachable(), "service should not be reachable during block dns")
+			}
+
+			if tt.WantedReachesUrl {
+				require.NoError(t, nginx.CanReach("https://google.com"), "service should be reachable during block dns")
+			} else {
+				require.ErrorContains(t, nginx.CanReach("https://google.com"), "cannot resolve host", "service should not be reachable during block dns")
+			}
+
+			require.NoError(t, action.Cancel())
+			require.NoError(t, nginx.IsReachable(), "service should be reachable after block dns")
+			require.NoError(t, nginx.CanReach("https://google.com"), "service should reach url after block dns")
 		})
 	}
 }

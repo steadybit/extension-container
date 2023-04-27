@@ -10,27 +10,28 @@ import (
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/rs/zerolog/log"
 	"github.com/steadybit/extension-container/pkg/container/runc"
+	"github.com/steadybit/extension-container/pkg/networkutils"
 	"io"
 	"sync/atomic"
 )
 
 var counter = atomic.Int32{}
 
-func Apply(ctx context.Context, r runc.Runc, targetId string, opts Opts) error {
+func Apply(ctx context.Context, r runc.Runc, targetId string, opts networkutils.Opts) error {
 	log.Info().
 		Str("targetContainer", targetId).
 		Msg("applying network config")
 
-	return generateAndRunCommands(ctx, r, targetId, opts, ModeAdd)
+	return generateAndRunCommands(ctx, r, targetId, opts, networkutils.ModeAdd)
 }
 
-func generateAndRunCommands(ctx context.Context, r runc.Runc, targetId string, opts Opts, mode Mode) error {
-	ipCommandsV4, err := opts.IpCommands(FamilyV4, mode)
+func generateAndRunCommands(ctx context.Context, r runc.Runc, targetId string, opts networkutils.Opts, mode networkutils.Mode) error {
+	ipCommandsV4, err := opts.IpCommands(networkutils.FamilyV4, mode)
 	if err != nil {
 		return err
 	}
 
-	ipCommandsV6, err := opts.IpCommands(FamilyV6, mode)
+	ipCommandsV6, err := opts.IpCommands(networkutils.FamilyV6, mode)
 	if err != nil {
 		return err
 	}
@@ -41,14 +42,14 @@ func generateAndRunCommands(ctx context.Context, r runc.Runc, targetId string, o
 	}
 
 	if ipCommandsV4 != nil {
-		err = executeIpCommands(ctx, r, targetId, FamilyV4, ipCommandsV4)
+		err = executeIpCommands(ctx, r, targetId, networkutils.FamilyV4, ipCommandsV4)
 		if err != nil {
 			return err
 		}
 	}
 
 	if ipCommandsV6 != nil {
-		err = executeIpCommands(ctx, r, targetId, FamilyV6, ipCommandsV6)
+		err = executeIpCommands(ctx, r, targetId, networkutils.FamilyV6, ipCommandsV6)
 		if err != nil {
 			return err
 		}
@@ -64,12 +65,12 @@ func generateAndRunCommands(ctx context.Context, r runc.Runc, targetId string, o
 	return nil
 }
 
-func Revert(ctx context.Context, r runc.Runc, targetId string, opts Opts) error {
+func Revert(ctx context.Context, r runc.Runc, targetId string, opts networkutils.Opts) error {
 	log.Info().
 		Str("targetContainer", targetId).
 		Msg("reverting network config")
 
-	return generateAndRunCommands(ctx, r, targetId, opts, ModeDelete)
+	return generateAndRunCommands(ctx, r, targetId, opts, networkutils.ModeDelete)
 
 }
 
@@ -77,7 +78,7 @@ func getNextContainerId() string {
 	return fmt.Sprintf("sb-network-%d", counter.Add(1))
 }
 
-func executeIpCommands(ctx context.Context, r runc.Runc, targetId string, family Family, batch io.Reader) error {
+func executeIpCommands(ctx context.Context, r runc.Runc, targetId string, family networkutils.Family, batch io.Reader) error {
 	if batch == nil {
 		return nil
 	}

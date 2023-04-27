@@ -1,33 +1,31 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2023 Steadybit GmbH
 
-package network
+package networkutils
 
 import (
 	"fmt"
 	"github.com/rs/zerolog/log"
 	"io"
 	"strings"
-	"time"
 )
 
-type DelayOpts struct {
+type LimitBandwidthOpts struct {
 	Filter
-	Delay      time.Duration
-	Jitter     time.Duration
+	Bandwidth  string
 	Interfaces []string
 }
 
-func (o *DelayOpts) IpCommands(_ Family, _ Mode) (io.Reader, error) {
+func (o *LimitBandwidthOpts) IpCommands(_ Family, _ Mode) (io.Reader, error) {
 	return nil, nil
 }
 
-func (o *DelayOpts) TcCommands(mode Mode) (io.Reader, error) {
+func (o *LimitBandwidthOpts) TcCommands(mode Mode) (io.Reader, error) {
 	var cmds []string
 
 	for _, ifc := range o.Interfaces {
-		cmds = append(cmds, fmt.Sprintf("qdisc %s dev %s root handle 1: prio", mode, ifc))
-		cmds = append(cmds, fmt.Sprintf("qdisc %s dev %s parent %s handle 30: netem delay %dms %dms", mode, ifc, handleInclude, o.Delay.Milliseconds(), o.Jitter.Milliseconds()))
+		cmds = append(cmds, fmt.Sprintf("qdisc %s dev %s root handle 1: htb default 30", mode, ifc))
+		cmds = append(cmds, fmt.Sprintf("class %s dev %s parent 1: classid %s htb rate %s", mode, ifc, handleInclude, o.Bandwidth))
 
 		filterCmds, err := tcCommandsForFilter(mode, &o.Filter, ifc)
 		if err != nil {
@@ -40,12 +38,10 @@ func (o *DelayOpts) TcCommands(mode Mode) (io.Reader, error) {
 	return toReader(cmds, mode)
 }
 
-func (o *DelayOpts) String() string {
+func (o *LimitBandwidthOpts) String() string {
 	var sb strings.Builder
-	sb.WriteString("Delaying traffic (delay: ")
-	sb.WriteString(o.Delay.String())
-	sb.WriteString(", Jitter: ")
-	sb.WriteString(o.Jitter.String())
+	sb.WriteString("Limit bandwidth (bandwidth: ")
+	sb.WriteString(o.Bandwidth)
 	sb.WriteString(", Interfaces: ")
 	sb.WriteString(strings.Join(o.Interfaces, ", "))
 	sb.WriteString(")")
