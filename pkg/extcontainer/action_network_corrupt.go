@@ -76,7 +76,7 @@ func corruptPackages(r runc.Runc) networkOptsProvider {
 			return nil, err
 		}
 
-		interfaces := toStringArray(request.Config["networkInterface"])
+		interfaces := extutil.ToStringArray(request.Config["networkInterface"])
 		if len(interfaces) == 0 {
 			interfaces, err = readNetworkInterfaces(ctx, r, RemovePrefix(containerId))
 			if err != nil {

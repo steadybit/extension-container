@@ -195,8 +195,8 @@ func parsePortRanges(raw []string) ([]networkutils.PortRange, error) {
 
 func mapToNetworkFilter(ctx context.Context, r runc.Runc, containerId string, config map[string]interface{}, restrictedUrls []string) (networkutils.Filter, error) {
 	toResolve := append(
-		toStringArray(config["ip"]),
-		toStringArray(config["hostname"])...,
+		extutil.ToStringArray(config["ip"]),
+		extutil.ToStringArray(config["hostname"])...,
 	)
 	includeCidrs, err := network.ResolveHostnames(ctx, r, RemovePrefix(containerId), toResolve...)
 	if err != nil {
@@ -207,7 +207,7 @@ func mapToNetworkFilter(ctx context.Context, r runc.Runc, containerId string, co
 		includeCidrs = []string{"::/0", "0.0.0.0/0"}
 	}
 
-	portRanges, err := parsePortRanges(toStringArray(config["port"]))
+	portRanges, err := parsePortRanges(extutil.ToStringArray(config["port"]))
 	if err != nil {
 		return networkutils.Filter{}, err
 	}
