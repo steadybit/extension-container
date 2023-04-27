@@ -13,23 +13,22 @@ import (
 	"github.com/steadybit/extension-container/pkg/network"
 	"github.com/steadybit/extension-kit/extbuild"
 	"github.com/steadybit/extension-kit/extutil"
-	"time"
 )
 
-func NewNetworkDelayContainerAction(runc runc.Runc) action_kit_sdk.Action[NetworkActionState] {
+func NewNetworkBandwidthContainerAction(runc runc.Runc) action_kit_sdk.Action[NetworkActionState] {
 	return &networkAction{
-		optsProvider: delay(runc),
-		optsDecoder:  delayDecode,
-		description:  getNetworkDelayDescription(),
+		optsProvider: bandwidth(runc),
+		optsDecoder:  bandwidthDecode,
+		description:  getNetworkBandwidthDescription(),
 		runc:         runc,
 	}
 }
 
-func getNetworkDelayDescription() action_kit_api.ActionDescription {
+func getNetworkBandwidthDescription() action_kit_api.ActionDescription {
 	return action_kit_api.ActionDescription{
-		Id:          fmt.Sprintf("%s.network_delay", targetID),
-		Label:       "Delay Traffic",
-		Description: "Inject latency into egress network traffic.",
+		Id:          fmt.Sprintf("%s.network_bandwidth", targetID),
+		Label:       "Limit Bandwidth",
+		Description: "Limit available network bandwidth.",
 		Version:     extbuild.GetSemverVersionStringOrUnknown(),
 		Icon:        extutil.Ptr(targetIcon),
 		TargetSelection: &action_kit_api.TargetSelection{
@@ -42,22 +41,13 @@ func getNetworkDelayDescription() action_kit_api.ActionDescription {
 		Parameters: append(
 			commonNetworkParameters,
 			action_kit_api.ActionParameter{
-				Name:         "networkDelay",
-				Label:        "Network Delay",
-				Description:  extutil.Ptr("How much should the traffic be delayed?"),
-				Type:         action_kit_api.Duration,
-				DefaultValue: extutil.Ptr("500ms"),
+				Name:         "bandwidth",
+				Label:        "Network Bandwidth",
+				Description:  extutil.Ptr("How much traffic should be allowed per second?"),
+				Type:         action_kit_api.String, //FIXME bitrate
+				DefaultValue: extutil.Ptr("1024kbit"),
 				Required:     extutil.Ptr(true),
 				Order:        extutil.Ptr(1),
-			},
-			action_kit_api.ActionParameter{
-				Name:         "networkDelayJitter",
-				Label:        "Jitter",
-				Description:  extutil.Ptr("Add random +/-30% jitter to network delay?"),
-				Type:         action_kit_api.Boolean,
-				DefaultValue: extutil.Ptr("true"),
-				Required:     extutil.Ptr(true),
-				Order:        extutil.Ptr(2),
 			},
 			action_kit_api.ActionParameter{
 				Name:        "networkInterface",
@@ -71,16 +61,10 @@ func getNetworkDelayDescription() action_kit_api.ActionDescription {
 	}
 }
 
-func delay(r runc.Runc) networkOptsProvider {
+func bandwidth(r runc.Runc) networkOptsProvider {
 	return func(ctx context.Context, request action_kit_api.PrepareActionRequestBody) (network.Opts, error) {
 		containerId := request.Target.Attributes["container.id"][0]
-		delay := time.Duration(extutil.ToInt64(request.Config["networkDelay"])) * time.Millisecond
-		hasJitter := extutil.ToBool(request.Config["networkDelayJitter"])
-
-		jitter := 0 * time.Millisecond
-		if hasJitter {
-			jitter = delay * 30 / 100
-		}
+		bandwidth := extutil.ToString(request.Config["bandwidth"])
 
 		filter, err := mapToNetworkFilter(ctx, r, containerId, request.Config)
 		if err != nil {
@@ -99,17 +83,16 @@ func delay(r runc.Runc) networkOptsProvider {
 			return nil, fmt.Errorf("no network interfaces specified")
 		}
 
-		return &network.DelayOpts{
+		return &network.BandwidthOpts{
 			Filter:     filter,
-			Delay:      delay,
-			Jitter:     jitter,
+			Bandwidth:  bandwidth,
 			Interfaces: interfaces,
 		}, nil
 	}
 }
 
-func delayDecode(data json.RawMessage) (network.Opts, error) {
-	var opts network.DelayOpts
+func bandwidthDecode(data json.RawMessage) (network.Opts, error) {
+	var opts network.BandwidthOpts
 	err := json.Unmarshal(data, &opts)
 	return &opts, err
 }

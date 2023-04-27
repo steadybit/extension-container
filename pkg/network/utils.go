@@ -53,7 +53,27 @@ func getFamily(cidr string) (Family, error) {
 	}
 }
 
-func tcFilterCommands(cidrWithPortRange []CidrWithPortRange, mode Mode, ifc, parent, flowId string, prio int) ([]string, error) {
+const handleExclude = "1:1"
+const handleInclude = "1:3"
+
+func tcCommandsForFilter(mode Mode, f *Filter, ifc string) ([]string, error) {
+	var cmds []string
+
+	if filterCmds, err := tcCommandsForCidrs(f.Exclude, mode, ifc, "1:", handleExclude, len(cmds)); err == nil {
+		cmds = append(cmds, filterCmds...)
+	} else {
+		return nil, err
+	}
+
+	if filterCmds, err := tcCommandsForCidrs(f.Include, mode, ifc, "1:", handleInclude, len(cmds)); err == nil {
+		cmds = append(cmds, filterCmds...)
+	} else {
+		return nil, err
+	}
+	return cmds, nil
+}
+
+func tcCommandsForCidrs(cidrWithPortRange []CidrWithPortRange, mode Mode, ifc, parent, flowId string, prio int) ([]string, error) {
 	var cmds []string
 	for _, cwp := range cidrWithPortRange {
 		protocol, err := getProtocol(cwp.Cidr)
