@@ -1,8 +1,0 @@
-FROM debian:bullseye-slim
-
-RUN apt-get -qq update \
-    && apt-get -qq install -y --no-install-recommends iproute2 dnsutils\
-    && apt-get -y autoremove \
-    && rm -rf /var/lib/apt/lists/*
-
-ENTRYPOINT ["/sbin/ip"]

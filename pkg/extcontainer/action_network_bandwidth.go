@@ -44,7 +44,7 @@ func getNetworkBandwidthDescription() action_kit_api.ActionDescription {
 				Name:         "bandwidth",
 				Label:        "Network Bandwidth",
 				Description:  extutil.Ptr("How much traffic should be allowed per second?"),
-				Type:         action_kit_api.String, //FIXME bitrate
+				Type:         action_kit_api.Bitrate,
 				DefaultValue: extutil.Ptr("1024kbit"),
 				Required:     extutil.Ptr(true),
 				Order:        extutil.Ptr(1),
@@ -66,7 +66,12 @@ func bandwidth(r runc.Runc) networkOptsProvider {
 		containerId := request.Target.Attributes["container.id"][0]
 		bandwidth := extutil.ToString(request.Config["bandwidth"])
 
-		filter, err := mapToNetworkFilter(ctx, r, containerId, request.Config)
+		var restrictedUrls []string
+		if request.ExecutionContext != nil && request.ExecutionContext.RestrictedUrls != nil {
+			restrictedUrls = *request.ExecutionContext.RestrictedUrls
+		}
+
+		filter, err := mapToNetworkFilter(ctx, r, containerId, request.Config, restrictedUrls)
 		if err != nil {
 			return nil, err
 		}

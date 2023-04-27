@@ -192,7 +192,7 @@ func parsePortRanges(raw []string) ([]network.PortRange, error) {
 	return ranges, nil
 }
 
-func mapToNetworkFilter(ctx context.Context, r runc.Runc, containerId string, config map[string]interface{}) (network.Filter, error) {
+func mapToNetworkFilter(ctx context.Context, r runc.Runc, containerId string, config map[string]interface{}, restrictedUrls []string) (network.Filter, error) {
 	toResolve := append(
 		toStringArray(config["ip"]),
 		toStringArray(config["hostname"])...,
@@ -218,17 +218,14 @@ func mapToNetworkFilter(ctx context.Context, r runc.Runc, containerId string, co
 	includes := network.NewCidrWithPortRanges(includeCidrs, portRanges...)
 	var excludes []network.CidrWithPortRange
 
-	//FIXME use restricted urls
-	//if request.ExecutionContext.RestrictedUrls != nil {
-	//	for _, restrictedUrl := range *request.ExecutionContext.RestrictedUrls {
-	//		ips, port, err := resolveUrl(ctx, runc, containerId, restrictedUrl)
-	//		if err != nil {
-	//			return network.Filter{}, err
-	//		}
-	//
-	//		excludes = append(excludes, network.NewCidrWithPortRanges(ips, network.PortRange{From: port, To: port})...)
-	//	}
-	//}
+	for _, restrictedUrl := range restrictedUrls {
+		ips, port, err := resolveUrl(ctx, r, containerId, restrictedUrl)
+		if err != nil {
+			return network.Filter{}, err
+		}
+
+		excludes = append(excludes, network.NewCidrWithPortRanges(ips, network.PortRange{From: port, To: port})...)
+	}
 
 	return network.Filter{
 		Include: includes,
@@ -251,8 +248,8 @@ func readNetworkInterfaces(ctx context.Context, r runc.Runc, containerId string)
 	return ifcNames, nil
 }
 
-func resolveUrl(ctx context.Context, runc runc.Runc, containerId string, raw string) ([]string, int, error) {
-	port := 0
+func resolveUrl(ctx context.Context, runc runc.Runc, containerId string, raw string) ([]string, uint16, error) {
+	port := uint16(0)
 	u, err := url.Parse(raw)
 	if err != nil {
 		return nil, port, err
@@ -265,7 +262,8 @@ func resolveUrl(ctx context.Context, runc runc.Runc, containerId string, raw str
 
 	portStr := u.Port()
 	if portStr != "" {
-		port, _ = strconv.Atoi(portStr)
+		parsed, _ := strconv.ParseUint(portStr, 10, 16)
+		port = uint16(parsed)
 	} else {
 		switch u.Scheme {
 		case "https":

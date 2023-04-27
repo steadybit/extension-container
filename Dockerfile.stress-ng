@@ -1,8 +1,0 @@
-FROM debian:bullseye-slim
-
-RUN apt-get -qq update \
-    && apt-get -qq install -y --no-install-recommends stress-ng\
-    && apt-get -y autoremove \
-    && rm -rf /var/lib/apt/lists/*
-
-ENTRYPOINT ["/usr/bin/stress-ng"]
