@@ -58,5 +58,5 @@ run: tidy build
 ## container: build the container image
 .PHONY: container
 container:
-	DOCKER_BUILDKIT=1 docker build -f Dockerfile.sidecar --output type=tar,dest=sidecar.tar .
-	DOCKER_BUILDKIT=1 docker build -t extension-container:latest .
+	docker buildx build --platform="linux/amd64,linux/arm64" -f Dockerfile.sidecar --output type=tar,dest=sidecar.tar .
+	docker buildx build -t extension-container:latest --output=type=docker .

@@ -155,7 +155,9 @@ func (a *ActionExecution) Wait() error {
 }
 
 func (a *ActionExecution) Cancel() error {
-	a.cancel()
+	if a.cancel != nil {
+		a.cancel()
+	}
 	return nil
 }
 
