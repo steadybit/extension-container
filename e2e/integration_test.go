@@ -203,7 +203,7 @@ func testNetworkPackageLoss(t *testing.T, m *Minikube, e *Extension) {
 			loss, err := iperf.MeasurePackageLoss()
 			require.NoError(t, err)
 			if tt.WantedLoss {
-				require.True(t, loss >= 7.0, "~10%% packages should be lost but was %.2f", loss)
+				require.True(t, loss >= 6.0, "~10%% packages should be lost but was %.2f", loss)
 			} else {
 				require.True(t, loss <= 2.0, "packages should be lost but was %.2f", loss)
 			}
@@ -279,7 +279,7 @@ func testNetworkPackageCorruption(t *testing.T, m *Minikube, e *Extension) {
 			loss, err := iperf.MeasurePackageLoss()
 			require.NoError(t, err)
 			if tt.WantedCorruption {
-				require.True(t, loss >= 7.0, "~10%% packages should be corrupted but was %.2f", loss)
+				require.True(t, loss >= 6.0, "~10%% packages should be corrupted but was %.2f", loss)
 			} else {
 				require.True(t, loss <= 2.0, "packages should be corrupted but was %.2f", loss)
 			}

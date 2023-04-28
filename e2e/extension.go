@@ -403,8 +403,14 @@ func startExtension(minikube *Minikube, image string) (*Extension, error) {
 		}
 
 		pods, err = minikube.ListPods(ctx, "default", "app.kubernetes.io/name=steadybit-extension-container")
+		if err != nil {
+			_ = stop()
+			return nil, err
+		}
+
 		for _, pod := range pods {
 			if err = minikube.WaitForPodPhase(pod.GetObjectMeta(), corev1.PodRunning, 30*time.Second); err != nil {
+				_ = stop()
 				return nil, err
 			}
 			go minikube.TailLog(tailCtx, pod.GetObjectMeta())
@@ -416,7 +422,7 @@ func startExtension(minikube *Minikube, image string) (*Extension, error) {
 
 	localPort, err := minikube.PortForward(pods[0].GetObjectMeta(), 8080, stopFwdCh)
 	if err != nil {
-		tailCancel()
+		_ = stop()
 		return nil, err
 	}
 
