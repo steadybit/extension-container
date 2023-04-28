@@ -1,7 +1,5 @@
 # Steadybit extension-container
 
-*Open Beta: This extension generally works, but you may discover some rough edges.*
-
 TODO describe what your extension is doing here from a user perspective.
 
 ## Configuration
