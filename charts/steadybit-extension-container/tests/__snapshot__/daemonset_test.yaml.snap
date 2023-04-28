@@ -1,0 +1,463 @@
+manifest should match snapshot using containerd:
+  1: |
+    apiVersion: apps/v1
+    kind: DaemonSet
+    metadata:
+      labels: null
+      name: RELEASE-NAME-steadybit-extension-container
+      namespace: NAMESPACE
+    spec:
+      selector:
+        matchLabels:
+          app.kubernetes.io/name: steadybit-extension-container
+      template:
+        metadata:
+          annotations:
+            container.apparmor.security.beta.kubernetes.io/extension-container: unconfined
+            steadybit.com/extension-auto-discovery: "{\n  \"extensions\": [\n    {\n      \"port\": \"8080\",\n      \"types\": null,\n      \"tls\": {\n          \n    }\n    }\n  ]\n}\n"
+          labels:
+            app.kubernetes.io/name: steadybit-extension-container
+            steadybit.com/extension: "true"
+        spec:
+          containers:
+            - env:
+                - name: STEADYBIT_LOG_LEVEL
+                  value: INFO
+                - name: STEADYBIT_LOG_FORMAT
+                  value: text
+              image: ghcr.io/steadybit/extension-container:latest
+              imagePullPolicy: Always
+              livenessProbe:
+                httpGet:
+                  path: /health/liveness
+                  port: 8081
+              name: extension
+              readinessProbe:
+                httpGet:
+                  path: /health/readiness
+                  port: 8081
+              securityContext:
+                capabilities:
+                  add:
+                    - SYS_ADMIN
+                    - SYS_RESOURCE
+                    - SYS_PTRACE
+                    - KILL
+                    - NET_ADMIN
+                    - DAC_OVERRIDE
+                    - SETUID
+                    - SETGID
+                    - AUDIT_WRITE
+                readOnlyRootFilesystem: true
+                runAsGroup: 10000
+                runAsNonRoot: true
+                runAsUser: 10000
+                seccompProfile:
+                  type: Unconfined
+              volumeMounts:
+                - mountPath: /tmp
+                  name: tmp-dir
+                - mountPath: /sys/fs/cgroup
+                  name: cgroup-root
+                - mountPath: /run/containerd/containerd.sock
+                  name: runtime-socket
+                  type: Socket
+                - mountPath: /run/containerd/runc/k8s.io
+                  name: runtime-runc-root
+                  type: Directory
+          hostPID: true
+          volumes:
+            - emptyDir: {}
+              name: tmp-dir
+            - hostPath:
+                path: /sys/fs/cgroup
+                type: Directory
+              name: cgroup-root
+            - hostPath:
+                path: /run/containerd/containerd.sock
+                type: Socket
+              name: runtime-socket
+            - hostPath:
+                path: /run/containerd/runc/k8s.io
+                type: Directory
+              name: runtime-runc-root
+manifest should match snapshot using crio:
+  1: |
+    apiVersion: apps/v1
+    kind: DaemonSet
+    metadata:
+      labels: null
+      name: RELEASE-NAME-steadybit-extension-container
+      namespace: NAMESPACE
+    spec:
+      selector:
+        matchLabels:
+          app.kubernetes.io/name: steadybit-extension-container
+      template:
+        metadata:
+          annotations:
+            container.apparmor.security.beta.kubernetes.io/extension-container: unconfined
+            steadybit.com/extension-auto-discovery: "{\n  \"extensions\": [\n    {\n      \"port\": \"8080\",\n      \"types\": null,\n      \"tls\": {\n          \n    }\n    }\n  ]\n}\n"
+          labels:
+            app.kubernetes.io/name: steadybit-extension-container
+            steadybit.com/extension: "true"
+        spec:
+          containers:
+            - env:
+                - name: STEADYBIT_LOG_LEVEL
+                  value: INFO
+                - name: STEADYBIT_LOG_FORMAT
+                  value: text
+              image: ghcr.io/steadybit/extension-container:latest
+              imagePullPolicy: Always
+              livenessProbe:
+                httpGet:
+                  path: /health/liveness
+                  port: 8081
+              name: extension
+              readinessProbe:
+                httpGet:
+                  path: /health/readiness
+                  port: 8081
+              securityContext:
+                capabilities:
+                  add:
+                    - SYS_ADMIN
+                    - SYS_RESOURCE
+                    - SYS_PTRACE
+                    - KILL
+                    - NET_ADMIN
+                    - DAC_OVERRIDE
+                    - SETUID
+                    - SETGID
+                    - AUDIT_WRITE
+                readOnlyRootFilesystem: true
+                runAsGroup: 10000
+                runAsNonRoot: true
+                runAsUser: 10000
+                seccompProfile:
+                  type: Unconfined
+              volumeMounts:
+                - mountPath: /tmp
+                  name: tmp-dir
+                - mountPath: /sys/fs/cgroup
+                  name: cgroup-root
+                - mountPath: /var/run/crio/crio.sock
+                  name: runtime-socket
+                  type: Socket
+                - mountPath: /run/runc
+                  name: runtime-runc-root
+                  type: Directory
+          hostPID: true
+          volumes:
+            - emptyDir: {}
+              name: tmp-dir
+            - hostPath:
+                path: /sys/fs/cgroup
+                type: Directory
+              name: cgroup-root
+            - hostPath:
+                path: /var/run/crio/crio.sock
+                type: Socket
+              name: runtime-socket
+            - hostPath:
+                path: /run/runc
+                type: Directory
+              name: runtime-runc-root
+manifest should match snapshot using docker:
+  1: |
+    apiVersion: apps/v1
+    kind: DaemonSet
+    metadata:
+      labels: null
+      name: RELEASE-NAME-steadybit-extension-container
+      namespace: NAMESPACE
+    spec:
+      selector:
+        matchLabels:
+          app.kubernetes.io/name: steadybit-extension-container
+      template:
+        metadata:
+          annotations:
+            container.apparmor.security.beta.kubernetes.io/extension-container: unconfined
+            steadybit.com/extension-auto-discovery: "{\n  \"extensions\": [\n    {\n      \"port\": \"8080\",\n      \"types\": null,\n      \"tls\": {\n          \n    }\n    }\n  ]\n}\n"
+          labels:
+            app.kubernetes.io/name: steadybit-extension-container
+            steadybit.com/extension: "true"
+        spec:
+          containers:
+            - env:
+                - name: STEADYBIT_LOG_LEVEL
+                  value: INFO
+                - name: STEADYBIT_LOG_FORMAT
+                  value: text
+              image: ghcr.io/steadybit/extension-container:latest
+              imagePullPolicy: Always
+              livenessProbe:
+                httpGet:
+                  path: /health/liveness
+                  port: 8081
+              name: extension
+              readinessProbe:
+                httpGet:
+                  path: /health/readiness
+                  port: 8081
+              securityContext:
+                capabilities:
+                  add:
+                    - SYS_ADMIN
+                    - SYS_RESOURCE
+                    - SYS_PTRACE
+                    - KILL
+                    - NET_ADMIN
+                    - DAC_OVERRIDE
+                    - SETUID
+                    - SETGID
+                    - AUDIT_WRITE
+                readOnlyRootFilesystem: true
+                runAsGroup: 10000
+                runAsNonRoot: true
+                runAsUser: 10000
+                seccompProfile:
+                  type: Unconfined
+              volumeMounts:
+                - mountPath: /tmp
+                  name: tmp-dir
+                - mountPath: /sys/fs/cgroup
+                  name: cgroup-root
+                - mountPath: /var/run/docker.sock
+                  name: runtime-socket
+                  type: Socket
+                - mountPath: /run/docker/runtime-runc/moby
+                  name: runtime-runc-root
+                  type: Directory
+          hostPID: true
+          volumes:
+            - emptyDir: {}
+              name: tmp-dir
+            - hostPath:
+                path: /sys/fs/cgroup
+                type: Directory
+              name: cgroup-root
+            - hostPath:
+                path: /var/run/docker.sock
+                type: Socket
+              name: runtime-socket
+            - hostPath:
+                path: /run/docker/runtime-runc/moby
+                type: Directory
+              name: runtime-runc-root
+manifest should match snapshot with TLS:
+  1: |
+    apiVersion: apps/v1
+    kind: DaemonSet
+    metadata:
+      labels: null
+      name: RELEASE-NAME-steadybit-extension-container
+      namespace: NAMESPACE
+    spec:
+      selector:
+        matchLabels:
+          app.kubernetes.io/name: steadybit-extension-container
+      template:
+        metadata:
+          annotations:
+            container.apparmor.security.beta.kubernetes.io/extension-container: unconfined
+            steadybit.com/extension-auto-discovery: "{\n  \"extensions\": [\n    {\n      \"port\": \"8080\",\n      \"types\": null,\n      \"tls\": {\n        \"server\": {\n          \"extraCertsFile\": \"/opt/steadybit/agent/etc/extension-mtls/server-cert/tls.crt\"\n          }\n          \n    }\n    }\n  ]\n}\n"
+          labels:
+            app.kubernetes.io/name: steadybit-extension-container
+            steadybit.com/extension: "true"
+        spec:
+          containers:
+            - env:
+                - name: STEADYBIT_LOG_LEVEL
+                  value: INFO
+                - name: STEADYBIT_LOG_FORMAT
+                  value: text
+                - name: STEADYBIT_EXTENSION_TLS_SERVER_CERT
+                  value: /etc/extension/certificates/server-cert/tls.crt
+                - name: STEADYBIT_EXTENSION_TLS_SERVER_KEY
+                  value: /etc/extension/certificates/server-cert/tls.key
+              image: ghcr.io/steadybit/extension-container:latest
+              imagePullPolicy: Always
+              livenessProbe:
+                httpGet:
+                  path: /health/liveness
+                  port: 8081
+              name: extension
+              readinessProbe:
+                httpGet:
+                  path: /health/readiness
+                  port: 8081
+              securityContext:
+                capabilities:
+                  add:
+                    - SYS_ADMIN
+                    - SYS_RESOURCE
+                    - SYS_PTRACE
+                    - KILL
+                    - NET_ADMIN
+                    - DAC_OVERRIDE
+                    - SETUID
+                    - SETGID
+                    - AUDIT_WRITE
+                readOnlyRootFilesystem: true
+                runAsGroup: 10000
+                runAsNonRoot: true
+                runAsUser: 10000
+                seccompProfile:
+                  type: Unconfined
+              volumeMounts:
+                - mountPath: /tmp
+                  name: tmp-dir
+                - mountPath: /sys/fs/cgroup
+                  name: cgroup-root
+                - mountPath: /etc/extension/certificates/server-cert
+                  name: certificate-server-cert
+                  readOnly: true
+                - mountPath: /var/run/docker.sock
+                  name: runtime-socket
+                  type: Socket
+                - mountPath: /run/docker/runtime-runc/moby
+                  name: runtime-runc-root
+                  type: Directory
+          hostPID: true
+          volumes:
+            - emptyDir: {}
+              name: tmp-dir
+            - hostPath:
+                path: /sys/fs/cgroup
+                type: Directory
+              name: cgroup-root
+            - name: certificate-server-cert
+              secret:
+                optional: false
+                secretName: server-cert
+            - hostPath:
+                path: /var/run/docker.sock
+                type: Socket
+              name: runtime-socket
+            - hostPath:
+                path: /run/docker/runtime-runc/moby
+                type: Directory
+              name: runtime-runc-root
+manifest should match snapshot with mutual TLS:
+  1: |
+    apiVersion: apps/v1
+    kind: DaemonSet
+    metadata:
+      labels: null
+      name: RELEASE-NAME-steadybit-extension-container
+      namespace: NAMESPACE
+    spec:
+      selector:
+        matchLabels:
+          app.kubernetes.io/name: steadybit-extension-container
+      template:
+        metadata:
+          annotations:
+            container.apparmor.security.beta.kubernetes.io/extension-container: unconfined
+            steadybit.com/extension-auto-discovery: |
+              {
+                "extensions": [
+                  {
+                    "port": "8080",
+                    "types": null,
+                    "tls": {
+                      "server": {
+                        "extraCertsFile": "/opt/steadybit/agent/etc/extension-mtls/server-cert/tls.crt"
+                        },
+                        "client": {
+                        "certChainFile": "/opt/steadybit/agent/etc/extension-mtls/client-cert-a/tls.crt",
+                        "certKeyFile": "/opt/steadybit/agent/etc/extension-mtls/client-cert-a/tls.key"
+                      }
+                  }
+                  }
+                ]
+              }
+          labels:
+            app.kubernetes.io/name: steadybit-extension-container
+            steadybit.com/extension: "true"
+        spec:
+          containers:
+            - env:
+                - name: STEADYBIT_LOG_LEVEL
+                  value: INFO
+                - name: STEADYBIT_LOG_FORMAT
+                  value: text
+                - name: STEADYBIT_EXTENSION_TLS_SERVER_CERT
+                  value: /etc/extension/certificates/server-cert/tls.crt
+                - name: STEADYBIT_EXTENSION_TLS_SERVER_KEY
+                  value: /etc/extension/certificates/server-cert/tls.key
+                - name: STEADYBIT_EXTENSION_TLS_CLIENT_CAS
+                  value: /etc/extension/certificates/client-cert-a/tls.crt,/etc/extension/certificates/client-cert-a/tls.crt
+              image: ghcr.io/steadybit/extension-container:latest
+              imagePullPolicy: Always
+              livenessProbe:
+                httpGet:
+                  path: /health/liveness
+                  port: 8081
+              name: extension
+              readinessProbe:
+                httpGet:
+                  path: /health/readiness
+                  port: 8081
+              securityContext:
+                capabilities:
+                  add:
+                    - SYS_ADMIN
+                    - SYS_RESOURCE
+                    - SYS_PTRACE
+                    - KILL
+                    - NET_ADMIN
+                    - DAC_OVERRIDE
+                    - SETUID
+                    - SETGID
+                    - AUDIT_WRITE
+                readOnlyRootFilesystem: true
+                runAsGroup: 10000
+                runAsNonRoot: true
+                runAsUser: 10000
+                seccompProfile:
+                  type: Unconfined
+              volumeMounts:
+                - mountPath: /tmp
+                  name: tmp-dir
+                - mountPath: /sys/fs/cgroup
+                  name: cgroup-root
+                - mountPath: /etc/extension/certificates/client-cert-a
+                  name: certificate-client-cert-a
+                  readOnly: true
+                - mountPath: /etc/extension/certificates/server-cert
+                  name: certificate-server-cert
+                  readOnly: true
+                - mountPath: /var/run/docker.sock
+                  name: runtime-socket
+                  type: Socket
+                - mountPath: /run/docker/runtime-runc/moby
+                  name: runtime-runc-root
+                  type: Directory
+          hostPID: true
+          volumes:
+            - emptyDir: {}
+              name: tmp-dir
+            - hostPath:
+                path: /sys/fs/cgroup
+                type: Directory
+              name: cgroup-root
+            - name: certificate-client-cert-a
+              secret:
+                optional: false
+                secretName: client-cert-a
+            - name: certificate-server-cert
+              secret:
+                optional: false
+                secretName: server-cert
+            - hostPath:
+                path: /var/run/docker.sock
+                type: Socket
+              name: runtime-socket
+            - hostPath:
+                path: /run/docker/runtime-runc/moby
+                type: Directory
+              name: runtime-runc-root

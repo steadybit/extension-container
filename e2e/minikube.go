@@ -23,8 +23,11 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/tools/portforward"
 	"k8s.io/client-go/tools/remotecommand"
+	"k8s.io/client-go/transport/spdy"
 	"k8s.io/client-go/util/homedir"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -384,4 +387,74 @@ func (m *Minikube) Exec(pod metav1.Object, containername string, cmd ...string) 
 		Tty:    true,
 	})
 	return outb.String(), err
+}
+
+func (m *Minikube) PortForward(pod metav1.Object, remotePort uint16, stopCh <-chan struct{}) (uint16, error) {
+	req := m.Client().CoreV1().RESTClient().Post().
+		Namespace(pod.GetNamespace()).
+		Resource("pods").
+		Name(pod.GetName()).
+		SubResource("portforward")
+
+	transport, upgrader, err := spdy.RoundTripperFor(m.Config())
+	if err != nil {
+		return 0, err
+	}
+
+	dialer := spdy.NewDialer(upgrader, &http.Client{Transport: transport}, http.MethodPost, req.URL())
+
+	readyCh := make(chan struct{})
+	forwarder, err := portforward.New(dialer, []string{fmt.Sprintf("0:%d", remotePort)}, stopCh, readyCh, m.stdout, m.stderr)
+	if err != nil {
+		return 0, err
+	}
+
+	chErr := make(chan error)
+	go func() {
+		err = forwarder.ForwardPorts()
+		if err != nil {
+			chErr <- err
+		}
+	}()
+
+	select {
+	case <-readyCh:
+	case err := <-chErr:
+		if err != nil {
+			return 0, err
+		}
+	}
+
+	ports, err := forwarder.GetPorts()
+	if err != nil {
+		return 0, err
+	}
+
+	for _, port := range ports {
+		if port.Remote == remotePort {
+			return port.Local, nil
+		}
+	}
+
+	return 0, fmt.Errorf("port %d not forwarded", remotePort)
+}
+
+func (m *Minikube) ListPods(ctx context.Context, namespace, matchLabels string) ([]corev1.Pod, error) {
+	list, err := m.Client().CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{LabelSelector: matchLabels})
+	if err != nil {
+		return nil, err
+	}
+	return list.Items, nil
+}
+
+func (m *Minikube) TailLog(ctx context.Context, pod metav1.Object) {
+	reader, err := m.Client().CoreV1().Pods(pod.GetNamespace()).GetLogs(pod.GetName(), &corev1.PodLogOptions{Follow: true}).Stream(ctx)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to tail logs")
+	}
+	defer func() { _ = reader.Close() }()
+	scanner := bufio.NewScanner(reader)
+	for scanner.Scan() {
+		fmt.Printf("📦%s\n", scanner.Text())
+	}
 }

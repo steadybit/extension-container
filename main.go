@@ -16,6 +16,7 @@ import (
 	"github.com/steadybit/extension-container/pkg/container/types"
 	"github.com/steadybit/extension-container/pkg/extcontainer"
 	"github.com/steadybit/extension-kit/extbuild"
+	"github.com/steadybit/extension-kit/exthealth"
 	"github.com/steadybit/extension-kit/exthttp"
 	"github.com/steadybit/extension-kit/extlogging"
 )
@@ -24,6 +25,9 @@ func main() {
 	extlogging.InitZeroLog()
 
 	extbuild.PrintBuildInformation()
+
+	exthealth.SetReady(false)
+	exthealth.StartProbes(8081)
 
 	config.ParseConfiguration()
 	config.ValidateConfiguration()
@@ -61,6 +65,10 @@ func main() {
 	action_kit_sdk.RegisterAction(extcontainer.NewNetworkLimitBandwidthContainerAction(r))
 	action_kit_sdk.RegisterAction(extcontainer.NewNetworkCorruptPackagesContainerAction(r))
 	action_kit_sdk.RegisterAction(extcontainer.NewNetworkPackageLossContainerAction(r))
+
+	action_kit_sdk.InstallSignalHandler()
+
+	exthealth.SetReady(true)
 
 	exthttp.Listen(exthttp.ListenOpts{
 		Port: 8080,

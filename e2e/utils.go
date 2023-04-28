@@ -4,22 +4,18 @@
 package e2e
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"errors"
 	"fmt"
-	"github.com/rs/zerolog/log"
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
 	"github.com/steadybit/discovery-kit/go/discovery_kit_api"
 	"github.com/steadybit/extension-container/pkg/container/types"
 	"github.com/steadybit/extension-container/pkg/extcontainer"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	appv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"strings"
 	"testing"
 	"time"
@@ -158,50 +154,4 @@ func hasAttribute(target discovery_kit_api.Target, key, value string) bool {
 		}
 	}
 	return false
-}
-
-func waitForPods(minikube *Minikube, daemonSet *appv1.DaemonSet) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-time.After(200 * time.Millisecond):
-		}
-
-		pods, err := minikube.Client().CoreV1().Pods(daemonSet.GetNamespace()).List(ctx, metav1.ListOptions{
-			LabelSelector: labels.Set(daemonSet.Spec.Selector.MatchLabels).String(),
-		})
-		if err != nil {
-			log.Warn().Err(err).Msg("failed to list pods for extension")
-		}
-
-		for _, pod := range pods.Items {
-			if err := minikube.WaitForPodPhase(pod.GetObjectMeta(), corev1.PodRunning, 10*time.Second); err != nil {
-				log.Warn().Err(err).Msg("pod is not running")
-			}
-			go tailLog(minikube, pod.GetObjectMeta())
-		}
-		if len(pods.Items) > 0 {
-			break
-		}
-	}
-}
-
-func tailLog(minikube *Minikube, pod metav1.Object) {
-	reader, err := minikube.Client().CoreV1().
-		Pods(pod.GetNamespace()).
-		GetLogs(pod.GetName(), &corev1.PodLogOptions{
-			Follow: true,
-		}).Stream(context.Background())
-	if err != nil {
-		log.Fatal().Err(err).Msg("failed to tail logs")
-	}
-	defer func() { _ = reader.Close() }()
-	scanner := bufio.NewScanner(reader)
-	for scanner.Scan() {
-		fmt.Printf("📦%s\n", scanner.Text())
-	}
 }

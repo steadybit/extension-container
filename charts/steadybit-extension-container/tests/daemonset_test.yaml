@@ -1,0 +1,53 @@
+templates:
+  - daemonset.yaml
+tests:
+  - it: manifest should match snapshot using docker
+    set:
+      container:
+        runtime: docker
+    asserts:
+      - matchSnapshot: { }
+  - it: manifest should match snapshot using containerd
+    set:
+      container:
+        runtime: containerd
+    asserts:
+      - matchSnapshot: { }
+  - it: manifest should match snapshot using crio
+    set:
+      container:
+        runtime: crio
+    asserts:
+      - matchSnapshot: { }
+  - it: manifest should fail without runtime
+    set:
+      container:
+        runtime: null
+    asserts:
+      - failedTemplate:
+          errorMessage: "<nil> (must be one of containerd, crio, docker)"
+  - it: manifest should match snapshot with TLS
+    set:
+      container:
+        runtime: docker
+      tls:
+        server:
+          certificate:
+            fromSecret: server-cert
+    asserts:
+      - matchSnapshot: { }
+  - it: manifest should match snapshot with mutual TLS
+    set:
+      container:
+        runtime: docker
+      tls:
+        server:
+          certificate:
+            fromSecret: server-cert
+        client:
+          certificates:
+            fromSecrets:
+              - client-cert-a
+              - client-cert-a
+    asserts:
+      - matchSnapshot: {}

@@ -4,7 +4,6 @@
 package e2e
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -15,15 +14,9 @@ import (
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
 	"github.com/steadybit/discovery-kit/go/discovery_kit_api"
 	"github.com/steadybit/extension-kit/extconversion"
-	"github.com/steadybit/extension-kit/extutil"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	aappsv1 "k8s.io/client-go/applyconfigurations/apps/v1"
-	acorev1 "k8s.io/client-go/applyconfigurations/core/v1"
-	ametav1 "k8s.io/client-go/applyconfigurations/meta/v1"
 	"os"
 	"os/exec"
-	"strings"
 	"time"
 )
 
@@ -362,151 +355,71 @@ func logMessages(messages *action_kit_api.Messages) {
 }
 
 func startExtension(minikube *Minikube, image string) (*Extension, error) {
-	ctx := context.Background()
-
 	if err := minikube.LoadImage(image); err != nil {
 		return nil, err
 	}
 
-	//FIXME use helm chart
-	daemonSet, err := minikube.Client().AppsV1().DaemonSets("default").Apply(ctx, &aappsv1.DaemonSetApplyConfiguration{
-		TypeMetaApplyConfiguration: ametav1.TypeMetaApplyConfiguration{
-			Kind:       extutil.Ptr("DaemonSet"),
-			APIVersion: extutil.Ptr("apps/v1"),
-		},
-		ObjectMetaApplyConfiguration: &ametav1.ObjectMetaApplyConfiguration{
-			Name: extutil.Ptr("extension-container"),
-		},
-		Spec: &aappsv1.DaemonSetSpecApplyConfiguration{
-			Selector: &ametav1.LabelSelectorApplyConfiguration{
-				MatchLabels: map[string]string{
-					"app": "extension-container",
-				},
-			},
-			Template: &acorev1.PodTemplateSpecApplyConfiguration{
-				ObjectMetaApplyConfiguration: &ametav1.ObjectMetaApplyConfiguration{
-					Labels: map[string]string{
-						"app": "extension-container",
-					},
-					Annotations: map[string]string{
-						"container.apparmor.security.beta.kubernetes.io/extension-container": "unconfined",
-					},
-				},
-				Spec: &acorev1.PodSpecApplyConfiguration{
-					Containers: []acorev1.ContainerApplyConfiguration{
-						{
-							Name:            extutil.Ptr("extension-container"),
-							Image:           &image,
-							ImagePullPolicy: extutil.Ptr(corev1.PullNever),
-							SecurityContext: &acorev1.SecurityContextApplyConfiguration{
-								SeccompProfile: &acorev1.SeccompProfileApplyConfiguration{
-									Type: extutil.Ptr(corev1.SeccompProfileTypeUnconfined),
-								},
-								Capabilities: &acorev1.CapabilitiesApplyConfiguration{
-									Add: []corev1.Capability{"SYS_ADMIN", "SYS_RESOURCE", "SYS_PTRACE", "KILL", "NET_ADMIN", "DAC_OVERRIDE", "SETUID", "SETGID", "AUDIT_WRITE"},
-								},
-								ReadOnlyRootFilesystem: extutil.Ptr(true),
-							},
-							Env: []acorev1.EnvVarApplyConfiguration{
-								{
-									Name:  extutil.Ptr("STEADYBIT_LOG_LEVEL"),
-									Value: extutil.Ptr("debug"),
-								},
-							},
-							Ports: []acorev1.ContainerPortApplyConfiguration{
-								{
-									Name:          extutil.Ptr("http"),
-									ContainerPort: extutil.Ptr(int32(8080)),
-									HostPort:      extutil.Ptr(int32(8080)),
-								},
-							},
-							VolumeMounts: []acorev1.VolumeMountApplyConfiguration{
-								{
-									Name:      extutil.Ptr("cgroup-root"),
-									MountPath: extutil.Ptr("/sys/fs/cgroup"),
-								},
-								{
-									Name:      extutil.Ptr("runtime-socket"),
-									MountPath: extutil.Ptr(minikube.Runtime().DefaultSocket()),
-								},
-								{
-									Name:      extutil.Ptr("runtime-runc-root"),
-									MountPath: extutil.Ptr(minikube.Runtime().DefaultRuncRoot()),
-								},
-								{
-									Name:      extutil.Ptr("tmp"),
-									MountPath: extutil.Ptr("/tmp"),
-								},
-							},
-						},
-					},
-					HostPID: extutil.Ptr(true),
-					SecurityContext: &acorev1.PodSecurityContextApplyConfiguration{
-						RunAsUser:    extutil.Ptr(int64(10000)),
-						RunAsGroup:   extutil.Ptr(int64(10000)),
-						RunAsNonRoot: extutil.Ptr(true),
-					},
-					Volumes: []acorev1.VolumeApplyConfiguration{
-						{
-							Name: extutil.Ptr("cgroup-root"),
-							VolumeSourceApplyConfiguration: acorev1.VolumeSourceApplyConfiguration{
-								HostPath: &acorev1.HostPathVolumeSourceApplyConfiguration{
-									Path: extutil.Ptr("/sys/fs/cgroup"),
-									Type: extutil.Ptr(corev1.HostPathDirectory),
-								},
-							},
-						},
-						{
-							Name: extutil.Ptr("runtime-socket"),
-							VolumeSourceApplyConfiguration: acorev1.VolumeSourceApplyConfiguration{
-								HostPath: &acorev1.HostPathVolumeSourceApplyConfiguration{
-									Path: extutil.Ptr(minikube.Runtime().DefaultSocket()),
-									Type: extutil.Ptr(corev1.HostPathSocket),
-								},
-							},
-						},
-						{
-							Name: extutil.Ptr("runtime-runc-root"),
-							VolumeSourceApplyConfiguration: acorev1.VolumeSourceApplyConfiguration{
-								HostPath: &acorev1.HostPathVolumeSourceApplyConfiguration{
-									Path: extutil.Ptr(minikube.Runtime().DefaultRuncRoot()),
-									Type: extutil.Ptr(corev1.HostPathDirectory),
-								},
-							},
-						},
-						{
-							Name: extutil.Ptr("tmp"),
-							VolumeSourceApplyConfiguration: acorev1.VolumeSourceApplyConfiguration{
-								EmptyDir: &acorev1.EmptyDirVolumeSourceApplyConfiguration{},
-							},
-						},
-					},
-				},
-			},
-		},
-	}, metav1.ApplyOptions{FieldManager: "application/apply-patch"})
+	ctx := context.Background()
+	out, err := exec.CommandContext(ctx,
+		"helm",
+		"install",
+		"--kube-context", minikube.profile,
+		"--namespace=default",
+		"--wait",
+		"--set", fmt.Sprintf("container.runtime=%s", minikube.runtime),
+		"--set", fmt.Sprintf("image.name=%s", image),
+		"--set", "image.pullPolicy=Never",
+		"extension-container",
+		"../charts/steadybit-extension-container",
+	).CombinedOutput()
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to create extension daemonset: %w", err)
+		return nil, fmt.Errorf("failed to install helm chart: %s: %s", err, out)
 	}
 
+	tailCtx, tailCancel := context.WithCancel(context.Background())
+	stopFwdCh := make(chan struct{})
 	stop := func() error {
-		return minikube.Client().AppsV1().DaemonSets("default").Delete(ctx, "extension-container", metav1.DeleteOptions{})
+		tailCancel()
+		close(stopFwdCh)
+		out, err := exec.Command("helm", "uninstall", "--namespace=default", "--context", minikube.profile, "extension-container").CombinedOutput()
+		if err != nil {
+			return fmt.Errorf("failed to uninstall helm chart: %s: %s", err, out)
+		}
+		return nil
 	}
 
-	waitForPods(minikube, daemonSet)
+	ctx, waitCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer waitCancel()
+	var pods []corev1.Pod
+	for {
+		select {
+		case <-ctx.Done():
+			_ = stop()
+			return nil, fmt.Errorf("extension pods did not start in time")
+		case <-time.After(200 * time.Millisecond):
+		}
 
-	var outb bytes.Buffer
-	cmd := exec.Command("docker", "port", minikube.profile, "8080")
-	cmd.Stdout = &outb
-	cmd.Stderr = os.Stderr
-	if err = cmd.Run(); err != nil {
-		return nil, fmt.Errorf("failed to get the adress for the extension: %w", err)
+		pods, err = minikube.ListPods(ctx, "default", "app.kubernetes.io/name=steadybit-extension-container")
+		for _, pod := range pods {
+			if err = minikube.WaitForPodPhase(pod.GetObjectMeta(), corev1.PodRunning, 30*time.Second); err != nil {
+				return nil, err
+			}
+			go minikube.TailLog(tailCtx, pod.GetObjectMeta())
+		}
+		if len(pods) > 0 {
+			break
+		}
 	}
-	address := strings.TrimSpace(outb.String())
-	address, _, _ = strings.Cut(address, "\n")
 
-	client := resty.New().SetBaseURL(fmt.Sprintf("http://%s", address))
+	localPort, err := minikube.PortForward(pods[0].GetObjectMeta(), 8080, stopFwdCh)
+	if err != nil {
+		tailCancel()
+		return nil, err
+	}
+
+	address := fmt.Sprintf("http://127.0.0.1:%d", localPort)
+	client := resty.New().SetBaseURL(address)
 	log.Info().Msgf("extension is available at %s", address)
 	return &Extension{client: client, stop: stop}, nil
 }
@@ -520,5 +433,5 @@ func createExtensionContainer() (string, error) {
 	if err := cmd.Run(); err != nil {
 		return "", err
 	}
-	return "docker.io/library/extension-container:latest", nil
+	return "docker.io/library/extension-container", nil
 }
