@@ -384,7 +384,7 @@ func startExtension(minikube *Minikube, image string) (*Extension, error) {
 	stop := func() error {
 		tailCancel()
 		close(stopFwdCh)
-		out, err := exec.Command("helm", "uninstall", "--namespace=default", "--context", minikube.profile, "extension-container").CombinedOutput()
+		out, err := exec.Command("helm", "uninstall", "--namespace=default", "--kube-context", minikube.profile, "extension-container").CombinedOutput()
 		if err != nil {
 			return fmt.Errorf("failed to uninstall helm chart: %s: %s", err, out)
 		}
