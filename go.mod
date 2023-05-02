@@ -17,6 +17,7 @@ require (
 	github.com/steadybit/event-kit/go/event_kit_api v1.1.0
 	github.com/steadybit/extension-kit v1.7.13
 	github.com/stretchr/testify v1.8.2
+	github.com/yalp/jsonpath v0.0.0-20180802001716-5cc68e5049a0
 	google.golang.org/grpc v1.54.0
 	k8s.io/api v0.26.3
 	k8s.io/apimachinery v0.26.3
@@ -77,7 +78,6 @@ require (
 	github.com/rogpeppe/go-internal v1.10.0 // indirect
 	github.com/sirupsen/logrus v1.9.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
-	github.com/yalp/jsonpath v0.0.0-20180802001716-5cc68e5049a0 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.opentelemetry.io/otel v1.14.0 // indirect
 	go.opentelemetry.io/otel/trace v1.14.0 // indirect
