@@ -7,8 +7,8 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/google/uuid"
-  "github.com/rs/zerolog/log"
-  "github.com/steadybit/action-kit/go/action_kit_api/v2"
+	"github.com/rs/zerolog/log"
+	"github.com/steadybit/action-kit/go/action_kit_api/v2"
 	"github.com/steadybit/action-kit/go/action_kit_sdk"
 	"github.com/steadybit/extension-container/pkg/container/runc"
 	"github.com/steadybit/extension-container/pkg/network"
@@ -262,19 +262,19 @@ func resolveUrl(ctx context.Context, runc runc.Runc, containerId string, raw str
 		return nil, port, err
 	}
 
-  ips := make([]string, 0)
-  for _, ip := range resolvedIps {
-    if ip == "" {
-      continue
-    }
-    cidr, err := networkutils.IpRangeToCIDR(ip, ip)
-    if err != nil {
-      log.Warn().Err(err).Msgf("Failed to convert ip range to cidr: %s", ip)
-      continue
-    }
-    log.Debug().Msgf("Converted ip %s to cidr: %s", ip, cidr[0])
-    ips = append(ips, cidr[0])
-  }
+	ips := make([]string, 0)
+	for _, ip := range resolvedIps {
+		if ip == "" {
+			continue
+		}
+		cidr, err := networkutils.IpRangeToCIDR(ip, ip)
+		if err != nil {
+			log.Warn().Err(err).Msgf("Failed to convert ip range to cidr: %s", ip)
+			continue
+		}
+		log.Debug().Msgf("Converted ip %s to cidr: %s", ip, cidr[0])
+		ips = append(ips, cidr[0])
+	}
 
 	portStr := u.Port()
 	if portStr != "" {
@@ -289,5 +289,5 @@ func resolveUrl(ctx context.Context, runc runc.Runc, containerId string, raw str
 		}
 	}
 
-	return resolvedIps, port, nil
+	return ips, port, nil
 }
