@@ -66,12 +66,7 @@ func limitBandwidth(r runc.Runc) networkOptsProvider {
 		containerId := request.Target.Attributes["container.id"][0]
 		bandwidth := extutil.ToString(request.Config["bandwidth"])
 
-		var restrictedUrls []string
-		if request.ExecutionContext != nil && request.ExecutionContext.RestrictedUrls != nil {
-			restrictedUrls = *request.ExecutionContext.RestrictedUrls
-		}
-
-		filter, err := mapToNetworkFilter(ctx, r, containerId, request.Config, restrictedUrls)
+		filter, err := mapToNetworkFilter(ctx, r, containerId, request.Config, nil)
 		if err != nil {
 			return nil, err
 		}

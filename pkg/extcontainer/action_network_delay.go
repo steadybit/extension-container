@@ -82,12 +82,7 @@ func delay(r runc.Runc) networkOptsProvider {
 			jitter = delay * 30 / 100
 		}
 
-		var restrictedUrls []string
-		if request.ExecutionContext != nil && request.ExecutionContext.RestrictedUrls != nil {
-			restrictedUrls = *request.ExecutionContext.RestrictedUrls
-		}
-
-		filter, err := mapToNetworkFilter(ctx, r, containerId, request.Config, restrictedUrls)
+		filter, err := mapToNetworkFilter(ctx, r, containerId, request.Config, nil)
 		if err != nil {
 			return nil, err
 		}

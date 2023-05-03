@@ -38,17 +38,17 @@ func (e *Extension) DiscoverTargets(targetId string) ([]discovery_kit_api.Target
 	return nil, fmt.Errorf("discovery not found: %s", targetId)
 }
 
-func (e *Extension) RunAction(actionId string, target action_kit_api.Target, config interface{}) (*ActionExecution, error) {
+func (e *Extension) RunAction(actionId string, target action_kit_api.Target, config interface{}) (ActionExecution, error) {
 	actions, err := e.describeActions()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get action descriptions: %w", err)
+		return ActionExecution{}, fmt.Errorf("failed to get action descriptions: %w", err)
 	}
 	for _, action := range actions {
 		if action.Id == actionId {
 			return e.execAction(action, target, config)
 		}
 	}
-	return nil, fmt.Errorf("action not found: %s", actionId)
+	return ActionExecution{}, fmt.Errorf("action not found: %s", actionId)
 }
 
 func (e *Extension) listDiscoveries() (discovery_kit_api.DiscoveryList, error) {
@@ -161,12 +161,12 @@ func (a *ActionExecution) Cancel() error {
 	return nil
 }
 
-func (e *Extension) execAction(action action_kit_api.ActionDescription, target action_kit_api.Target, config interface{}) (*ActionExecution, error) {
+func (e *Extension) execAction(action action_kit_api.ActionDescription, target action_kit_api.Target, config interface{}) (ActionExecution, error) {
 	executionId := uuid.New()
 
 	state, duration, err := e.prepareAction(action, target, config, executionId)
 	if err != nil {
-		return nil, err
+		return ActionExecution{}, err
 	}
 	log.Info().Str("actionId", action.Id).
 		Interface("config", config).
@@ -178,7 +178,7 @@ func (e *Extension) execAction(action action_kit_api.ActionDescription, target a
 		if action.Stop != nil {
 			_ = e.stopAction(action, executionId, state)
 		}
-		return nil, err
+		return ActionExecution{}, err
 	}
 	log.Info().Str("actionId", action.Id).
 		Interface("state", state).
@@ -217,7 +217,7 @@ func (e *Extension) execAction(action action_kit_api.ActionDescription, target a
 		close(ch)
 	}()
 
-	return &ActionExecution{
+	return ActionExecution{
 		ch:     ch,
 		cancel: cancel,
 	}, nil

@@ -121,6 +121,9 @@ func createBundleAndSpec(ctx context.Context, r runc.Runc, id, targetId string, 
 	cleanup := func() error {
 		var errs []error
 		for _, f := range finalizers {
+			if f == nil {
+				continue
+			}
 			if err := f(); err != nil {
 				errs = append(errs, err)
 			}

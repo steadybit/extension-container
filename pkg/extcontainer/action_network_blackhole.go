@@ -46,12 +46,7 @@ func blackhole(r runc.Runc) networkOptsProvider {
 	return func(ctx context.Context, request action_kit_api.PrepareActionRequestBody) (networkutils.Opts, error) {
 		containerId := request.Target.Attributes["container.id"][0]
 
-		var restrictedUrls []string
-		if request.ExecutionContext != nil && request.ExecutionContext.RestrictedUrls != nil {
-			restrictedUrls = *request.ExecutionContext.RestrictedUrls
-		}
-
-		filter, err := mapToNetworkFilter(ctx, r, containerId, request.Config, restrictedUrls)
+		filter, err := mapToNetworkFilter(ctx, r, containerId, request.Config, nil)
 		if err != nil {
 			return nil, err
 		}

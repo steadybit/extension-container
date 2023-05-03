@@ -11,11 +11,11 @@ require (
 	github.com/opencontainers/runtime-spec v1.1.0-rc.2
 	github.com/pkg/errors v0.9.1
 	github.com/rs/zerolog v1.29.1
-	github.com/steadybit/action-kit/go/action_kit_api/v2 v2.5.2
-	github.com/steadybit/action-kit/go/action_kit_sdk v1.1.0
+	github.com/steadybit/action-kit/go/action_kit_api/v2 v2.6.0
+	github.com/steadybit/action-kit/go/action_kit_sdk v1.1.1
 	github.com/steadybit/discovery-kit/go/discovery_kit_api v1.3.0
 	github.com/steadybit/event-kit/go/event_kit_api v1.1.0
-	github.com/steadybit/extension-kit v1.7.13
+	github.com/steadybit/extension-kit v1.7.15
 	github.com/stretchr/testify v1.8.2
 	github.com/yalp/jsonpath v0.0.0-20180802001716-5cc68e5049a0
 	google.golang.org/grpc v1.54.0
@@ -71,7 +71,7 @@ require (
 	github.com/morikuni/aec v1.0.0 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
-	github.com/opencontainers/image-spec v1.1.0-rc2.0.20221005185240-3a7f492d3f1b // indirect
+	github.com/opencontainers/image-spec v1.1.0-rc3 // indirect
 	github.com/opencontainers/runc v1.1.7 // indirect
 	github.com/opencontainers/selinux v1.11.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
@@ -79,8 +79,8 @@ require (
 	github.com/sirupsen/logrus v1.9.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	go.opencensus.io v0.24.0 // indirect
-	go.opentelemetry.io/otel v1.14.0 // indirect
-	go.opentelemetry.io/otel/trace v1.14.0 // indirect
+	go.opentelemetry.io/otel v1.15.1 // indirect
+	go.opentelemetry.io/otel/trace v1.15.1 // indirect
 	golang.org/x/mod v0.10.0 // indirect
 	golang.org/x/net v0.9.0 // indirect
 	golang.org/x/oauth2 v0.4.0 // indirect

@@ -119,17 +119,17 @@ func (r *Runc) PrepareBundle(ctx context.Context, image string, id string) (stri
 		return "", nil, fmt.Errorf("failed to create bundle dir: %w", err)
 	}
 
+	cleanup := func() error {
+		return os.RemoveAll(bundle)
+	}
+
 	platformFilter := fmt.Sprintf("%s_%s/*", runtime.GOOS, runtime.GOARCH)
 	if out, err := exec.Command("tar", "-xf", image, "--strip-components=1", "--wildcards", "-C", rootfs, platformFilter).CombinedOutput(); err != nil {
-		return "", nil, fmt.Errorf("failed to prepare rootfs dir: %s %w", out, err)
+		return "", cleanup, fmt.Errorf("failed to prepare rootfs dir: %s %w", out, err)
 	}
 
 	if err := r.Spec(ctx, bundle); err != nil {
-		return "", nil, err
-	}
-
-	cleanup := func() error {
-		return os.RemoveAll(bundle)
+		return "", cleanup, err
 	}
 
 	log.Debug().Str("bundle", bundle).Str("id", id).Msg("prepared bundle")
