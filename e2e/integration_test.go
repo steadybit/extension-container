@@ -25,7 +25,7 @@ var (
 )
 
 func TestWithMinikube(t *testing.T) {
-	e2e.WithMinikube(t, e2e.AllRuntimes, 8080, "extension-container", "../charts/steadybit-extension-container", []e2e.WithMinikubeTestCase{
+	e2e.WithMinikube(t, e2e.AllRuntimes, 8080, "extension-container", "steadybit-extension-container", "../charts/steadybit-extension-container", []e2e.WithMinikubeTestCase{
 		{
 			Name: "target discovery",
 			Test: testDiscovery,
