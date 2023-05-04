@@ -550,7 +550,7 @@ func testStressCpu(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	action, err := e.RunAction("container.stress_cpu", *target, config, executionContext)
 	defer func() { _ = action.Cancel() }()
 	require.NoError(t, err)
-	e2e.AssertProcessRunningInContainer(t, m, nginx.Pod, "nginx", "stress-ng")
+	e2e.AssertProcessRunningInContainer(t, m, nginx.Pod, "nginx", "stress-ng", nil)
 	require.NoError(t, action.Cancel())
 }
 
@@ -571,7 +571,7 @@ func testStressMemory(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	action, err := e.RunAction("container.stress_mem", *target, config, executionContext)
 	defer func() { _ = action.Cancel() }()
 	require.NoError(t, err)
-	e2e.AssertProcessRunningInContainer(t, m, nginx.Pod, "nginx", "stress-ng")
+	e2e.AssertProcessRunningInContainer(t, m, nginx.Pod, "nginx", "stress-ng", nil)
 	require.NoError(t, action.Cancel())
 }
 
@@ -593,7 +593,7 @@ func testStressIo(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	action, err := e.RunAction("container.stress_io", *target, config, executionContext)
 	defer func() { _ = action.Cancel() }()
 	require.NoError(t, err)
-	e2e.AssertProcessRunningInContainer(t, m, nginx.Pod, "nginx", "stress-ng")
+	e2e.AssertProcessRunningInContainer(t, m, nginx.Pod, "nginx", "stress-ng", nil)
 	require.NoError(t, action.Cancel())
 }
 
