@@ -243,11 +243,11 @@ func (e *Extension) prepareAction(action action_kit_api.ActionDescription, targe
 		return nil, duration, fmt.Errorf("failed to prepare action: %w", err)
 	}
 	logMessages(prepareResult.Messages)
-	if !res.IsSuccess() {
-		return nil, duration, fmt.Errorf("failed to prepare action: %d", res.StatusCode())
-	}
 	if prepareResult.Error != nil {
 		return nil, duration, fmt.Errorf("action failed: %v", *prepareResult.Error)
+	}
+	if !res.IsSuccess() {
+		return nil, duration, fmt.Errorf("failed to prepare action: %d", res.StatusCode())
 	}
 
 	return prepareResult.State, duration, nil

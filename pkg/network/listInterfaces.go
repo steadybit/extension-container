@@ -46,12 +46,12 @@ func ListInterfaces(ctx context.Context, r runc.Runc, targetId string) ([]Interf
 		return nil, fmt.Errorf("could not list interfaces: %w: %s", err, errb.String())
 	}
 
-	var interfacces []Interface
-	err = json.Unmarshal(outb.Bytes(), &interfacces)
+	var interfaces []Interface
+	err = json.Unmarshal(outb.Bytes(), &interfaces)
 	if err != nil {
 		return nil, fmt.Errorf("could not unmarshal interfaces: %w", err)
 	}
 
-	log.Trace().Interface("interfaces", interfacces).Msg("listed network interfaces")
-	return interfacces, nil
+	log.Trace().Interface("interfaces", interfaces).Msg("listed network interfaces")
+	return interfaces, nil
 }

@@ -153,7 +153,7 @@ func createBundleAndSpec(ctx context.Context, r runc.Runc, id, targetId string, 
 		spec.Process.Cwd = "/tmp"
 
 		runc.AddCapabilities(spec, "CAP_NET_ADMIN")
-		runc.UseCgroupOf(spec, state.Pid, "network")
+		runc.UseCgroupOf(spec, state.Pid, "netchaos")
 		runc.UseNamespacesOf(spec, state.Pid)
 
 		editFn(spec)

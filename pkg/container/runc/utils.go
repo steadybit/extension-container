@@ -91,6 +91,7 @@ func UseCgroupOf(spec *specs.Spec, pid int, child string) {
 	}
 	spec.Linux.CgroupsPath = filepath.Join(cgroup, child)
 }
+
 func MountFileOf(ctx context.Context, bundle string, pid int, path string) (func() error, error) {
 	src := filepath.Join("/proc", strconv.Itoa(pid), "root", path)
 	dst := filepath.Join(bundle, "rootfs", path)
