@@ -2,7 +2,7 @@
 checks the .Values.containerRuntime for valid values
 */}}
 {{- define "containerRuntime.valid" -}}
-{{- $valid := keys .Values.containerRuntimes -}}
+{{- $valid := keys .Values.containerRuntimes | sortAlpha -}}
 {{- $runtime := .Values.container.runtime -}}
 {{- if has $runtime $valid -}}
 {{- $runtime  -}}
