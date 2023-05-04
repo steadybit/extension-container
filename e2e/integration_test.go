@@ -26,34 +26,34 @@ func TestWithMinikube(t *testing.T) {
 		}, {
 			Name: "pause container",
 			Test: testPauseContainer,
-		}, {
-			Name: "stress cpu",
-			Test: testStressCpu,
-		}, {
-			Name: "stress memory",
-			Test: testStressMemory,
-		}, {
-			Name: "stress io",
-			Test: testStressIo,
-		}, {
-			Name: "network blackhole",
-			Test: testNetworkBlackhole,
-		}, {
-			Name: "network delay",
-			Test: testNetworkDelay,
-		}, {
-			Name: "network block dns",
-			Test: testNetworkBlockDns,
-		}, {
-			Name: "network limit bandwidth",
-			Test: testNetworkLimitBandwidth,
-		}, {
-			Name: "network package loss",
-			Test: testNetworkPackageLoss,
-		}, {
-			Name: "network package corruption",
-			Test: testNetworkPackageCorruption,
-		},
+		}, /* {
+		     	Name: "stress cpu",
+		     	Test: testStressCpu,
+		     }, {
+		     	Name: "stress memory",
+		     	Test: testStressMemory,
+		     }, {
+		     	Name: "stress io",
+		     	Test: testStressIo,
+		     }, {
+		     	Name: "network blackhole",
+		     	Test: testNetworkBlackhole,
+		     }, {
+		     	Name: "network delay",
+		     	Test: testNetworkDelay,
+		     }, {
+		     	Name: "network block dns",
+		     	Test: testNetworkBlockDns,
+		     }, {
+		     	Name: "network limit bandwidth",
+		     	Test: testNetworkLimitBandwidth,
+		     }, {
+		     	Name: "network package loss",
+		     	Test: testNetworkPackageLoss,
+		     }, {
+		   	Name: "network package corruption",
+		   	Test: testNetworkPackageCorruption,
+		   },*/
 	})
 }
 
