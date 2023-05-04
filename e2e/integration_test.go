@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	"runtime"
 	"testing"
 	"time"
 )
@@ -25,7 +26,21 @@ var (
 )
 
 func TestWithMinikube(t *testing.T) {
-	e2e.WithMinikube(t, e2e.AllRuntimes, 8080, "extension-container", "steadybit-extension-container", "../charts/steadybit-extension-container", []e2e.WithMinikubeTestCase{
+	extFactory := e2e.HelmExtensionFactory{
+		Name: "extension-container",
+		Port: 8080,
+		ExtraArgs: func(m *e2e.Minikube) []string {
+			return []string{"--set", fmt.Sprintf("container.runtime=%s", m.Runtime)}
+		},
+	}
+
+	mOpts := e2e.DefaultMiniKubeOpts
+	mOpts.Runtimes = e2e.AllRuntimes
+	if runtime.GOOS == "linux" {
+		mOpts.Driver = "kvm2"
+	}
+
+	e2e.WithMinikube(t, mOpts, &extFactory, []e2e.WithMinikubeTestCase{
 		{
 			Name: "target discovery",
 			Test: testDiscovery,
@@ -35,34 +50,34 @@ func TestWithMinikube(t *testing.T) {
 		}, {
 			Name: "pause container",
 			Test: testPauseContainer,
-		}, /* {
-		     	Name: "stress cpu",
-		     	Test: testStressCpu,
-		     }, {
-		     	Name: "stress memory",
-		     	Test: testStressMemory,
-		     }, {
-		     	Name: "stress io",
-		     	Test: testStressIo,
-		     }, {
-		     	Name: "network blackhole",
-		     	Test: testNetworkBlackhole,
-		     }, {
-		     	Name: "network delay",
-		     	Test: testNetworkDelay,
-		     }, {
-		     	Name: "network block dns",
-		     	Test: testNetworkBlockDns,
-		     }, {
-		     	Name: "network limit bandwidth",
-		     	Test: testNetworkLimitBandwidth,
-		     }, {
-		     	Name: "network package loss",
-		     	Test: testNetworkPackageLoss,
-		     }, {
-		   	Name: "network package corruption",
-		   	Test: testNetworkPackageCorruption,
-		   },*/
+		}, {
+			Name: "stress cpu",
+			Test: testStressCpu,
+		}, {
+			Name: "stress memory",
+			Test: testStressMemory,
+		}, {
+			Name: "stress io",
+			Test: testStressIo,
+		}, {
+			Name: "network blackhole",
+			Test: testNetworkBlackhole,
+		}, {
+			Name: "network delay",
+			Test: testNetworkDelay,
+		}, {
+			Name: "network block dns",
+			Test: testNetworkBlockDns,
+		}, {
+			Name: "network limit bandwidth",
+			Test: testNetworkLimitBandwidth,
+		}, {
+			Name: "network package loss",
+			Test: testNetworkPackageLoss,
+		}, {
+			Name: "network package corruption",
+			Test: testNetworkPackageCorruption,
+		},
 	})
 }
 
