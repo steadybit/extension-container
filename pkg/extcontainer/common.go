@@ -47,3 +47,11 @@ func AddPrefix(containerId string, runtime types.Runtime) string {
 	}
 	return containerId
 }
+
+func getRestrictedEndpoints(request action_kit_api.PrepareActionRequestBody) []action_kit_api.RestrictedEndpoint {
+  var restrictedEndpoints []action_kit_api.RestrictedEndpoint
+  if request.ExecutionContext != nil && request.ExecutionContext.RestrictedEndpoints != nil {
+    restrictedEndpoints = *request.ExecutionContext.RestrictedEndpoints
+  }
+  return restrictedEndpoints
+}
