@@ -6,8 +6,10 @@ package e2e
 import (
 	"context"
 	"fmt"
+	"github.com/steadybit/action-kit/go/action_kit_api/v2"
+	"github.com/steadybit/action-kit/go/action_kit_test/e2e"
 	"github.com/steadybit/discovery-kit/go/discovery_kit_api"
-	"github.com/steadybit/extension-container/pkg/container/types"
+	"github.com/steadybit/extension-kit/extutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -15,8 +17,15 @@ import (
 	"time"
 )
 
+var (
+	executionContext = &action_kit_api.ExecutionContext{
+		AgentAwsAccountId:   nil,
+		RestrictedEndpoints: extutil.Ptr([]action_kit_api.RestrictedEndpoint{}),
+	}
+)
+
 func TestWithMinikube(t *testing.T) {
-	WithMinikube(t, types.AllRuntimes, []WithMinikubeTestCase{
+	e2e.WithMinikube(t, e2e.AllRuntimes, 8080, "extension-container", "../charts/steadybit-extension-container", []e2e.WithMinikubeTestCase{
 		{
 			Name: "target discovery",
 			Test: testDiscovery,
@@ -57,12 +66,12 @@ func TestWithMinikube(t *testing.T) {
 	})
 }
 
-func testNetworkDelay(t *testing.T, m *Minikube, e *Extension) {
-	if m.runtime == "cri-o" {
+func testNetworkDelay(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
+	if m.Runtime == "cri-o" {
 		t.Skip("Due to https://github.com/kubernetes/minikube/issues/16371 this test is skipped for cri-o")
 	}
 
-	netperf := netperf{minikube: m}
+	netperf := e2e.Netperf{Minikube: m}
 	err := netperf.Deploy("delay")
 	defer func() { _ = netperf.Delete() }()
 	require.NoError(t, err)
@@ -118,7 +127,7 @@ func testNetworkDelay(t *testing.T, m *Minikube, e *Extension) {
 		}
 
 		t.Run(tt.name, func(t *testing.T) {
-			action, err := e.RunAction("container.network_delay", *target, config)
+			action, err := e.RunAction("container.network_delay", *target, config, executionContext)
 			defer func() { _ = action.Cancel() }()
 			require.NoError(t, err)
 
@@ -140,12 +149,12 @@ func testNetworkDelay(t *testing.T, m *Minikube, e *Extension) {
 	}
 }
 
-func testNetworkPackageLoss(t *testing.T, m *Minikube, e *Extension) {
-	if m.runtime == "cri-o" {
+func testNetworkPackageLoss(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
+	if m.Runtime == "cri-o" {
 		t.Skip("Due to https://github.com/kubernetes/minikube/issues/16371 this test is skipped for cri-o")
 	}
 
-	iperf := iperf{minikube: m}
+	iperf := e2e.Iperf{Minikube: m}
 	err := iperf.Deploy("loss")
 	defer func() { _ = iperf.Delete() }()
 	require.NoError(t, err)
@@ -196,7 +205,7 @@ func testNetworkPackageLoss(t *testing.T, m *Minikube, e *Extension) {
 		}
 
 		t.Run(tt.name, func(t *testing.T) {
-			action, err := e.RunAction("container.network_package_loss", *target, config)
+			action, err := e.RunAction("container.network_package_loss", *target, config, executionContext)
 			defer func() { _ = action.Cancel() }()
 			require.NoError(t, err)
 
@@ -216,12 +225,12 @@ func testNetworkPackageLoss(t *testing.T, m *Minikube, e *Extension) {
 	}
 }
 
-func testNetworkPackageCorruption(t *testing.T, m *Minikube, e *Extension) {
-	if m.runtime == "cri-o" {
+func testNetworkPackageCorruption(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
+	if m.Runtime == "cri-o" {
 		t.Skip("Due to https://github.com/kubernetes/minikube/issues/16371 this test is skipped for cri-o")
 	}
 
-	iperf := iperf{minikube: m}
+	iperf := e2e.Iperf{Minikube: m}
 	err := iperf.Deploy("corruption")
 	defer func() { _ = iperf.Delete() }()
 	require.NoError(t, err)
@@ -272,7 +281,7 @@ func testNetworkPackageCorruption(t *testing.T, m *Minikube, e *Extension) {
 		}
 
 		t.Run(tt.name, func(t *testing.T) {
-			action, err := e.RunAction("container.network_package_corruption", *target, config)
+			action, err := e.RunAction("container.network_package_corruption", *target, config, executionContext)
 			defer func() { _ = action.Cancel() }()
 			require.NoError(t, err)
 
@@ -292,12 +301,12 @@ func testNetworkPackageCorruption(t *testing.T, m *Minikube, e *Extension) {
 	}
 }
 
-func testNetworkLimitBandwidth(t *testing.T, m *Minikube, e *Extension) {
-	if m.runtime == "cri-o" {
+func testNetworkLimitBandwidth(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
+	if m.Runtime == "cri-o" {
 		t.Skip("Due to https://github.com/kubernetes/minikube/issues/16371 this test is skipped for cri-o")
 	}
 
-	iperf := iperf{minikube: m}
+	iperf := e2e.Iperf{Minikube: m}
 	err := iperf.Deploy("bandwidth")
 	defer func() { _ = iperf.Delete() }()
 	require.NoError(t, err)
@@ -352,7 +361,7 @@ func testNetworkLimitBandwidth(t *testing.T, m *Minikube, e *Extension) {
 		}
 
 		t.Run(tt.name, func(t *testing.T) {
-			action, err := e.RunAction("container.network_bandwidth", *target, config)
+			action, err := e.RunAction("container.network_bandwidth", *target, config, executionContext)
 			defer func() { _ = action.Cancel() }()
 			require.NoError(t, err)
 
@@ -372,12 +381,12 @@ func testNetworkLimitBandwidth(t *testing.T, m *Minikube, e *Extension) {
 	}
 }
 
-func testNetworkBlackhole(t *testing.T, m *Minikube, e *Extension) {
-	if m.runtime == "cri-o" {
+func testNetworkBlackhole(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
+	if m.Runtime == "cri-o" {
 		t.Skip("Due to https://github.com/kubernetes/minikube/issues/16371 this test is skipped for cri-o")
 	}
 
-	nginx := Nginx{minikube: m}
+	nginx := e2e.Nginx{Minikube: m}
 	err := nginx.Deploy("nginx-network-blackhole")
 	require.NoError(t, err, "failed to create pod")
 	defer func() { _ = nginx.Delete() }()
@@ -429,7 +438,7 @@ func testNetworkBlackhole(t *testing.T, m *Minikube, e *Extension) {
 			require.NoError(t, nginx.IsReachable(), "service should be reachable before blackhole")
 			require.NoError(t, nginx.CanReach("https://google.com"), "service should reach url before blackhole")
 
-			action, err := e.RunAction("container.network_blackhole", *target, config)
+			action, err := e.RunAction("container.network_blackhole", *target, config, executionContext)
 			defer func() { _ = action.Cancel() }()
 			require.NoError(t, err)
 
@@ -452,12 +461,12 @@ func testNetworkBlackhole(t *testing.T, m *Minikube, e *Extension) {
 	}
 }
 
-func testNetworkBlockDns(t *testing.T, m *Minikube, e *Extension) {
-	if m.runtime == "cri-o" {
+func testNetworkBlockDns(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
+	if m.Runtime == "cri-o" {
 		t.Skip("Due to https://github.com/kubernetes/minikube/issues/16371 this test is skipped for cri-o")
 	}
 
-	nginx := Nginx{minikube: m}
+	nginx := e2e.Nginx{Minikube: m}
 	err := nginx.Deploy("nginx-network-block-dns")
 	require.NoError(t, err, "failed to create pod")
 	defer func() { _ = nginx.Delete() }()
@@ -500,7 +509,7 @@ func testNetworkBlockDns(t *testing.T, m *Minikube, e *Extension) {
 			require.NoError(t, nginx.IsReachable(), "service should be reachable before block dns")
 			require.NoError(t, nginx.CanReach("https://google.com"), "service should reach url before block dns")
 
-			action, err := e.RunAction("container.network_block_dns", *target, config)
+			action, err := e.RunAction("container.network_block_dns", *target, config, executionContext)
 			defer func() { _ = action.Cancel() }()
 			require.NoError(t, err)
 
@@ -523,8 +532,8 @@ func testNetworkBlockDns(t *testing.T, m *Minikube, e *Extension) {
 	}
 }
 
-func testStressCpu(t *testing.T, m *Minikube, e *Extension) {
-	nginx := Nginx{minikube: m}
+func testStressCpu(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
+	nginx := e2e.Nginx{Minikube: m}
 	err := nginx.Deploy("nginx-stress-cpu")
 	require.NoError(t, err, "failed to create pod")
 	defer func() { _ = nginx.Delete() }()
@@ -538,15 +547,15 @@ func testStressCpu(t *testing.T, m *Minikube, e *Extension) {
 		Workers  int `json:"workers"`
 	}{Duration: 5000, Workers: 0, CpuLoad: 50}
 
-	action, err := e.RunAction("container.stress_cpu", *target, config)
+	action, err := e.RunAction("container.stress_cpu", *target, config, executionContext)
 	defer func() { _ = action.Cancel() }()
 	require.NoError(t, err)
-	assertProcessRunningInContainer(t, m, nginx.Pod, "nginx", "stress-ng")
+	e2e.AssertProcessRunningInContainer(t, m, nginx.Pod, "nginx", "stress-ng")
 	require.NoError(t, action.Cancel())
 }
 
-func testStressMemory(t *testing.T, m *Minikube, e *Extension) {
-	nginx := Nginx{minikube: m}
+func testStressMemory(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
+	nginx := e2e.Nginx{Minikube: m}
 	err := nginx.Deploy("nginx-stress-mem")
 	require.NoError(t, err, "failed to create pod")
 	defer func() { _ = nginx.Delete() }()
@@ -559,15 +568,15 @@ func testStressMemory(t *testing.T, m *Minikube, e *Extension) {
 		Percentage int `json:"percentage"`
 	}{Duration: 5000, Percentage: 50}
 
-	action, err := e.RunAction("container.stress_mem", *target, config)
+	action, err := e.RunAction("container.stress_mem", *target, config, executionContext)
 	defer func() { _ = action.Cancel() }()
 	require.NoError(t, err)
-	assertProcessRunningInContainer(t, m, nginx.Pod, "nginx", "stress-ng")
+	e2e.AssertProcessRunningInContainer(t, m, nginx.Pod, "nginx", "stress-ng")
 	require.NoError(t, action.Cancel())
 }
 
-func testStressIo(t *testing.T, m *Minikube, e *Extension) {
-	nginx := Nginx{minikube: m}
+func testStressIo(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
+	nginx := e2e.Nginx{Minikube: m}
 	err := nginx.Deploy("nginx-stress-io")
 	require.NoError(t, err, "failed to create pod")
 	defer func() { _ = nginx.Delete() }()
@@ -581,19 +590,19 @@ func testStressIo(t *testing.T, m *Minikube, e *Extension) {
 		Percentage int    `json:"percentage"`
 		Workers    int    `json:"workers"`
 	}{Duration: 5000, Workers: 1, Percentage: 50, Path: "/tmp"}
-	action, err := e.RunAction("container.stress_io", *target, config)
+	action, err := e.RunAction("container.stress_io", *target, config, executionContext)
 	defer func() { _ = action.Cancel() }()
 	require.NoError(t, err)
-	assertProcessRunningInContainer(t, m, nginx.Pod, "nginx", "stress-ng")
+	e2e.AssertProcessRunningInContainer(t, m, nginx.Pod, "nginx", "stress-ng")
 	require.NoError(t, action.Cancel())
 }
 
-func testPauseContainer(t *testing.T, m *Minikube, e *Extension) {
-	if m.runtime == "cri-o" {
+func testPauseContainer(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
+	if m.Runtime == "cri-o" {
 		t.Skip("pause is not supported in cri-o")
 	}
 
-	nginx := Nginx{minikube: m}
+	nginx := e2e.Nginx{Minikube: m}
 	err := nginx.Deploy("nginx-pause")
 	require.NoError(t, err, "failed to create pod")
 	defer func() { _ = nginx.Delete() }()
@@ -607,16 +616,16 @@ func testPauseContainer(t *testing.T, m *Minikube, e *Extension) {
 
 	ts := make(chan time.Time, 10)
 	go func() {
-		require.NoError(t, waitForContainerStatusUsingContainerEngine(m, status.ContainerID, "paused"))
+		require.NoError(t, e2e.WaitForContainerStatusUsingContainerEngine(m, status.ContainerID, "paused"))
 		ts <- time.Now()
-		require.NoError(t, waitForContainerStatusUsingContainerEngine(m, status.ContainerID, "running"))
+		require.NoError(t, e2e.WaitForContainerStatusUsingContainerEngine(m, status.ContainerID, "running"))
 		ts <- time.Now()
 	}()
 
 	config := struct {
 		Duration int `json:"duration"`
 	}{Duration: 5000}
-	action, err := e.RunAction("container.pause", *target, config)
+	action, err := e.RunAction("container.pause", *target, config, executionContext)
 	defer func() { _ = action.Cancel() }()
 	require.NoError(t, err)
 	err = action.Wait()
@@ -639,8 +648,8 @@ func testPauseContainer(t *testing.T, m *Minikube, e *Extension) {
 	duration := end.Sub(start)
 	assert.True(t, duration >= 4*time.Second && duration < 5500*time.Millisecond, "container expected to be paused for ~5s but was paused for %s", duration)
 }
-func testStopContainer(t *testing.T, m *Minikube, e *Extension) {
-	nginx := Nginx{minikube: m}
+func testStopContainer(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
+	nginx := e2e.Nginx{Minikube: m}
 	err := nginx.Deploy("nginx-stop")
 	require.NoError(t, err, "failed to create pod")
 	defer func() { _ = nginx.Delete() }()
@@ -651,7 +660,7 @@ func testStopContainer(t *testing.T, m *Minikube, e *Extension) {
 	config := struct {
 		Graceful bool `json:"graceful"`
 	}{Graceful: true}
-	action, err := e.RunAction("container.stop", *target, config)
+	action, err := e.RunAction("container.stop", *target, config, executionContext)
 	defer func() { _ = action.Cancel() }()
 	require.NoError(t, err)
 	require.NoError(t, action.Wait())
@@ -664,8 +673,8 @@ func testStopContainer(t *testing.T, m *Minikube, e *Extension) {
 	assert.NotNil(t, status.State.Terminated, "container should be terminated")
 }
 
-func testDiscovery(t *testing.T, m *Minikube, e *Extension) {
-	nginx := Nginx{minikube: m}
+func testDiscovery(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
+	nginx := e2e.Nginx{Minikube: m}
 	err := nginx.Deploy("nginx-discovery")
 	require.NoError(t, err, "failed to create pod")
 	defer func() { _ = nginx.Delete() }()
@@ -673,8 +682,8 @@ func testDiscovery(t *testing.T, m *Minikube, e *Extension) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	target, err := pollForTarget(ctx, e, func(target discovery_kit_api.Target) bool {
-		return hasAttribute(target, "k8s.pod.name", "nginx-discovery")
+	target, err := e2e.PollForTarget(ctx, e, "container", func(target discovery_kit_api.Target) bool {
+		return e2e.HasAttribute(target, "k8s.pod.name", "nginx-discovery")
 	})
 
 	require.NoError(t, err)
