@@ -13,7 +13,7 @@ manifest should match snapshot using containerd:
       template:
         metadata:
           annotations:
-            container.apparmor.security.beta.kubernetes.io/extension-container: unconfined
+            container.apparmor.security.beta.kubernetes.io/extension: unconfined
             steadybit.com/extension-auto-discovery: "{\n  \"extensions\": [\n    {\n      \"port\": \"8080\",\n      \"types\": null,\n      \"tls\": {\n          \n    }\n    }\n  ]\n}\n"
           labels:
             app.kubernetes.io/name: steadybit-extension-container
@@ -61,10 +61,8 @@ manifest should match snapshot using containerd:
                   name: cgroup-root
                 - mountPath: /run/containerd/containerd.sock
                   name: runtime-socket
-                  type: Socket
                 - mountPath: /run/containerd/runc/k8s.io
                   name: runtime-runc-root
-                  type: Directory
           hostPID: true
           volumes:
             - emptyDir: {}
@@ -96,7 +94,7 @@ manifest should match snapshot using crio:
       template:
         metadata:
           annotations:
-            container.apparmor.security.beta.kubernetes.io/extension-container: unconfined
+            container.apparmor.security.beta.kubernetes.io/extension: unconfined
             steadybit.com/extension-auto-discovery: "{\n  \"extensions\": [\n    {\n      \"port\": \"8080\",\n      \"types\": null,\n      \"tls\": {\n          \n    }\n    }\n  ]\n}\n"
           labels:
             app.kubernetes.io/name: steadybit-extension-container
@@ -144,10 +142,8 @@ manifest should match snapshot using crio:
                   name: cgroup-root
                 - mountPath: /var/run/crio/crio.sock
                   name: runtime-socket
-                  type: Socket
                 - mountPath: /run/runc
                   name: runtime-runc-root
-                  type: Directory
           hostPID: true
           volumes:
             - emptyDir: {}
@@ -179,7 +175,7 @@ manifest should match snapshot using docker:
       template:
         metadata:
           annotations:
-            container.apparmor.security.beta.kubernetes.io/extension-container: unconfined
+            container.apparmor.security.beta.kubernetes.io/extension: unconfined
             steadybit.com/extension-auto-discovery: "{\n  \"extensions\": [\n    {\n      \"port\": \"8080\",\n      \"types\": null,\n      \"tls\": {\n          \n    }\n    }\n  ]\n}\n"
           labels:
             app.kubernetes.io/name: steadybit-extension-container
@@ -227,10 +223,8 @@ manifest should match snapshot using docker:
                   name: cgroup-root
                 - mountPath: /var/run/docker.sock
                   name: runtime-socket
-                  type: Socket
                 - mountPath: /run/docker/runtime-runc/moby
                   name: runtime-runc-root
-                  type: Directory
           hostPID: true
           volumes:
             - emptyDir: {}
@@ -262,7 +256,7 @@ manifest should match snapshot with TLS:
       template:
         metadata:
           annotations:
-            container.apparmor.security.beta.kubernetes.io/extension-container: unconfined
+            container.apparmor.security.beta.kubernetes.io/extension: unconfined
             steadybit.com/extension-auto-discovery: "{\n  \"extensions\": [\n    {\n      \"port\": \"8080\",\n      \"types\": null,\n      \"tls\": {\n        \"server\": {\n          \"extraCertsFile\": \"/opt/steadybit/agent/etc/extension-mtls/server-cert/tls.crt\"\n          }\n          \n    }\n    }\n  ]\n}\n"
           labels:
             app.kubernetes.io/name: steadybit-extension-container
@@ -317,10 +311,8 @@ manifest should match snapshot with TLS:
                   readOnly: true
                 - mountPath: /var/run/docker.sock
                   name: runtime-socket
-                  type: Socket
                 - mountPath: /run/docker/runtime-runc/moby
                   name: runtime-runc-root
-                  type: Directory
           hostPID: true
           volumes:
             - emptyDir: {}
@@ -356,7 +348,7 @@ manifest should match snapshot with mutual TLS:
       template:
         metadata:
           annotations:
-            container.apparmor.security.beta.kubernetes.io/extension-container: unconfined
+            container.apparmor.security.beta.kubernetes.io/extension: unconfined
             steadybit.com/extension-auto-discovery: |
               {
                 "extensions": [
@@ -433,10 +425,8 @@ manifest should match snapshot with mutual TLS:
                   readOnly: true
                 - mountPath: /var/run/docker.sock
                   name: runtime-socket
-                  type: Socket
                 - mountPath: /run/docker/runtime-runc/moby
                   name: runtime-runc-root
-                  type: Directory
           hostPID: true
           volumes:
             - emptyDir: {}
