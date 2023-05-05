@@ -142,7 +142,7 @@ func testNetworkDelay(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 		}
 
 		t.Run(tt.name, func(t *testing.T) {
-			action, err := e.RunAction("container.network_delay", *target, config, executionContext)
+			action, err := e.RunAction("container.network_delay", target, config, executionContext)
 			defer func() { _ = action.Cancel() }()
 			require.NoError(t, err)
 
@@ -220,7 +220,7 @@ func testNetworkPackageLoss(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 		}
 
 		t.Run(tt.name, func(t *testing.T) {
-			action, err := e.RunAction("container.network_package_loss", *target, config, executionContext)
+			action, err := e.RunAction("container.network_package_loss", target, config, executionContext)
 			defer func() { _ = action.Cancel() }()
 			require.NoError(t, err)
 
@@ -296,7 +296,7 @@ func testNetworkPackageCorruption(t *testing.T, m *e2e.Minikube, e *e2e.Extensio
 		}
 
 		t.Run(tt.name, func(t *testing.T) {
-			action, err := e.RunAction("container.network_package_corruption", *target, config, executionContext)
+			action, err := e.RunAction("container.network_package_corruption", target, config, executionContext)
 			defer func() { _ = action.Cancel() }()
 			require.NoError(t, err)
 
@@ -376,7 +376,7 @@ func testNetworkLimitBandwidth(t *testing.T, m *e2e.Minikube, e *e2e.Extension) 
 		}
 
 		t.Run(tt.name, func(t *testing.T) {
-			action, err := e.RunAction("container.network_bandwidth", *target, config, executionContext)
+			action, err := e.RunAction("container.network_bandwidth", target, config, executionContext)
 			defer func() { _ = action.Cancel() }()
 			require.NoError(t, err)
 
@@ -453,7 +453,7 @@ func testNetworkBlackhole(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			require.NoError(t, nginx.IsReachable(), "service should be reachable before blackhole")
 			require.NoError(t, nginx.CanReach("https://google.com"), "service should reach url before blackhole")
 
-			action, err := e.RunAction("container.network_blackhole", *target, config, executionContext)
+			action, err := e.RunAction("container.network_blackhole", target, config, executionContext)
 			defer func() { _ = action.Cancel() }()
 			require.NoError(t, err)
 
@@ -524,7 +524,7 @@ func testNetworkBlockDns(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			require.NoError(t, nginx.IsReachable(), "service should be reachable before block dns")
 			require.NoError(t, nginx.CanReach("https://google.com"), "service should reach url before block dns")
 
-			action, err := e.RunAction("container.network_block_dns", *target, config, executionContext)
+			action, err := e.RunAction("container.network_block_dns", target, config, executionContext)
 			defer func() { _ = action.Cancel() }()
 			require.NoError(t, err)
 
@@ -562,7 +562,7 @@ func testStressCpu(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 		Workers  int `json:"workers"`
 	}{Duration: 5000, Workers: 0, CpuLoad: 50}
 
-	action, err := e.RunAction("container.stress_cpu", *target, config, executionContext)
+	action, err := e.RunAction("container.stress_cpu", target, config, executionContext)
 	defer func() { _ = action.Cancel() }()
 	require.NoError(t, err)
 	e2e.AssertProcessRunningInContainer(t, m, nginx.Pod, "nginx", "stress-ng", false)
@@ -583,7 +583,7 @@ func testStressMemory(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 		Percentage int `json:"percentage"`
 	}{Duration: 5000, Percentage: 50}
 
-	action, err := e.RunAction("container.stress_mem", *target, config, executionContext)
+	action, err := e.RunAction("container.stress_mem", target, config, executionContext)
 	defer func() { _ = action.Cancel() }()
 	require.NoError(t, err)
 	e2e.AssertProcessRunningInContainer(t, m, nginx.Pod, "nginx", "stress-ng", false)
@@ -605,7 +605,7 @@ func testStressIo(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 		Percentage int    `json:"percentage"`
 		Workers    int    `json:"workers"`
 	}{Duration: 5000, Workers: 1, Percentage: 50, Path: "/tmp"}
-	action, err := e.RunAction("container.stress_io", *target, config, executionContext)
+	action, err := e.RunAction("container.stress_io", target, config, executionContext)
 	defer func() { _ = action.Cancel() }()
 	require.NoError(t, err)
 	e2e.AssertProcessRunningInContainer(t, m, nginx.Pod, "nginx", "stress-ng", false)
@@ -640,7 +640,7 @@ func testPauseContainer(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	config := struct {
 		Duration int `json:"duration"`
 	}{Duration: 5000}
-	action, err := e.RunAction("container.pause", *target, config, executionContext)
+	action, err := e.RunAction("container.pause", target, config, executionContext)
 	defer func() { _ = action.Cancel() }()
 	require.NoError(t, err)
 	err = action.Wait()
@@ -675,7 +675,7 @@ func testStopContainer(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	config := struct {
 		Graceful bool `json:"graceful"`
 	}{Graceful: true}
-	action, err := e.RunAction("container.stop", *target, config, executionContext)
+	action, err := e.RunAction("container.stop", target, config, executionContext)
 	defer func() { _ = action.Cancel() }()
 	require.NoError(t, err)
 	require.NoError(t, action.Wait())

@@ -96,24 +96,31 @@ func (a *stressAction) Start(_ context.Context, state *StressActionState) (*acti
 }
 
 func (a *stressAction) Status(_ context.Context, state *StressActionState) (*action_kit_api.StatusResult, error) {
-	var messages []action_kit_api.Message
 	completed, err := a.isStressCompleted(state.ExecutionId)
+
 	if err != nil {
-		messages = append(messages, action_kit_api.Message{
-			Level:   extutil.Ptr(action_kit_api.Error),
-			Message: fmt.Sprintf("Failed to stress container %s: %s", state.ContainerId, err),
-		})
-	} else if completed {
-		messages = append(messages, action_kit_api.Message{
-			Level:   extutil.Ptr(action_kit_api.Info),
-			Message: fmt.Sprintf("Stessing container %s stopped", state.ContainerId),
-		})
+		return &action_kit_api.StatusResult{
+			Completed: true,
+			Error: &action_kit_api.ActionKitError{
+				Status: extutil.Ptr(action_kit_api.Failed),
+				Title:  fmt.Sprintf("Failed to stress container: %s", err),
+			},
+		}, nil
 	}
 
-	return &action_kit_api.StatusResult{
-		Completed: completed,
-		Messages:  &messages,
-	}, nil
+	if completed {
+		return &action_kit_api.StatusResult{
+			Completed: true,
+			Messages: &[]action_kit_api.Message{
+				{
+					Level:   extutil.Ptr(action_kit_api.Info),
+					Message: fmt.Sprintf("Stessing container %s stopped", state.ContainerId),
+				},
+			},
+		}, nil
+	}
+
+	return &action_kit_api.StatusResult{Completed: false}, nil
 }
 
 func (a *stressAction) Stop(_ context.Context, state *StressActionState) (*action_kit_api.StopResult, error) {
