@@ -161,7 +161,26 @@ func readCgroup(pid int) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return strings.TrimPrefix(strings.TrimSpace(out), "0::"), nil
+	minHid := 9999
+	cgroup := ""
+	for _, line := range strings.Split(strings.TrimSpace(out), "\n") {
+		fields := strings.Split(line, ":")
+		if len(fields) != 3 {
+			continue
+		}
+		hid, err := strconv.Atoi(fields[0])
+		if err != nil {
+			continue
+		}
+		if hid < minHid {
+			minHid = hid
+			cgroup = fields[2]
+		}
+	}
+	if cgroup == "" {
+		return "", fmt.Errorf("could not read cgroup for pid %d\n%s", pid, out)
+	}
+	return cgroup, nil
 }
 
 func readProc(file string, pid int) (string, error) {
