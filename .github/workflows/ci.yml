@@ -45,7 +45,8 @@ jobs:
       - name: Audit
         run: |
           go mod download
-          make audit
+          #exec in a new sell for the group change to take effect
+          sudo -u $USER make audit
 
       - name: Check Sonar Token
         id: check-sonar
