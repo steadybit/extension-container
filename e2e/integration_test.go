@@ -464,14 +464,14 @@ func testNetworkBlackhole(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			}
 
 			if tt.WantedReachesUrl {
-				require.NoError(t, nginx.CanReach("https://google.com"), "service should be reachable during blackhole")
+				require.NoError(t, nginx.CanReach("https://google.com"), "url should be reachable during blackhole")
 			} else {
-				require.Error(t, nginx.CanReach("https://google.com"), "service should not be reachable during blackhole")
+				require.Error(t, nginx.CanReach("https://google.com"), "url should not be reachable during blackhole")
 			}
 
 			require.NoError(t, action.Cancel())
 			require.NoError(t, nginx.IsReachable(), "service should be reachable after blackhole")
-			require.NoError(t, nginx.CanReach("https://google.com"), "service should reach url after blackhole")
+			require.NoError(t, nginx.CanReach("https://google.com"), "url should reach url after blackhole")
 		})
 	}
 }
