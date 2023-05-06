@@ -37,6 +37,7 @@ FROM debian:bullseye-slim
 ARG USERNAME=steadybit
 ARG USER_UID=10000
 ARG USER_GID=$USER_UID
+ARG TARGETARCH
 
 RUN groupadd --gid $USER_GID $USERNAME \
     && useradd --uid $USER_UID --gid $USER_GID -m $USERNAME
@@ -50,7 +51,7 @@ USER $USERNAME
 
 WORKDIR /
 
-COPY  ./sidecar.tar /sidecar.tar
+COPY  ./sidecar_linux_$TARGETARCH.tar /sidecar.tar
 COPY --from=build /app/extension /extension
 
 EXPOSE 8080

@@ -12,7 +12,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"time"
 )
 
@@ -123,8 +122,8 @@ func (r *Runc) PrepareBundle(ctx context.Context, image string, id string) (stri
 		return os.RemoveAll(bundle)
 	}
 
-	platformFilter := fmt.Sprintf("%s_%s/*", runtime.GOOS, runtime.GOARCH)
-	if out, err := exec.Command("tar", "-xf", image, "--strip-components=1", "--wildcards", "-C", rootfs, platformFilter).CombinedOutput(); err != nil {
+	cmd := exec.Command("tar", "-xf", image, "-C", rootfs)
+	if out, err := cmd.CombinedOutput(); err != nil {
 		return "", cleanup, fmt.Errorf("failed to prepare rootfs dir: %s %w", out, err)
 	}
 

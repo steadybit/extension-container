@@ -305,13 +305,13 @@ func testNetworkPackageCorruption(t *testing.T, m *e2e.Minikube, e *e2e.Extensio
 			if tt.WantedCorruption {
 				require.True(t, loss >= 6.0, "~10%% packages should be corrupted but was %.2f", loss)
 			} else {
-				require.True(t, loss <= 2.0, "packages should be corrupted but was %.2f", loss)
+				require.True(t, loss <= 2.0, "packages should not be corrupted but was %.2f", loss)
 			}
 			require.NoError(t, action.Cancel())
 
 			loss, err = iperf.MeasurePackageLoss()
 			require.NoError(t, err)
-			require.True(t, loss <= 2.0, "packages should be corrupted but was %.2f", loss)
+			require.True(t, loss <= 2.0, "packages should not be corrupted but was %.2f", loss)
 		})
 	}
 }
