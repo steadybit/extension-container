@@ -6,6 +6,7 @@ package extcontainer
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
@@ -15,6 +16,7 @@ import (
 	"github.com/steadybit/extension-container/pkg/networkutils"
 	extension_kit "github.com/steadybit/extension-kit"
 	"github.com/steadybit/extension-kit/extutil"
+	"net"
 )
 
 type networkOptsProvider func(ctx context.Context, sidecarConfig network.TargetContainerConfig, request action_kit_api.PrepareActionRequestBody) (networkutils.Opts, error)
@@ -203,13 +205,15 @@ func mapToNetworkFilter(ctx context.Context, r runc.Runc, cfg network.TargetCont
 		extutil.ToStringArray(config["hostname"])...,
 	)
 
-	includeCidrs, err := network.ResolveHostnames(ctx, r, cfg, toResolve...)
+	includeIps, err := network.ResolveHostnames(ctx, r, cfg, toResolve...)
 	if err != nil {
 		return networkutils.Filter{}, err
 	}
-	if len(includeCidrs) == 0 {
-		//if no hostname/ip specified we affect all ips
-		includeCidrs = []string{"::/0", "0.0.0.0/0"}
+
+	//if no hostname/ip specified we affect all ips
+	includeCidrs := networkutils.NetAny
+	if len(includeIps) > 0 {
+		includeCidrs = networkutils.IpToNet(includeIps)
 	}
 
 	portRanges, err := parsePortRanges(extutil.ToStringArray(config["port"]))
@@ -221,12 +225,16 @@ func mapToNetworkFilter(ctx context.Context, r runc.Runc, cfg network.TargetCont
 		portRanges = []networkutils.PortRange{networkutils.PortRangeAny}
 	}
 
-	includes := networkutils.NewCidrWithPortRanges(includeCidrs, portRanges...)
-	var excludes []networkutils.CidrWithPortRange
+	includes := networkutils.NewNetWithPortRanges(includeCidrs, portRanges...)
+	var excludes []networkutils.NetWithPortRange
 
 	for _, restrictedEndpoint := range restrictedEndpoints {
 		log.Debug().Msgf("Adding restricted endpoint %s (%s) => %s:%d-%d", restrictedEndpoint.Name, restrictedEndpoint.Url, restrictedEndpoint.Cidr, restrictedEndpoint.PortMin, restrictedEndpoint.PortMax)
-		excludes = append(excludes, networkutils.NewCidrWithPortRanges([]string{restrictedEndpoint.Cidr}, networkutils.PortRange{From: uint16(restrictedEndpoint.PortMin), To: uint16(restrictedEndpoint.PortMax)})...)
+		_, cidr, err := net.ParseCIDR(restrictedEndpoint.Cidr)
+		if err != nil {
+			return networkutils.Filter{}, fmt.Errorf("invalid cidr %s: %w", restrictedEndpoint.Cidr, err)
+		}
+		excludes = append(excludes, networkutils.NewNetWithPortRanges([]net.IPNet{*cidr}, networkutils.PortRange{From: uint16(restrictedEndpoint.PortMin), To: uint16(restrictedEndpoint.PortMax)})...)
 	}
 
 	return networkutils.Filter{

@@ -84,7 +84,7 @@ func toRuncNamespaceType(t string) specs.LinuxNamespaceType {
 	}
 }
 
-func CopyFileFromProcess(dst string, pid int, path string) error {
+func CopyFileFromProcessToBundle(bundle string, pid int, path string) error {
 	var out bytes.Buffer
 	cmd := RootCommandContext(context.Background(), "nsenter", "-t", "1", "-C", "--", "cat", filepath.Join("/proc", strconv.Itoa(pid), "root", path))
 	cmd.Stdout = &out
@@ -93,7 +93,7 @@ func CopyFileFromProcess(dst string, pid int, path string) error {
 		return fmt.Errorf("%s: %s", err, out.String())
 	}
 
-	return os.WriteFile(filepath.Join(dst, path), out.Bytes(), 0644)
+	return os.WriteFile(filepath.Join(bundle, "rootfs", path), out.Bytes(), 0644)
 }
 
 func RootCommandContext(ctx context.Context, name string, arg ...string) *exec.Cmd {

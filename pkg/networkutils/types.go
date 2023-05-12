@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"strconv"
 	"strings"
 )
@@ -21,6 +22,13 @@ const (
 	FamilyV6   Family = "inet6"
 )
 
+var (
+	NetAny = []net.IPNet{
+		{IP: net.IPv4zero, Mask: net.CIDRMask(0, 32)},
+		{IP: net.IPv6zero, Mask: net.CIDRMask(0, 128)},
+	}
+)
+
 type Opts interface {
 	IpCommands(family Family, mode Mode) (io.Reader, error)
 	TcCommands(mode Mode) (io.Reader, error)
@@ -28,8 +36,8 @@ type Opts interface {
 }
 
 type Filter struct {
-	Include []CidrWithPortRange
-	Exclude []CidrWithPortRange
+	Include []NetWithPortRange
+	Exclude []NetWithPortRange
 }
 
 var (
@@ -74,24 +82,37 @@ func ParsePortRange(raw string) (PortRange, error) {
 	return PortRange{From: uint16(from), To: uint16(to)}, nil
 }
 
-type CidrWithPortRange struct {
-	Cidr      string
+type NetWithPortRange struct {
+	Net       net.IPNet
 	PortRange PortRange
 }
 
-func (c CidrWithPortRange) String() string {
-	if c.PortRange == PortRangeAny {
-		return c.Cidr
+func IpToNet(ips []string) []net.IPNet {
+	var nets []net.IPNet
+	for _, ip := range ips {
+		addr := net.ParseIP(ip)
+		if v4 := addr.To4(); v4 != nil {
+			nets = append(nets, net.IPNet{IP: v4, Mask: net.CIDRMask(32, 32)})
+		} else if v6 := addr.To4(); v6 != nil {
+			nets = append(nets, net.IPNet{IP: v6, Mask: net.CIDRMask(128, 128)})
+		}
 	}
-	return fmt.Sprintf("%s port %s", c.Cidr, c.PortRange.String())
+	return nets
 }
 
-func NewCidrWithPortRanges(cidrs []string, portRanges ...PortRange) []CidrWithPortRange {
-	var result []CidrWithPortRange
-	for _, cidr := range cidrs {
+func (nwp NetWithPortRange) String() string {
+	if nwp.PortRange == PortRangeAny {
+		return nwp.Net.String()
+	}
+	return fmt.Sprintf("%s port %s", nwp.Net, nwp.PortRange.String())
+}
+
+func NewNetWithPortRanges(nets []net.IPNet, portRanges ...PortRange) []NetWithPortRange {
+	var result []NetWithPortRange
+	for _, n := range nets {
 		for _, portRange := range portRanges {
-			result = append(result, CidrWithPortRange{
-				Cidr:      cidr,
+			result = append(result, NetWithPortRange{
+				Net:       n,
 				PortRange: portRange,
 			})
 		}

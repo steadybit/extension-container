@@ -4,13 +4,10 @@
 package networkutils
 
 import (
-  "errors"
-  "fmt"
+	"fmt"
 	"io"
-  "math/big"
-  "net"
-  "net/netip"
-  "strings"
+	"net"
+	"strings"
 )
 
 func toReader(lines []string, mode Mode) (io.Reader, error) {
@@ -40,19 +37,14 @@ func toReader(lines []string, mode Mode) (io.Reader, error) {
 	return strings.NewReader(sb.String()), nil
 }
 
-func getFamily(cidr string) (Family, error) {
-	ip, _, err := net.ParseCIDR(cidr)
-	if err != nil {
-		return "", err
-	}
-
+func getFamily(net net.IPNet) (Family, error) {
 	switch {
-	case ip.To4() != nil:
+	case net.IP.To4() != nil:
 		return FamilyV4, nil
-	case ip.To16() != nil:
+	case net.IP.To16() != nil:
 		return FamilyV6, nil
 	default:
-		return "", fmt.Errorf("unknown family for %s", cidr)
+		return "", fmt.Errorf("unknown family for %s", net)
 	}
 }
 
@@ -62,13 +54,13 @@ const handleInclude = "1:3"
 func tcCommandsForFilter(mode Mode, f *Filter, ifc string) ([]string, error) {
 	var cmds []string
 
-	if filterCmds, err := tcCommandsForCidrs(f.Exclude, mode, ifc, "1:", handleExclude, len(cmds)); err == nil {
+	if filterCmds, err := tcCommandsForNets(f.Exclude, mode, ifc, "1:", handleExclude, len(cmds)); err == nil {
 		cmds = append(cmds, filterCmds...)
 	} else {
 		return nil, err
 	}
 
-	if filterCmds, err := tcCommandsForCidrs(f.Include, mode, ifc, "1:", handleInclude, len(cmds)); err == nil {
+	if filterCmds, err := tcCommandsForNets(f.Include, mode, ifc, "1:", handleInclude, len(cmds)); err == nil {
 		cmds = append(cmds, filterCmds...)
 	} else {
 		return nil, err
@@ -76,15 +68,15 @@ func tcCommandsForFilter(mode Mode, f *Filter, ifc string) ([]string, error) {
 	return cmds, nil
 }
 
-func tcCommandsForCidrs(cidrWithPortRange []CidrWithPortRange, mode Mode, ifc, parent, flowId string, prio int) ([]string, error) {
+func tcCommandsForNets(netWithPortRanges []NetWithPortRange, mode Mode, ifc, parent, flowId string, prio int) ([]string, error) {
 	var cmds []string
-	for _, cwp := range cidrWithPortRange {
-		protocol, err := getProtocol(cwp.Cidr)
+	for _, nwp := range netWithPortRanges {
+		protocol, err := getProtocol(nwp.Net)
 		if err != nil {
 			return nil, err
 		}
 
-		matchers, err := getMatchers(cwp)
+		matchers, err := getMatchers(nwp)
 		if err != nil {
 			return nil, err
 		}
@@ -98,8 +90,8 @@ func tcCommandsForCidrs(cidrWithPortRange []CidrWithPortRange, mode Mode, ifc, p
 	return cmds, nil
 }
 
-func getMatchers(cwp CidrWithPortRange) ([]string, error) {
-	family, err := getFamily(cwp.Cidr)
+func getMatchers(net NetWithPortRange) ([]string, error) {
+	family, err := getFamily(net.Net)
 	if err != nil {
 		return nil, err
 	}
@@ -115,9 +107,9 @@ func getMatchers(cwp CidrWithPortRange) ([]string, error) {
 	}
 
 	var matchers []string
-	for _, pm := range getMask(cwp.PortRange) {
-		matchers = append(matchers, fmt.Sprintf("match %s src %s match %s sport %s", selector, cwp.Cidr, selector, pm))
-		matchers = append(matchers, fmt.Sprintf("match %s dst %s match %s dport %s", selector, cwp.Cidr, selector, pm))
+	for _, pm := range getMask(net.PortRange) {
+		matchers = append(matchers, fmt.Sprintf("match %s src %s match %s sport %s", selector, net.Net.String(), selector, pm))
+		matchers = append(matchers, fmt.Sprintf("match %s dst %s match %s dport %s", selector, net.Net.String(), selector, pm))
 	}
 	return matchers, nil
 }
@@ -180,8 +172,8 @@ func portMask(port, to uint16) uint16 {
 	return mask
 }
 
-func getProtocol(cidr string) (string, error) {
-	family, err := getFamily(cidr)
+func getProtocol(net net.IPNet) (string, error) {
+	family, err := getFamily(net)
 	if err != nil {
 		return "", err
 	}
@@ -194,72 +186,4 @@ func getProtocol(cidr string) (string, error) {
 	default:
 		return "", fmt.Errorf("unknown family %s", family)
 	}
-}
-
-
-func IpRangeToCIDR(start, end string) ([]string, error) {
-  ips, err := netip.ParseAddr(start)
-  if err != nil {
-    return nil, err
-  }
-  ipe, err := netip.ParseAddr(end)
-  if err != nil {
-    return nil, err
-  }
-
-  isV4 := ips.Is4()
-  if isV4 != ipe.Is4() {
-    return nil, errors.New("start and end types are different")
-  }
-  if ips.Compare(ipe) > 0 {
-    return nil, errors.New("start > end")
-  }
-
-  var (
-    ipsInt = new(big.Int).SetBytes(ips.AsSlice())
-    ipeInt = new(big.Int).SetBytes(ipe.AsSlice())
-    nextIp = new(big.Int)
-    maxBit = new(big.Int)
-    cmpSh  = new(big.Int)
-    bits   = new(big.Int)
-    mask   = new(big.Int)
-    one    = big.NewInt(1)
-    buf    []byte
-    cidr   []string
-    bitSh  uint
-  )
-  if isV4 {
-    maxBit.SetUint64(32)
-    buf = make([]byte, 4)
-  } else {
-    maxBit.SetUint64(128)
-    buf = make([]byte, 16)
-  }
-
-  for {
-    bits.SetUint64(1)
-    mask.SetUint64(1)
-    for bits.Cmp(maxBit) < 0 {
-      nextIp.Or(ipsInt, mask)
-
-      bitSh = uint(bits.Uint64())
-      cmpSh.Lsh(cmpSh.Rsh(ipsInt, bitSh), bitSh)
-      if (nextIp.Cmp(ipeInt) > 0) || (cmpSh.Cmp(ipsInt) != 0) {
-        bits.Sub(bits, one)
-        mask.Rsh(mask, 1)
-        break
-      }
-      bits.Add(bits, one)
-      mask.Add(mask.Lsh(mask, 1), one)
-    }
-
-    addr, _ := netip.AddrFromSlice(ipsInt.FillBytes(buf))
-    cidr = append(cidr, addr.String()+"/"+bits.Sub(maxBit, bits).String())
-
-    if nextIp.Or(ipsInt, mask); nextIp.Cmp(ipeInt) >= 0 {
-      break
-    }
-    ipsInt.Add(nextIp, one)
-  }
-  return cidr, nil
 }

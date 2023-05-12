@@ -68,7 +68,7 @@ func blockDns(_ runc.Runc) networkOptsProvider {
 		dnsPort := uint16(extutil.ToUInt(request.Config["dnsPort"]))
 
 		return &networkutils.BlackholeOpts{
-			Filter: networkutils.Filter{Include: networkutils.NewCidrWithPortRanges([]string{"::/0", "0.0.0.0/0"}, networkutils.PortRange{From: dnsPort, To: dnsPort})},
+			Filter: networkutils.Filter{Include: networkutils.NewNetWithPortRanges(networkutils.NetAny, networkutils.PortRange{From: dnsPort, To: dnsPort})},
 		}, nil
 	}
 }

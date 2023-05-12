@@ -53,11 +53,11 @@ func runResolvingSidecar(ctx context.Context, r runc.Runc, config TargetContaine
 		return nil, err
 	}
 
-	if err := utils.CopyFileFromProcess(bundle, config.Pid, "/etc/resolv.conf"); err != nil {
+	if err := utils.CopyFileFromProcessToBundle(bundle, config.Pid, "/etc/resolv.conf"); err != nil {
 		log.Warn().Err(err).Msg("could not copy /etc/resolv.conf")
 	}
 
-	if err := utils.CopyFileFromProcess(bundle, config.Pid, "/etc/hosts"); err != nil {
+	if err := utils.CopyFileFromProcessToBundle(bundle, config.Pid, "/etc/hosts"); err != nil {
 		log.Warn().Err(err).Msg("could not copy /etc/hosts")
 	}
 

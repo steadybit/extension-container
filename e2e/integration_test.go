@@ -437,6 +437,12 @@ func testNetworkBlackhole(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			WantedReachable:  false,
 			WantedReachesUrl: false,
 		},
+		{
+			name:             "should blackhole only traffic for steadybit.com",
+			hostname:         []string{"steadybit.com"},
+			WantedReachable:  true,
+			WantedReachesUrl: false,
+		},
 	}
 
 	for _, tt := range tests {
@@ -454,7 +460,7 @@ func testNetworkBlackhole(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 
 		t.Run(tt.name, func(t *testing.T) {
 			require.NoError(t, nginx.IsReachable(), "service should be reachable before blackhole")
-			require.NoError(t, nginx.CanReach("https://google.com"), "service should reach url before blackhole")
+			require.NoError(t, nginx.CanReach("https://steadybit.com"), "service should reach url before blackhole")
 
 			action, err := e.RunAction("container.network_blackhole", target, config, executionContext)
 			defer func() { _ = action.Cancel() }()
@@ -467,14 +473,14 @@ func testNetworkBlackhole(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			}
 
 			if tt.WantedReachesUrl {
-				require.NoError(t, nginx.CanReach("https://google.com"), "url should be reachable during blackhole")
+				require.NoError(t, nginx.CanReach("https://steadybit.com"), "url should be reachable during blackhole")
 			} else {
-				require.Error(t, nginx.CanReach("https://google.com"), "url should not be reachable during blackhole")
+				require.Error(t, nginx.CanReach("https://steadybit.com"), "url should not be reachable during blackhole")
 			}
 
 			require.NoError(t, action.Cancel())
 			require.NoError(t, nginx.IsReachable(), "service should be reachable after blackhole")
-			require.NoError(t, nginx.CanReach("https://google.com"), "url should reach url after blackhole")
+			require.NoError(t, nginx.CanReach("https://steadybit.com"), "url should reach url after blackhole")
 		})
 	}
 }
@@ -525,7 +531,7 @@ func testNetworkBlockDns(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 
 		t.Run(tt.name, func(t *testing.T) {
 			require.NoError(t, nginx.IsReachable(), "service should be reachable before block dns")
-			require.NoError(t, nginx.CanReach("https://google.com"), "service should reach url before block dns")
+			require.NoError(t, nginx.CanReach("https://steadybit.com"), "service should reach url before block dns")
 
 			action, err := e.RunAction("container.network_block_dns", target, config, executionContext)
 			defer func() { _ = action.Cancel() }()
@@ -538,14 +544,14 @@ func testNetworkBlockDns(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			}
 
 			if tt.WantedReachesUrl {
-				require.NoError(t, nginx.CanReach("https://google.com"), "service should be reachable during block dns")
+				require.NoError(t, nginx.CanReach("https://steadybit.com"), "service should be reachable during block dns")
 			} else {
-				require.ErrorContains(t, nginx.CanReach("https://google.com"), "Resolving timed out", "service should not be reachable during block dns")
+				require.ErrorContains(t, nginx.CanReach("https://steadybit.com"), "Resolving timed out", "service should not be reachable during block dns")
 			}
 
 			require.NoError(t, action.Cancel())
 			require.NoError(t, nginx.IsReachable(), "service should be reachable after block dns")
-			require.NoError(t, nginx.CanReach("https://google.com"), "service should reach url after block dns")
+			require.NoError(t, nginx.CanReach("https://steadybit.com"), "service should reach url after block dns")
 		})
 	}
 }

@@ -17,32 +17,32 @@ type BlackholeOpts struct {
 func (o *BlackholeOpts) IpCommands(family Family, mode Mode) (io.Reader, error) {
 	var cmds []string
 
-	for _, cidrAndPort := range o.Include {
-		cidr := cidrAndPort.Cidr
-		portRange := cidrAndPort.PortRange
+	for _, nwp := range o.Include {
+		net := nwp.Net
+		portRange := nwp.PortRange
 
-		if cidrFamily, err := getFamily(cidr); err != nil {
+		if netFamily, err := getFamily(net); err != nil {
 			return nil, err
-		} else if cidrFamily != family {
+		} else if netFamily != family {
 			continue
 		}
 
-		cmds = append(cmds, fmt.Sprintf("rule %s blackhole to %s dport %s", mode, cidr, portRange.String()))
-		cmds = append(cmds, fmt.Sprintf("rule %s blackhole from %s sport %s", mode, cidr, portRange.String()))
+		cmds = append(cmds, fmt.Sprintf("rule %s blackhole to %s dport %s", mode, net.String(), portRange.String()))
+		cmds = append(cmds, fmt.Sprintf("rule %s blackhole from %s sport %s", mode, net.String(), portRange.String()))
 	}
 
-	for _, cidrAndPort := range o.Exclude {
-		cidr := cidrAndPort.Cidr
-		portRange := cidrAndPort.PortRange
+	for _, nwp := range o.Exclude {
+		net := nwp.Net
+		portRange := nwp.PortRange
 
-		if cidrFamily, err := getFamily(cidr); err != nil {
+		if netFamily, err := getFamily(net); err != nil {
 			return nil, err
-		} else if cidrFamily != family {
+		} else if netFamily != family {
 			continue
 		}
 
-		cmds = append(cmds, fmt.Sprintf("rule %s to %s dport %s table main", mode, cidr, portRange.String()))
-		cmds = append(cmds, fmt.Sprintf("rule %s from %s sport %s table main", mode, cidr, portRange.String()))
+		cmds = append(cmds, fmt.Sprintf("rule %s to %s dport %s table main", mode, net.String(), portRange.String()))
+		cmds = append(cmds, fmt.Sprintf("rule %s from %s sport %s table main", mode, net.String(), portRange.String()))
 	}
 
 	log.Debug().Strs("commands", cmds).Str("family", string(family)).Msg("generated ip commands")
