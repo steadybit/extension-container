@@ -100,13 +100,21 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
 
-      - name: Build nested Docker image
+      - name: Build nested Docker image (arm64)
         uses: docker/build-push-action@v4
         with:
           context: .
           file: ./Dockerfile.sidecar
-          platforms: linux/amd64,linux/arm64
-          outputs: type=tar,dest=sidecar.tar
+          platforms: linux/arm64
+          outputs: type=tar,dest=sidecar_linux_arm64.tar
+
+      - name: Build nested Docker image (amd64)
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ./Dockerfile.sidecar
+          platforms: linux/amd64
+          outputs: type=tar,dest=sidecar_linux_amd64.tar
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v4
