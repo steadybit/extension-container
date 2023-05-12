@@ -45,6 +45,8 @@ jobs:
       - name: Audit
         run: |
           go mod download
+          minikube config set cpus 6
+          minikube config set memory 16g
           #exec in a new sell for the group change to take effect
           sudo -u $USER make audit
 
