@@ -10,6 +10,7 @@ import (
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
 	"github.com/steadybit/action-kit/go/action_kit_sdk"
 	"github.com/steadybit/extension-container/pkg/container/runc"
+	"github.com/steadybit/extension-container/pkg/network"
 	"github.com/steadybit/extension-container/pkg/networkutils"
 	"github.com/steadybit/extension-kit/extbuild"
 	"github.com/steadybit/extension-kit/extutil"
@@ -62,18 +63,17 @@ func getNetworkCorruptPackagesDescription() action_kit_api.ActionDescription {
 }
 
 func corruptPackages(r runc.Runc) networkOptsProvider {
-	return func(ctx context.Context, request action_kit_api.PrepareActionRequestBody) (networkutils.Opts, error) {
-		containerId := request.Target.Attributes["container.id"][0]
+	return func(ctx context.Context, cfg network.TargetContainerConfig, request action_kit_api.PrepareActionRequestBody) (networkutils.Opts, error) {
 		corruption := extutil.ToUInt(request.Config["networkCorruption"])
 
-		filter, err := mapToNetworkFilter(ctx, r, containerId, request.Config, getRestrictedEndpoints(request))
+		filter, err := mapToNetworkFilter(ctx, r, cfg, request.Config, getRestrictedEndpoints(request))
 		if err != nil {
 			return nil, err
 		}
 
 		interfaces := extutil.ToStringArray(request.Config["networkInterface"])
 		if len(interfaces) == 0 {
-			interfaces, err = readNetworkInterfaces(ctx, r, RemovePrefix(containerId))
+			interfaces, err = readNetworkInterfaces(ctx, r, cfg)
 			if err != nil {
 				return nil, err
 			}

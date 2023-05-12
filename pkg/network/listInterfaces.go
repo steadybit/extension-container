@@ -29,13 +29,29 @@ func (i *Interface) HasFlag(f string) bool {
 	return false
 }
 
-func ListInterfaces(ctx context.Context, r runc.Runc, targetId string) ([]Interface, error) {
+type ExtraMount struct {
+	Source string `json:"source"`
+	Path   string `json:"path"`
+}
+
+func ListInterfaces(ctx context.Context, r runc.Runc, config TargetContainerConfig) ([]Interface, error) {
 	id := getNextContainerId()
-	bundle, cleanup, err := createBundleAndSpec(ctx, r, id, targetId, func(spec *specs.Spec) {
-		spec.Process.Args = []string{"ip", "-json", "link", "show"}
-	})
+
+	bundle, cleanup, err := r.PrepareBundle(ctx, "sidecar.tar", id)
 	defer func() { _ = cleanup() }()
 	if err != nil {
+		return nil, err
+	}
+
+	if err = runc.EditSpec(
+		bundle,
+		runc.WithAnnotations(map[string]string{
+			"com.steadybit.sidecar": "true",
+		}),
+		runc.WithSelectedNamespaces(config.Namespaces, specs.NetworkNamespace, specs.UTSNamespace),
+		runc.WithCapabilities("CAP_NET_ADMIN"),
+		runc.WithProcessArgs("ip", "-json", "link", "show"),
+	); err != nil {
 		return nil, err
 	}
 

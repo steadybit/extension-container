@@ -21,7 +21,7 @@ type stressAction struct {
 	runc         runc.Runc
 	description  action_kit_api.ActionDescription
 	optsProvider stressOptsProvider
-	stresses     map[uuid.UUID]*stress.Stress //FIXME don't use the local state
+	stresses     map[uuid.UUID]*stress.Stress //FIXME don't use the local state; or do locking
 }
 
 type StressActionState struct {

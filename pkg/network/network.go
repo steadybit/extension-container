@@ -5,27 +5,53 @@ package network
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/rs/zerolog/log"
 	"github.com/steadybit/extension-container/pkg/container/runc"
 	"github.com/steadybit/extension-container/pkg/networkutils"
+	"github.com/steadybit/extension-container/pkg/utils"
 	"io"
 	"sync/atomic"
 )
 
 var counter = atomic.Int32{}
 
-func Apply(ctx context.Context, r runc.Runc, targetId string, opts networkutils.Opts) error {
-	log.Info().
-		Str("targetContainer", targetId).
-		Msg("applying network config")
-
-	return generateAndRunCommands(ctx, r, targetId, opts, networkutils.ModeAdd)
+type TargetContainerConfig struct {
+	ContainerID string                 `json:"id"`
+	Pid         int                    `json:"pid"`
+	Namespaces  []specs.LinuxNamespace `json:"namespaces"`
 }
 
-func generateAndRunCommands(ctx context.Context, r runc.Runc, targetId string, opts networkutils.Opts, mode networkutils.Mode) error {
+func GetConfigForContainer(ctx context.Context, r runc.Runc, targetId string) (TargetContainerConfig, error) {
+	config := TargetContainerConfig{
+		ContainerID: targetId,
+	}
+
+	state, err := r.State(ctx, targetId)
+	if err != nil {
+		return config, fmt.Errorf("could not load state of target container: %w", err)
+	}
+	config.Pid = state.Pid
+
+	namespaces, err := utils.ReadNamespaces(state.Pid)
+	if err != nil {
+		return config, fmt.Errorf("could not read namespaces of target container: %w", err)
+	}
+	config.Namespaces = namespaces
+
+	return config, nil
+}
+
+func Apply(ctx context.Context, r runc.Runc, config TargetContainerConfig, opts networkutils.Opts) error {
+	log.Info().
+		Str("config", config.ContainerID).
+		Msg("applying network config")
+
+	return generateAndRunCommands(ctx, r, config, opts, networkutils.ModeAdd)
+}
+
+func generateAndRunCommands(ctx context.Context, r runc.Runc, config TargetContainerConfig, opts networkutils.Opts, mode networkutils.Mode) error {
 	ipCommandsV4, err := opts.IpCommands(networkutils.FamilyV4, mode)
 	if err != nil {
 		return err
@@ -42,21 +68,21 @@ func generateAndRunCommands(ctx context.Context, r runc.Runc, targetId string, o
 	}
 
 	if ipCommandsV4 != nil {
-		err = executeIpCommands(ctx, r, targetId, networkutils.FamilyV4, ipCommandsV4)
+		err = executeIpCommands(ctx, r, config, networkutils.FamilyV4, ipCommandsV4)
 		if err != nil {
 			return err
 		}
 	}
 
 	if ipCommandsV6 != nil {
-		err = executeIpCommands(ctx, r, targetId, networkutils.FamilyV6, ipCommandsV6)
+		err = executeIpCommands(ctx, r, config, networkutils.FamilyV6, ipCommandsV6)
 		if err != nil {
 			return err
 		}
 	}
 
 	if tcCommands != nil {
-		err = executeTcCommands(ctx, r, targetId, tcCommands)
+		err = executeTcCommands(ctx, r, config, tcCommands)
 		if err != nil {
 			return err
 		}
@@ -65,12 +91,12 @@ func generateAndRunCommands(ctx context.Context, r runc.Runc, targetId string, o
 	return nil
 }
 
-func Revert(ctx context.Context, r runc.Runc, targetId string, opts networkutils.Opts) error {
+func Revert(ctx context.Context, r runc.Runc, config TargetContainerConfig, opts networkutils.Opts) error {
 	log.Info().
-		Str("targetContainer", targetId).
+		Str("config", config.ContainerID).
 		Msg("reverting network config")
 
-	return generateAndRunCommands(ctx, r, targetId, opts, networkutils.ModeDelete)
+	return generateAndRunCommands(ctx, r, config, opts, networkutils.ModeDelete)
 
 }
 
@@ -78,100 +104,60 @@ func getNextContainerId() string {
 	return fmt.Sprintf("sb-network-%d", counter.Add(1))
 }
 
-func executeIpCommands(ctx context.Context, r runc.Runc, targetId string, family networkutils.Family, batch io.Reader) error {
+func executeIpCommands(ctx context.Context, r runc.Runc, config TargetContainerConfig, family networkutils.Family, batch io.Reader) error {
 	if batch == nil {
 		return nil
 	}
 
 	id := getNextContainerId()
-	bundle, cleanup, err := createBundleAndSpec(ctx, r, id, targetId, func(spec *specs.Spec) {
-		spec.Process.Args = []string{"ip", "-family", string(family), "-force", "-batch", "-"}
-	})
+	bundle, cleanup, err := r.PrepareBundle(ctx, "sidecar.tar", id)
 	defer func() { _ = cleanup() }()
 	if err != nil {
 		return err
 	}
 
-	err = r.Run(ctx, id, bundle, runc.InheritStdIo().WithStdin(batch))
-	defer func() { _ = r.Delete(context.Background(), id, true) }()
-	return err
-}
-
-func executeTcCommands(ctx context.Context, r runc.Runc, targetId string, batch io.Reader) error {
-	if batch == nil {
-		return nil
-	}
-
-	id := getNextContainerId()
-	bundle, cleanup, err := createBundleAndSpec(ctx, r, id, targetId, func(spec *specs.Spec) {
-		spec.Process.Args = []string{"tc", "-force", "-batch", "-"}
-	})
-	defer func() { _ = cleanup() }()
-	if err != nil {
-		return err
-	}
-
-	err = r.Run(ctx, id, bundle, runc.InheritStdIo().WithStdin(batch))
-	defer func() { _ = r.Delete(context.Background(), id, true) }()
-	return err
-}
-
-func createBundleAndSpec(ctx context.Context, r runc.Runc, id, targetId string, editFn runc.SpecEditor) (string, func() error, error) {
-	var finalizers []func() error
-	cleanup := func() error {
-		var errs []error
-		for _, f := range finalizers {
-			if f == nil {
-				continue
-			}
-			if err := f(); err != nil {
-				errs = append(errs, err)
-			}
-		}
-		return errors.Join(errs...)
-	}
-
-	state, err := r.State(ctx, targetId)
-	if err != nil {
-		return "", cleanup, fmt.Errorf("could not load state of target container: %w", err)
-	}
-
-	bundle, cleanupBundle, err := r.PrepareBundle(ctx, "sidecar.tar", id)
-	finalizers = append(finalizers, cleanupBundle)
-	if err != nil {
-		return "", cleanup, err
-	}
-
-	if err := runc.EditSpec(bundle, func(spec *specs.Spec) {
-		spec.Hostname = id
-		spec.Annotations = map[string]string{
+	if err = runc.EditSpec(
+		bundle,
+		runc.WithAnnotations(map[string]string{
 			"com.steadybit.sidecar": "true",
-		}
-		spec.Root.Path = "rootfs"
-		spec.Root.Readonly = true
-		spec.Process.Terminal = false
-		spec.Process.Cwd = "/tmp"
-
-		runc.AddCapabilities(spec, "CAP_NET_ADMIN")
-		runc.UseCgroupOf(spec, state.Pid, "netchaos")
-		runc.UseNamespacesOf(spec, state.Pid)
-
-		editFn(spec)
-	}); err != nil {
-		return "", cleanup, err
+		}),
+		runc.WithSelectedNamespaces(config.Namespaces, specs.NetworkNamespace, specs.UTSNamespace),
+		runc.WithCapabilities("CAP_NET_ADMIN"),
+		runc.WithProcessArgs("ip", "-family", string(family), "-force", "-batch", "-"),
+	); err != nil {
+		return err
 	}
 
-	unmount, err := runc.MountFileOf(ctx, bundle, state.Pid, "/etc/hosts")
-	finalizers = append(finalizers, unmount)
+	err = r.Run(ctx, id, bundle, runc.InheritStdIo().WithStdin(batch))
+	defer func() { _ = r.Delete(context.Background(), id, true) }()
+	return err
+}
+
+func executeTcCommands(ctx context.Context, r runc.Runc, config TargetContainerConfig, batch io.Reader) error {
+	if batch == nil {
+		return nil
+	}
+
+	id := getNextContainerId()
+	bundle, cleanup, err := r.PrepareBundle(ctx, "sidecar.tar", id)
+	defer func() { _ = cleanup() }()
 	if err != nil {
-		return "", cleanup, err
+		return err
 	}
 
-	unmount, err = runc.MountFileOf(ctx, bundle, state.Pid, "/etc/resolv.conf")
-	finalizers = append(finalizers, unmount)
-	if err != nil {
-		return "", cleanup, err
+	if err = runc.EditSpec(
+		bundle,
+		runc.WithAnnotations(map[string]string{
+			"com.steadybit.sidecar": "true",
+		}),
+		runc.WithSelectedNamespaces(config.Namespaces, specs.NetworkNamespace, specs.UTSNamespace),
+		runc.WithCapabilities("CAP_NET_ADMIN"),
+		runc.WithProcessArgs("tc", "-force", "-batch", "-"),
+	); err != nil {
+		return err
 	}
 
-	return bundle, cleanup, nil
+	err = r.Run(ctx, id, bundle, runc.InheritStdIo().WithStdin(batch))
+	defer func() { _ = r.Delete(context.Background(), id, true) }()
+	return err
 }

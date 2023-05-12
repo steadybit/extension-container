@@ -4,10 +4,8 @@
 package runc
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/rs/zerolog/log"
@@ -15,21 +13,24 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
-	"strings"
-	syscall "syscall"
 )
 
 type SpecEditor func(spec *specs.Spec)
 
-func EditSpec(bundle string, editor SpecEditor) error {
+func EditSpec(bundle string, editors ...SpecEditor) error {
 	spec, err := readSpec(filepath.Join(bundle, "config.json"))
 	if err != nil {
 		return err
 	}
 
-	editor(spec)
+	withDefaults(spec)
 
-	return writeSpec(filepath.Join(bundle, "config.json"), spec)
+	for _, fn := range editors {
+		fn(spec)
+	}
+	err = writeSpec(filepath.Join(bundle, "config.json"), spec)
+	log.Trace().Str("bundle", bundle).Interface("spec", spec).Msg("written runc spec")
+	return err
 }
 
 func readSpec(file string) (*specs.Spec, error) {
@@ -55,22 +56,49 @@ func writeSpec(file string, spec *specs.Spec) error {
 	return os.WriteFile(file, content, 0644)
 }
 
-func AddMountIfNotPresent(spec *specs.Spec, mount specs.Mount) {
-	for _, m := range spec.Mounts {
-		if m.Destination == mount.Destination {
-			return
-		}
-	}
-	spec.Mounts = append(spec.Mounts, mount)
+func withDefaults(spec *specs.Spec) {
+	spec.Root.Path = "rootfs"
+	spec.Root.Readonly = true
+	spec.Process.Terminal = false
 }
 
-func AddCapabilities(spec *specs.Spec, caps ...string) {
-	for _, c := range caps {
-		spec.Process.Capabilities.Bounding = appendIfMissing(spec.Process.Capabilities.Bounding, c)
-		spec.Process.Capabilities.Effective = appendIfMissing(spec.Process.Capabilities.Effective, c)
-		spec.Process.Capabilities.Inheritable = appendIfMissing(spec.Process.Capabilities.Inheritable, c)
-		spec.Process.Capabilities.Permitted = appendIfMissing(spec.Process.Capabilities.Effective, c)
-		spec.Process.Capabilities.Ambient = appendIfMissing(spec.Process.Capabilities.Ambient, c)
+func WithMountIfNotPresent(mount specs.Mount) SpecEditor {
+	return func(spec *specs.Spec) {
+		for _, m := range spec.Mounts {
+			if m.Destination == mount.Destination {
+				return
+			}
+		}
+		spec.Mounts = append(spec.Mounts, mount)
+	}
+}
+
+func WithAnnotations(annotations map[string]string) SpecEditor {
+	return func(spec *specs.Spec) {
+		spec.Annotations = annotations
+	}
+}
+
+func WithProcessArgs(args ...string) SpecEditor {
+	return func(spec *specs.Spec) {
+		spec.Process.Args = args
+	}
+}
+func WithProcessCwd(cwd string) SpecEditor {
+	return func(spec *specs.Spec) {
+		spec.Process.Cwd = cwd
+	}
+}
+
+func WithCapabilities(caps ...string) SpecEditor {
+	return func(spec *specs.Spec) {
+		for _, c := range caps {
+			spec.Process.Capabilities.Bounding = appendIfMissing(spec.Process.Capabilities.Bounding, c)
+			spec.Process.Capabilities.Effective = appendIfMissing(spec.Process.Capabilities.Effective, c)
+			spec.Process.Capabilities.Inheritable = appendIfMissing(spec.Process.Capabilities.Inheritable, c)
+			spec.Process.Capabilities.Permitted = appendIfMissing(spec.Process.Capabilities.Effective, c)
+			spec.Process.Capabilities.Ambient = appendIfMissing(spec.Process.Capabilities.Ambient, c)
+		}
 	}
 }
 
@@ -83,116 +111,39 @@ func appendIfMissing(list []string, str string) []string {
 	return append(list, str)
 }
 
-func UseCgroupOf(spec *specs.Spec, pid int, child string) {
-	cgroup, err := readCgroup(pid)
-	if err != nil {
-		log.Warn().Err(err).Int("pid", pid).Msg("Could not read cgroup")
-		return
+func WithCgroupPath(cgroupPath, child string) SpecEditor {
+	return func(spec *specs.Spec) {
+		spec.Linux.CgroupsPath = filepath.Join(cgroupPath, child)
 	}
-	spec.Linux.CgroupsPath = filepath.Join(cgroup, child)
 }
 
-func MountFileOf(ctx context.Context, bundle string, pid int, path string) (func() error, error) {
-	src := filepath.Join("/proc", strconv.Itoa(pid), "root", path)
-	dst := filepath.Join(bundle, "rootfs", path)
+func WithNamespaces(ns []specs.LinuxNamespace) SpecEditor {
+	return func(spec *specs.Spec) {
+		spec.Linux.Namespaces = ns
 
-	out, err := exec.CommandContext(ctx, "touch", dst).CombinedOutput()
-	if err != nil {
-		return nil, errors.New(string(out))
-	}
-
-	out, err = rootCommandContext(ctx, "mount", "--bind", src, dst).CombinedOutput()
-	if err != nil {
-		return nil, errors.New(string(out))
-	}
-
-	return func() error {
-		out, err := rootCommandContext(ctx, "umount", dst).CombinedOutput()
-		if err != nil {
-			return errors.New(string(out))
+		for _, n := range ns {
+			if n.Type == specs.MountNamespace {
+				return
+			}
 		}
-		return nil
-	}, nil
-}
-
-func UseNamespacesOf(spec *specs.Spec, pid int) {
-	spec.Linux.Namespaces = []specs.LinuxNamespace{
-		{
-			Type: specs.PIDNamespace,
-			Path: fmt.Sprintf("/proc/%d/ns/pid", pid),
-		},
-		{
-			Type: specs.IPCNamespace,
-			Path: fmt.Sprintf("/proc/%d/ns/ipc", pid),
-		},
-		{
-			Type: specs.UTSNamespace,
-			Path: fmt.Sprintf("/proc/%d/ns/uts", pid),
-		},
-		{
-			Type: specs.MountNamespace,
-		},
-		{
-			Type: specs.CgroupNamespace,
-			Path: fmt.Sprintf("/proc/%d/ns/cgroup", pid),
-		},
-		{
-			Type: specs.NetworkNamespace,
-			Path: fmt.Sprintf("/proc/%d/ns/net", pid),
-		},
+		spec.Linux.Namespaces = append(spec.Linux.Namespaces, specs.LinuxNamespace{Type: specs.MountNamespace})
 	}
 }
 
-type MountInfo struct {
-	MountID        string
-	ParentID       string
-	MajorMinor     string
-	Root           string
-	MountPoint     string
-	MountOptions   string
-	OptionalFields string
-	FilesystemType string
-	MountSource    string
-	SuperOptions   string
+func WithSelectedNamespaces(ns []specs.LinuxNamespace, filter ...specs.LinuxNamespaceType) SpecEditor {
+	return WithNamespaces(FilterNamespaces(ns, filter...))
 }
 
-func readCgroup(pid int) (string, error) {
-	out, err := readProc("cgroup", pid)
-	if err != nil {
-		return "", err
-	}
-	minHid := 9999
-	cgroup := ""
-	for _, line := range strings.Split(strings.TrimSpace(out), "\n") {
-		fields := strings.Split(line, ":")
-		if len(fields) != 3 {
-			continue
-		}
-		hid, err := strconv.Atoi(fields[0])
-		if err != nil {
-			continue
-		}
-		if hid < minHid {
-			minHid = hid
-			cgroup = fields[2]
+func FilterNamespaces(ns []specs.LinuxNamespace, types ...specs.LinuxNamespaceType) []specs.LinuxNamespace {
+	var result []specs.LinuxNamespace
+	for _, n := range ns {
+		for _, t := range types {
+			if n.Type == t {
+				result = append(result, n)
+			}
 		}
 	}
-	if cgroup == "" {
-		return "", fmt.Errorf("could not read cgroup for pid %d\n%s", pid, out)
-	}
-	return cgroup, nil
-}
-
-func readProc(file string, pid int) (string, error) {
-	var out bytes.Buffer
-	cmd := rootCommandContext(context.Background(), "nsenter", "-t", "1", "-C", "--", "cat", filepath.Join("/proc", strconv.Itoa(pid), file))
-	cmd.Stdout = &out
-	cmd.Stderr = &out
-
-	if err := cmd.Run(); err != nil {
-		return "", fmt.Errorf("%s: %s", err, out.String())
-	}
-	return out.String(), nil
+	return result
 }
 
 // HasHostNetwork determines weather the given process has the same network as the init process.
@@ -208,15 +159,4 @@ func HasHostNetwork(ctx context.Context, pid int) (bool, error) {
 	}
 
 	return string(initNetNS) == string(pidNetNS), nil
-}
-
-func rootCommandContext(ctx context.Context, name string, arg ...string) *exec.Cmd {
-	cmd := exec.CommandContext(ctx, name, arg...)
-	cmd.SysProcAttr = &syscall.SysProcAttr{
-		Credential: &syscall.Credential{
-			Uid: 0,
-			Gid: 0,
-		},
-	}
-	return cmd
 }

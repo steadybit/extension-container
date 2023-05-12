@@ -4,20 +4,20 @@
 package extcontainer
 
 import (
-  "context"
-  "encoding/json"
-  "github.com/google/uuid"
-  "github.com/rs/zerolog/log"
-  "github.com/steadybit/action-kit/go/action_kit_api/v2"
-  "github.com/steadybit/action-kit/go/action_kit_sdk"
-  "github.com/steadybit/extension-container/pkg/container/runc"
-  "github.com/steadybit/extension-container/pkg/network"
-  "github.com/steadybit/extension-container/pkg/networkutils"
-  extension_kit "github.com/steadybit/extension-kit"
-  "github.com/steadybit/extension-kit/extutil"
+	"context"
+	"encoding/json"
+	"github.com/google/uuid"
+	"github.com/rs/zerolog/log"
+	"github.com/steadybit/action-kit/go/action_kit_api/v2"
+	"github.com/steadybit/action-kit/go/action_kit_sdk"
+	"github.com/steadybit/extension-container/pkg/container/runc"
+	"github.com/steadybit/extension-container/pkg/network"
+	"github.com/steadybit/extension-container/pkg/networkutils"
+	extension_kit "github.com/steadybit/extension-kit"
+	"github.com/steadybit/extension-kit/extutil"
 )
 
-type networkOptsProvider func(ctx context.Context, request action_kit_api.PrepareActionRequestBody) (networkutils.Opts, error)
+type networkOptsProvider func(ctx context.Context, sidecarConfig network.TargetContainerConfig, request action_kit_api.PrepareActionRequestBody) (networkutils.Opts, error)
 
 type networkOptsDecoder func(data json.RawMessage) (networkutils.Opts, error)
 
@@ -29,9 +29,9 @@ type networkAction struct {
 }
 
 type NetworkActionState struct {
-	ContainerId string
-	ExecutionId uuid.UUID
-	NetworkOpts json.RawMessage
+	ExecutionId     uuid.UUID
+	NetworkOpts     json.RawMessage
+	ContainerConfig network.TargetContainerConfig
 }
 
 // Make sure networkAction implements all required interfaces
@@ -115,7 +115,12 @@ func (a *networkAction) Prepare(ctx context.Context, state *NetworkActionState, 
 		}
 	}
 
-	opts, err := a.optsProvider(ctx, request)
+	cfg, err := network.GetConfigForContainer(ctx, a.runc, RemovePrefix(containerId[0]))
+	if err != nil {
+		return nil, extension_kit.ToError("Failed to prepare network settings.", err)
+	}
+
+	opts, err := a.optsProvider(ctx, cfg, request)
 	if err != nil {
 		return nil, extension_kit.ToError("Failed to prepare network settings.", err)
 	}
@@ -125,8 +130,8 @@ func (a *networkAction) Prepare(ctx context.Context, state *NetworkActionState, 
 		return nil, extension_kit.ToError("Failed to serialize network settings.", err)
 	}
 
-	state.ContainerId = containerId[0]
 	state.NetworkOpts = rawOpts
+	state.ContainerConfig = cfg
 	return nil, nil
 }
 
@@ -144,7 +149,7 @@ func (a *networkAction) Start(ctx context.Context, state *NetworkActionState) (*
 		return nil, extension_kit.ToError("Failed to deserialize network settings.", err)
 	}
 
-	err = network.Apply(ctx, a.runc, RemovePrefix(state.ContainerId), opts)
+	err = network.Apply(ctx, a.runc, state.ContainerConfig, opts)
 	if err != nil {
 		return nil, extension_kit.ToError("Failed to apply network settings.", err)
 	}
@@ -166,7 +171,7 @@ func (a *networkAction) Stop(ctx context.Context, state *NetworkActionState) (*a
 		return nil, extension_kit.ToError("Failed to deserialize network settings.", err)
 	}
 
-	err = network.Revert(ctx, a.runc, RemovePrefix(state.ContainerId), opts)
+	err = network.Revert(ctx, a.runc, state.ContainerConfig, opts)
 	if err != nil {
 		return nil, extension_kit.ToError("Failed to revert network settings.", err)
 	}
@@ -192,12 +197,13 @@ func parsePortRanges(raw []string) ([]networkutils.PortRange, error) {
 	return ranges, nil
 }
 
-func mapToNetworkFilter(ctx context.Context, r runc.Runc, containerId string, config map[string]interface{}, restrictedEndpoints []action_kit_api.RestrictedEndpoint) (networkutils.Filter, error) {
+func mapToNetworkFilter(ctx context.Context, r runc.Runc, cfg network.TargetContainerConfig, config map[string]interface{}, restrictedEndpoints []action_kit_api.RestrictedEndpoint) (networkutils.Filter, error) {
 	toResolve := append(
 		extutil.ToStringArray(config["ip"]),
 		extutil.ToStringArray(config["hostname"])...,
 	)
-	includeCidrs, err := network.ResolveHostnames(ctx, r, RemovePrefix(containerId), toResolve...)
+
+	includeCidrs, err := network.ResolveHostnames(ctx, r, cfg, toResolve...)
 	if err != nil {
 		return networkutils.Filter{}, err
 	}
@@ -218,10 +224,10 @@ func mapToNetworkFilter(ctx context.Context, r runc.Runc, containerId string, co
 	includes := networkutils.NewCidrWithPortRanges(includeCidrs, portRanges...)
 	var excludes []networkutils.CidrWithPortRange
 
-  for _, restrictedEndpoint := range restrictedEndpoints {
-    log.Debug().Msgf("Adding restricted endpoint %s (%s) => %s:%d-%d", restrictedEndpoint.Name, restrictedEndpoint.Url, restrictedEndpoint.Cidr, restrictedEndpoint.PortMin, restrictedEndpoint.PortMax)
-    excludes = append(excludes, networkutils.NewCidrWithPortRanges([]string{restrictedEndpoint.Cidr}, networkutils.PortRange{From: uint16(restrictedEndpoint.PortMin), To: uint16(restrictedEndpoint.PortMax)})...)
-  }
+	for _, restrictedEndpoint := range restrictedEndpoints {
+		log.Debug().Msgf("Adding restricted endpoint %s (%s) => %s:%d-%d", restrictedEndpoint.Name, restrictedEndpoint.Url, restrictedEndpoint.Cidr, restrictedEndpoint.PortMin, restrictedEndpoint.PortMax)
+		excludes = append(excludes, networkutils.NewCidrWithPortRanges([]string{restrictedEndpoint.Cidr}, networkutils.PortRange{From: uint16(restrictedEndpoint.PortMin), To: uint16(restrictedEndpoint.PortMax)})...)
+	}
 
 	return networkutils.Filter{
 		Include: includes,
@@ -229,8 +235,8 @@ func mapToNetworkFilter(ctx context.Context, r runc.Runc, containerId string, co
 	}, nil
 }
 
-func readNetworkInterfaces(ctx context.Context, r runc.Runc, containerId string) ([]string, error) {
-	ifcs, err := network.ListInterfaces(ctx, r, containerId)
+func readNetworkInterfaces(ctx context.Context, r runc.Runc, cfg network.TargetContainerConfig) ([]string, error) {
+	ifcs, err := network.ListInterfaces(ctx, r, cfg)
 	if err != nil {
 		return nil, err
 	}

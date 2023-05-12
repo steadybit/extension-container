@@ -9,6 +9,7 @@ import (
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/rs/zerolog/log"
 	"github.com/steadybit/extension-container/pkg/container/runc"
+	"github.com/steadybit/extension-container/pkg/utils"
 	"strconv"
 	"sync/atomic"
 	"time"
@@ -69,25 +70,30 @@ func New(r runc.Runc, targetId string, opts StressOpts) (*Stress, error) {
 		return nil, err
 	}
 
-	if err := runc.EditSpec(bundle, func(spec *specs.Spec) {
-		spec.Hostname = id
-		spec.Annotations = map[string]string{
-			"com.steadybit.sidecar": "true",
-		}
-		spec.Root.Path = "rootfs"
-		spec.Root.Readonly = true
-		spec.Process.Args = append([]string{"stress-ng"}, opts.Args()...)
-		spec.Process.Terminal = false
-		spec.Process.Cwd = "/tmp"
+	cgroupPath, err := utils.ReadCgroupPath(state.Pid)
+	if err != nil {
+		return nil, err
+	}
 
-		runc.UseCgroupOf(spec, state.Pid, "stress")
-		runc.UseNamespacesOf(spec, state.Pid)
-		runc.AddMountIfNotPresent(spec, specs.Mount{
+	namespaces, err := utils.ReadNamespaces(state.Pid)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := runc.EditSpec(bundle,
+		runc.WithAnnotations(map[string]string{
+			"com.steadybit.sidecar": "true",
+		}),
+		runc.WithProcessArgs(append([]string{"stress-ng"}, opts.Args()...)...),
+		runc.WithProcessCwd("/tmp"),
+		runc.WithCgroupPath(cgroupPath, "stress"),
+		runc.WithSelectedNamespaces(namespaces, specs.PIDNamespace, specs.UTSNamespace),
+		runc.WithMountIfNotPresent(specs.Mount{
 			Destination: "/tmp",
 			Type:        "tmpfs",
 			Options:     []string{"noexec", "nosuid", "nodev", "rprivate"},
-		})
-	}); err != nil {
+		}),
+	); err != nil {
 		return nil, err
 	}
 

@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/rs/zerolog/log"
+	"github.com/steadybit/extension-container/pkg/utils"
 	"io"
 	"os"
 	"os/exec"
@@ -75,7 +76,7 @@ func (o IoOpts) WithStdin(reader io.Reader) IoOpts {
 }
 
 func (r *Runc) Run(ctx context.Context, id, bundle string, ioOpts IoOpts) error {
-	log.Debug().Str("bundle", bundle).Msg("running container")
+	log.Trace().Str("bundle", bundle).Msg("running container")
 
 	cmd := r.command(ctx, "run", "--bundle", bundle, id)
 	cmd.Stdin = ioOpts.Stdin
@@ -85,7 +86,7 @@ func (r *Runc) Run(ctx context.Context, id, bundle string, ioOpts IoOpts) error 
 }
 
 func (r *Runc) command(ctx context.Context, args ...string) *exec.Cmd {
-	return rootCommandContext(ctx, "runc", append(r.args(), args...)...)
+	return utils.RootCommandContext(ctx, "runc", append(r.args(), args...)...)
 }
 
 func (r *Runc) args() []string {
@@ -131,6 +132,6 @@ func (r *Runc) PrepareBundle(ctx context.Context, image string, id string) (stri
 		return "", cleanup, err
 	}
 
-	log.Debug().Str("bundle", bundle).Str("id", id).Msg("prepared bundle")
+	log.Trace().Str("bundle", bundle).Str("id", id).Msg("prepared container bundle")
 	return bundle, cleanup, nil
 }

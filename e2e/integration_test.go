@@ -30,7 +30,10 @@ func TestWithMinikube(t *testing.T) {
 		Name: "extension-container",
 		Port: 8080,
 		ExtraArgs: func(m *e2e.Minikube) []string {
-			return []string{"--set", fmt.Sprintf("container.runtime=%s", m.Runtime)}
+			return []string{
+				"--set", fmt.Sprintf("container.runtime=%s", m.Runtime),
+				"--set", "logging.level=trace",
+			}
 		},
 	}
 
@@ -82,7 +85,7 @@ func TestWithMinikube(t *testing.T) {
 }
 
 func testNetworkDelay(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
-	if m.Runtime == "cri-o" {
+	if m.Runtime == "cri-o" && m.Driver == "docker" {
 		t.Skip("Due to https://github.com/kubernetes/minikube/issues/16371 this test is skipped for cri-o")
 	}
 
@@ -165,7 +168,7 @@ func testNetworkDelay(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 }
 
 func testNetworkPackageLoss(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
-	if m.Runtime == "cri-o" {
+	if m.Runtime == "cri-o" && m.Driver == "docker" {
 		t.Skip("Due to https://github.com/kubernetes/minikube/issues/16371 this test is skipped for cri-o")
 	}
 
@@ -241,7 +244,7 @@ func testNetworkPackageLoss(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 }
 
 func testNetworkPackageCorruption(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
-	if m.Runtime == "cri-o" {
+	if m.Runtime == "cri-o" && m.Driver == "docker" {
 		t.Skip("Due to https://github.com/kubernetes/minikube/issues/16371 this test is skipped for cri-o")
 	}
 
@@ -317,7 +320,7 @@ func testNetworkPackageCorruption(t *testing.T, m *e2e.Minikube, e *e2e.Extensio
 }
 
 func testNetworkLimitBandwidth(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
-	if m.Runtime == "cri-o" {
+	if m.Runtime == "cri-o" && m.Driver == "docker" {
 		t.Skip("Due to https://github.com/kubernetes/minikube/issues/16371 this test is skipped for cri-o")
 	}
 
@@ -397,7 +400,7 @@ func testNetworkLimitBandwidth(t *testing.T, m *e2e.Minikube, e *e2e.Extension) 
 }
 
 func testNetworkBlackhole(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
-	if m.Runtime == "cri-o" {
+	if m.Runtime == "cri-o" && m.Driver == "docker" {
 		t.Skip("Due to https://github.com/kubernetes/minikube/issues/16371 this test is skipped for cri-o")
 	}
 
@@ -477,7 +480,7 @@ func testNetworkBlackhole(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 }
 
 func testNetworkBlockDns(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
-	if m.Runtime == "cri-o" {
+	if m.Runtime == "cri-o" && m.Driver == "docker" {
 		t.Skip("Due to https://github.com/kubernetes/minikube/issues/16371 this test is skipped for cri-o")
 	}
 
