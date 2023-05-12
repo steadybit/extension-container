@@ -105,7 +105,7 @@ func (r *Runc) Delete(ctx context.Context, id string, force bool) error {
 	if err != nil {
 		return fmt.Errorf("%s: %s", err, output)
 	}
-	log.Debug().Str("id", id).Msg("deleted container")
+	log.Trace().Str("id", id).Msg("deleted container")
 	return nil
 }
 

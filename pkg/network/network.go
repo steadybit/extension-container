@@ -4,6 +4,7 @@
 package network
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"github.com/opencontainers/runtime-spec/specs-go"
@@ -128,9 +129,17 @@ func executeIpCommands(ctx context.Context, r runc.Runc, config TargetContainerC
 		return err
 	}
 
-	err = r.Run(ctx, id, bundle, runc.InheritStdIo().WithStdin(batch))
+	var outb bytes.Buffer
+	err = r.Run(ctx, id, bundle, runc.IoOpts{
+		Stdin:  batch,
+		Stdout: &outb,
+		Stderr: &outb,
+	})
 	defer func() { _ = r.Delete(context.Background(), id, true) }()
-	return err
+	if err != nil {
+		return fmt.Errorf("ip failed: %w, output: %s", err, outb.String())
+	}
+	return nil
 }
 
 func executeTcCommands(ctx context.Context, r runc.Runc, config TargetContainerConfig, batch io.Reader) error {
@@ -157,7 +166,15 @@ func executeTcCommands(ctx context.Context, r runc.Runc, config TargetContainerC
 		return err
 	}
 
-	err = r.Run(ctx, id, bundle, runc.InheritStdIo().WithStdin(batch))
+	var outb bytes.Buffer
+	err = r.Run(ctx, id, bundle, runc.IoOpts{
+		Stdin:  batch,
+		Stdout: &outb,
+		Stderr: &outb,
+	})
 	defer func() { _ = r.Delete(context.Background(), id, true) }()
-	return err
+	if err != nil {
+		return fmt.Errorf("tc failed: %w, output: %s", err, outb.String())
+	}
+	return nil
 }

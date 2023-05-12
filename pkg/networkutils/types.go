@@ -104,7 +104,7 @@ func (nwp NetWithPortRange) String() string {
 	if nwp.PortRange == PortRangeAny {
 		return nwp.Net.String()
 	}
-	return fmt.Sprintf("%s port %s", nwp.Net, nwp.PortRange.String())
+	return fmt.Sprintf("%s port %s", nwp.Net.String(), nwp.PortRange.String())
 }
 
 func NewNetWithPortRanges(nets []net.IPNet, portRanges ...PortRange) []NetWithPortRange {
