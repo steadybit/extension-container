@@ -93,7 +93,7 @@ func CopyFileFromProcess(dst string, pid int, path string) error {
 		return fmt.Errorf("%s: %s", err, out.String())
 	}
 
-	return os.WriteFile(filepath.Join(dst, path), out.Bytes(), 644)
+	return os.WriteFile(filepath.Join(dst, path), out.Bytes(), 0644)
 }
 
 func RootCommandContext(ctx context.Context, name string, arg ...string) *exec.Cmd {
