@@ -333,6 +333,94 @@ manifest should match snapshot with TLS:
                 path: /run/docker/runtime-runc/moby
                 type: Directory
               name: runtime-runc-root
+manifest should match snapshot with extra env vars:
+  1: |
+    apiVersion: apps/v1
+    kind: DaemonSet
+    metadata:
+      labels: null
+      name: RELEASE-NAME-steadybit-extension-container
+      namespace: NAMESPACE
+    spec:
+      selector:
+        matchLabels:
+          app.kubernetes.io/name: steadybit-extension-container
+      template:
+        metadata:
+          annotations:
+            container.apparmor.security.beta.kubernetes.io/extension: unconfined
+            steadybit.com/extension-auto-discovery: "{\n  \"extensions\": [\n    {\n      \"port\": \"8080\",\n      \"types\": null,\n      \"tls\": {\n          \n    }\n    }\n  ]\n}\n"
+          labels:
+            app.kubernetes.io/name: steadybit-extension-container
+            steadybit.com/extension: "true"
+        spec:
+          containers:
+            - env:
+                - name: STEADYBIT_LOG_LEVEL
+                  value: INFO
+                - name: STEADYBIT_LOG_FORMAT
+                  value: text
+                - name: FOO
+                  value: bar
+              envFrom:
+                - configMapRef: null
+                  name: env-configmap
+                - name: env-secrets
+                  secretRef: null
+              image: ghcr.io/steadybit/extension-container:latest
+              imagePullPolicy: Always
+              livenessProbe:
+                httpGet:
+                  path: /health/liveness
+                  port: 8081
+              name: extension
+              readinessProbe:
+                httpGet:
+                  path: /health/readiness
+                  port: 8081
+              securityContext:
+                capabilities:
+                  add:
+                    - SYS_ADMIN
+                    - SYS_RESOURCE
+                    - SYS_PTRACE
+                    - KILL
+                    - NET_ADMIN
+                    - DAC_OVERRIDE
+                    - SETUID
+                    - SETGID
+                    - AUDIT_WRITE
+                readOnlyRootFilesystem: true
+                runAsGroup: 10000
+                runAsNonRoot: true
+                runAsUser: 10000
+                seccompProfile:
+                  type: Unconfined
+              volumeMounts:
+                - mountPath: /tmp
+                  name: tmp-dir
+                - mountPath: /sys/fs/cgroup
+                  name: cgroup-root
+                - mountPath: /run/containerd/containerd.sock
+                  name: runtime-socket
+                - mountPath: /run/containerd/runc/k8s.io
+                  name: runtime-runc-root
+          hostPID: true
+          volumes:
+            - emptyDir: {}
+              name: tmp-dir
+            - hostPath:
+                path: /sys/fs/cgroup
+                type: Directory
+              name: cgroup-root
+            - hostPath:
+                path: /run/containerd/containerd.sock
+                type: Socket
+              name: runtime-socket
+            - hostPath:
+                path: /run/containerd/runc/k8s.io
+                type: Directory
+              name: runtime-runc-root
 manifest should match snapshot with mutual TLS:
   1: |
     apiVersion: apps/v1
