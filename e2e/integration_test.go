@@ -32,7 +32,6 @@ func TestWithMinikube(t *testing.T) {
 		ExtraArgs: func(m *e2e.Minikube) []string {
 			return []string{
 				"--set", fmt.Sprintf("container.runtime=%s", m.Runtime),
-				"--set", "logging.level=trace",
 			}
 		},
 	}
@@ -135,7 +134,7 @@ func testNetworkDelay(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			Port         []string `json:"port"`
 			NetInterface []string `json:"networkInterface"`
 		}{
-			Duration:     10000,
+			Duration:     20000,
 			Delay:        200,
 			Jitter:       false,
 			Ip:           tt.ip,
@@ -149,20 +148,14 @@ func testNetworkDelay(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			defer func() { _ = action.Cancel() }()
 			require.NoError(t, err)
 
-			latency, err := netperf.MeasureLatency()
-			require.NoError(t, err)
-			delay := latency - unaffectedLatency
 			if tt.WantedDelay {
-				require.True(t, delay > 200*time.Millisecond, "service should be delayed >200ms but was delayed %s", delay.String())
+				netperf.AssertLatency(t, unaffectedLatency+time.Duration(config.Delay)*time.Millisecond, 50*time.Millisecond)
 			} else {
-				require.True(t, delay < 50*time.Millisecond, "service should not be delayed but was delayed %s", delay.String())
+				netperf.AssertLatency(t, unaffectedLatency, 50*time.Millisecond)
 			}
 			require.NoError(t, action.Cancel())
 
-			latency, err = netperf.MeasureLatency()
-			require.NoError(t, err)
-			delay = latency - unaffectedLatency
-			require.True(t, delay < 50*time.Millisecond, "service should not be delayed but was delayed %s", delay.String())
+			netperf.AssertLatency(t, unaffectedLatency, 100*time.Millisecond)
 		})
 	}
 }
@@ -214,7 +207,7 @@ func testNetworkPackageLoss(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			Port         []string `json:"port"`
 			NetInterface []string `json:"networkInterface"`
 		}{
-			Duration:     10000,
+			Duration:     20000,
 			Loss:         10,
 			Ip:           tt.ip,
 			Hostname:     tt.hostname,
@@ -227,18 +220,14 @@ func testNetworkPackageLoss(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			defer func() { _ = action.Cancel() }()
 			require.NoError(t, err)
 
-			loss, err := iperf.MeasurePackageLoss()
-			require.NoError(t, err)
 			if tt.WantedLoss {
-				require.True(t, loss >= 6.0, "~10%% packages should be lost but was %.2f", loss)
+				iperf.AssertPackageLoss(t, 10, 5)
 			} else {
-				require.True(t, loss <= 2.0, "packages should be lost but was %.2f", loss)
+				iperf.AssertPackageLoss(t, 0, 5)
 			}
 			require.NoError(t, action.Cancel())
 
-			loss, err = iperf.MeasurePackageLoss()
-			require.NoError(t, err)
-			require.True(t, loss <= 2.0, "packages should be lost but was %.2f", loss)
+			iperf.AssertPackageLoss(t, 0, 5)
 		})
 	}
 }
@@ -290,7 +279,7 @@ func testNetworkPackageCorruption(t *testing.T, m *e2e.Minikube, e *e2e.Extensio
 			Port         []string `json:"port"`
 			NetInterface []string `json:"networkInterface"`
 		}{
-			Duration:     10000,
+			Duration:     20000,
 			Corruption:   10,
 			Ip:           tt.ip,
 			Hostname:     tt.hostname,
@@ -303,18 +292,14 @@ func testNetworkPackageCorruption(t *testing.T, m *e2e.Minikube, e *e2e.Extensio
 			defer func() { _ = action.Cancel() }()
 			require.NoError(t, err)
 
-			loss, err := iperf.MeasurePackageLoss()
-			require.NoError(t, err)
 			if tt.WantedCorruption {
-				require.True(t, loss >= 6.0, "~10%% packages should be corrupted but was %.2f", loss)
+				iperf.AssertPackageLoss(t, 10, 5)
 			} else {
-				require.True(t, loss <= 2.0, "packages should not be corrupted but was %.2f", loss)
+				iperf.AssertPackageLoss(t, 0, 5)
 			}
 			require.NoError(t, action.Cancel())
 
-			loss, err = iperf.MeasurePackageLoss()
-			require.NoError(t, err)
-			require.True(t, loss <= 2.0, "packages should not be corrupted but was %.2f", loss)
+			iperf.AssertPackageLoss(t, 0, 5)
 		})
 	}
 }
@@ -359,7 +344,7 @@ func testNetworkLimitBandwidth(t *testing.T, m *e2e.Minikube, e *e2e.Extension) 
 
 	unlimited, err := iperf.MeasureBandwidth()
 	require.NoError(t, err)
-	limit := unlimited / 3
+	limited := unlimited / 3
 
 	for _, tt := range tests {
 		config := struct {
@@ -370,8 +355,8 @@ func testNetworkLimitBandwidth(t *testing.T, m *e2e.Minikube, e *e2e.Extension) 
 			Port         []string `json:"port"`
 			NetInterface []string `json:"networkInterface"`
 		}{
-			Duration:     10000,
-			Bandwidth:    fmt.Sprintf("%dmbit", int(limit)),
+			Duration:     20000,
+			Bandwidth:    fmt.Sprintf("%dmbit", int(limited)),
 			Ip:           tt.ip,
 			Hostname:     tt.hostname,
 			Port:         tt.port,
@@ -383,18 +368,13 @@ func testNetworkLimitBandwidth(t *testing.T, m *e2e.Minikube, e *e2e.Extension) 
 			defer func() { _ = action.Cancel() }()
 			require.NoError(t, err)
 
-			bandwidth, err := iperf.MeasureBandwidth()
-			require.NoError(t, err)
 			if tt.WantedLimit {
-				require.True(t, bandwidth <= (limit*1.05), "bandwidth should be ~%.2fmbit but was %.2fmbit", limit, bandwidth)
+				iperf.AssertBandwidth(t, limited, limited*0.05)
 			} else {
-				require.True(t, bandwidth > (unlimited*0.95), "bandwidth should not be limited (~%.2fmbit) but was %.2fmbit", unlimited, bandwidth)
+				iperf.AssertBandwidth(t, unlimited, unlimited*0.05)
 			}
 			require.NoError(t, action.Cancel())
-
-			bandwidth, err = iperf.MeasureBandwidth()
-			require.NoError(t, err)
-			require.True(t, bandwidth > (unlimited*0.95), "bandwidth should not be limited (~%.2fmbit) but was %.2fmbit", unlimited, bandwidth)
+			iperf.AssertBandwidth(t, unlimited, unlimited*0.05)
 		})
 	}
 }
@@ -459,28 +439,19 @@ func testNetworkBlackhole(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 		}
 
 		t.Run(tt.name, func(t *testing.T) {
-			require.NoError(t, nginx.IsReachable(), "service should be reachable before blackhole")
-			require.NoError(t, nginx.CanReach("https://steadybit.com"), "service should reach url before blackhole")
+			nginx.AssertIsReachable(t, true)
+			nginx.AssertCanReach(t, "https://steadybit.com", true)
 
 			action, err := e.RunAction("container.network_blackhole", target, config, executionContext)
 			defer func() { _ = action.Cancel() }()
 			require.NoError(t, err)
 
-			if tt.WantedReachable {
-				require.NoError(t, nginx.IsReachable(), "service should be reachable during blackhole")
-			} else {
-				require.Error(t, nginx.IsReachable(), "service should not be reachable during blackhole")
-			}
-
-			if tt.WantedReachesUrl {
-				require.NoError(t, nginx.CanReach("https://steadybit.com"), "url should be reachable during blackhole")
-			} else {
-				require.Error(t, nginx.CanReach("https://steadybit.com"), "url should not be reachable during blackhole")
-			}
+			nginx.AssertIsReachable(t, tt.WantedReachable)
+			nginx.AssertCanReach(t, "https://steadybit.com", tt.WantedReachesUrl)
 
 			require.NoError(t, action.Cancel())
-			require.NoError(t, nginx.IsReachable(), "service should be reachable after blackhole")
-			require.NoError(t, nginx.CanReach("https://steadybit.com"), "url should reach url after blackhole")
+			nginx.AssertIsReachable(t, true)
+			nginx.AssertCanReach(t, "https://steadybit.com", true)
 		})
 	}
 }
@@ -530,28 +501,22 @@ func testNetworkBlockDns(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 		}
 
 		t.Run(tt.name, func(t *testing.T) {
-			require.NoError(t, nginx.IsReachable(), "service should be reachable before block dns")
-			require.NoError(t, nginx.CanReach("https://steadybit.com"), "service should reach url before block dns")
+			nginx.AssertIsReachable(t, true)
+			nginx.AssertCanReach(t, "https://steadybit.com", true)
 
 			action, err := e.RunAction("container.network_block_dns", target, config, executionContext)
 			defer func() { _ = action.Cancel() }()
 			require.NoError(t, err)
 
-			if tt.WantedReachable {
-				require.NoError(t, nginx.IsReachable(), "service should be reachable during block dns")
-			} else {
-				require.Error(t, nginx.IsReachable(), "service should not be reachable during block dns")
-			}
-
+			nginx.AssertIsReachable(t, tt.WantedReachable)
 			if tt.WantedReachesUrl {
-				require.NoError(t, nginx.CanReach("https://steadybit.com"), "service should be reachable during block dns")
+				nginx.AssertCanReach(t, "https://steadybit.com", true)
 			} else {
-				require.ErrorContains(t, nginx.CanReach("https://steadybit.com"), "Resolving timed out", "service should not be reachable during block dns")
+				nginx.AssertCannotReach(t, "https://steadybit.com", "Resolving timed out after")
 			}
-
 			require.NoError(t, action.Cancel())
-			require.NoError(t, nginx.IsReachable(), "service should be reachable after block dns")
-			require.NoError(t, nginx.CanReach("https://steadybit.com"), "service should reach url after block dns")
+			nginx.AssertIsReachable(t, true)
+			nginx.AssertCanReach(t, "https://steadybit.com", true)
 		})
 	}
 }
