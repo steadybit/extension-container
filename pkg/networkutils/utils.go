@@ -90,8 +90,8 @@ func tcCommandsForNets(netWithPortRanges []NetWithPortRange, mode Mode, ifc, par
 	return cmds, nil
 }
 
-func getMatchers(net NetWithPortRange) ([]string, error) {
-	family, err := getFamily(net.Net)
+func getMatchers(nwp NetWithPortRange) ([]string, error) {
+	family, err := getFamily(nwp.Net)
 	if err != nil {
 		return nil, err
 	}
@@ -107,9 +107,9 @@ func getMatchers(net NetWithPortRange) ([]string, error) {
 	}
 
 	var matchers []string
-	for _, pm := range getMask(net.PortRange) {
-		matchers = append(matchers, fmt.Sprintf("match %s src %s match %s sport %s", selector, net.Net.String(), selector, pm))
-		matchers = append(matchers, fmt.Sprintf("match %s dst %s match %s dport %s", selector, net.Net.String(), selector, pm))
+	for _, pr := range getMask(nwp.PortRange) {
+		matchers = append(matchers, fmt.Sprintf("match %s src %s match %s sport %s", selector, nwp.Net.String(), selector, pr))
+		matchers = append(matchers, fmt.Sprintf("match %s dst %s match %s dport %s", selector, nwp.Net.String(), selector, pr))
 	}
 	return matchers, nil
 }
