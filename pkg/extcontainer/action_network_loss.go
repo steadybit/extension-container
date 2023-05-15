@@ -27,7 +27,7 @@ func NewNetworkPackageLossContainerAction(r runc.Runc) action_kit_sdk.Action[Net
 
 func getNetworkPackageLossDescription() action_kit_api.ActionDescription {
 	return action_kit_api.ActionDescription{
-		Id:          fmt.Sprintf("%s.network_package_loss", targetID),
+		Id:          fmt.Sprintf("%s.network_package_loss", BaseActionID),
 		Label:       "Drop Outgoing Traffic",
 		Description: "Cause packet loss for outgoing network traffic (egress).",
 		Version:     extbuild.GetSemverVersionStringOrUnknown(),

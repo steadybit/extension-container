@@ -20,7 +20,7 @@ func NewStressIoContainerAction(r runc.Runc) action_kit_sdk.Action[StressActionS
 
 func getStressIoDescription() action_kit_api.ActionDescription {
 	return action_kit_api.ActionDescription{
-		Id:          fmt.Sprintf("%s.stress_io", targetID),
+		Id:          fmt.Sprintf("%s.stress_io", BaseActionID),
 		Label:       "Stress Container IO",
 		Description: "Stresses memory in the container cgroup for the given duration.",
 		Version:     extbuild.GetSemverVersionStringOrUnknown(),

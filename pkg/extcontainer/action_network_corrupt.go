@@ -27,7 +27,7 @@ func NewNetworkCorruptPackagesContainerAction(r runc.Runc) action_kit_sdk.Action
 
 func getNetworkCorruptPackagesDescription() action_kit_api.ActionDescription {
 	return action_kit_api.ActionDescription{
-		Id:          fmt.Sprintf("%s.network_package_corruption", targetID),
+		Id:          fmt.Sprintf("%s.network_package_corruption", BaseActionID),
 		Label:       "Package Corruption",
 		Description: "Inject corrupt packets by introducing single bit error at a random offset into network traffic.",
 		Version:     extbuild.GetSemverVersionStringOrUnknown(),

@@ -26,7 +26,7 @@ func NewNetworkBlockDnsContainerAction(r runc.Runc) action_kit_sdk.Action[Networ
 
 func getNetworkBlockDnsDescription() action_kit_api.ActionDescription {
 	return action_kit_api.ActionDescription{
-		Id:          fmt.Sprintf("%s.network_block_dns", targetID),
+		Id:          fmt.Sprintf("%s.network_block_dns", BaseActionID),
 		Label:       "Block DNS",
 		Description: "Blocks access to DNS servers",
 		Version:     extbuild.GetSemverVersionStringOrUnknown(),

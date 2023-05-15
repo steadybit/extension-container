@@ -38,7 +38,7 @@ func (a *pauseAction) NewEmptyState() PauseActionState {
 
 func (a *pauseAction) Describe() action_kit_api.ActionDescription {
 	return action_kit_api.ActionDescription{
-		Id:          fmt.Sprintf("%s.pause", targetID),
+		Id:          fmt.Sprintf("%s.pause", BaseActionID),
 		Label:       "Pause Container",
 		Description: "Pauses the container for the given duration.",
 		Version:     extbuild.GetSemverVersionStringOrUnknown(),

@@ -50,7 +50,7 @@ func (a *stopAction) NewEmptyState() StopActionState {
 
 func (a *stopAction) Describe() action_kit_api.ActionDescription {
 	return action_kit_api.ActionDescription{
-		Id:          fmt.Sprintf("%s.stop", targetID),
+		Id:          fmt.Sprintf("%s.stop", BaseActionID),
 		Label:       "Stop Container",
 		Description: "Stops or kills the Container",
 		Version:     extbuild.GetSemverVersionStringOrUnknown(),

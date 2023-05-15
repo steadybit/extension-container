@@ -28,7 +28,7 @@ func NewNetworkDelayContainerAction(r runc.Runc) action_kit_sdk.Action[NetworkAc
 
 func getNetworkDelayDescription() action_kit_api.ActionDescription {
 	return action_kit_api.ActionDescription{
-		Id:          fmt.Sprintf("%s.network_delay", targetID),
+		Id:          fmt.Sprintf("%s.network_delay", BaseActionID),
 		Label:       "Delay Traffic",
 		Description: "Inject latency into egress network traffic.",
 		Version:     extbuild.GetSemverVersionStringOrUnknown(),

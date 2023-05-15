@@ -27,7 +27,7 @@ func NewNetworkBlackholeContainerAction(runc runc.Runc) action_kit_sdk.Action[Ne
 
 func getNetworkBlackholeDescription() action_kit_api.ActionDescription {
 	return action_kit_api.ActionDescription{
-		Id:          fmt.Sprintf("%s.network_blackhole", targetID),
+		Id:          fmt.Sprintf("%s.network_blackhole", BaseActionID),
 		Label:       "Container Block Traffic",
 		Description: "Blocks network traffic (incoming and outgoing).",
 		Version:     extbuild.GetSemverVersionStringOrUnknown(),
