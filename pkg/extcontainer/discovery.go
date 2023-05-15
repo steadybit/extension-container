@@ -44,13 +44,13 @@ func GetDiscoveryList() discovery_kit_api.DiscoveryList {
 		TargetTypes: []discovery_kit_api.DescribingEndpointReference{
 			{
 				Method: "GET",
-				Path:   discoveryBasePath + "target-description",
+				Path:   discoveryBasePath + "/target-description",
 			},
 		},
 		TargetAttributes: []discovery_kit_api.DescribingEndpointReference{
 			{
 				Method: "GET",
-				Path:   discoveryBasePath + "attribute-descriptions",
+				Path:   discoveryBasePath + "/attribute-descriptions",
 			},
 		},
 	}
