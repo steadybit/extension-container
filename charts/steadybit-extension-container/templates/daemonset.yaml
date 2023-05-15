@@ -23,7 +23,7 @@ spec:
             "extensions": [
               {
                 "port": "8080",
-                "types": {{ toJson .Values.types }},
+                "types": ["ACTION", "DISCOVERY"],
                 "tls": {
                     {{- if .Values.tls.server.certificate.fromSecret }}
                   "server": {
