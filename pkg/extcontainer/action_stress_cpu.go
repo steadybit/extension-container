@@ -24,7 +24,7 @@ func getStressCpuDescription() action_kit_api.ActionDescription {
 		Label:       "Stress CPU",
 		Description: "Stresses CPU in the container cgroup for the given duration.",
 		Version:     extbuild.GetSemverVersionStringOrUnknown(),
-		Icon:        extutil.Ptr(targetIcon),
+		Icon:        extutil.Ptr(stressCPUIcon),
 		TargetSelection: &action_kit_api.TargetSelection{
 			TargetType:         targetID,
 			SelectionTemplates: &targetSelectionTemplates,

@@ -54,7 +54,7 @@ func (a *stopAction) Describe() action_kit_api.ActionDescription {
 		Label:       "Stop Container",
 		Description: "Stops or kills the Container",
 		Version:     extbuild.GetSemverVersionStringOrUnknown(),
-		Icon:        extutil.Ptr(targetIcon),
+		Icon:        extutil.Ptr(stopIcon),
 		TargetSelection: &action_kit_api.TargetSelection{
 			TargetType:         targetID,
 			SelectionTemplates: &targetSelectionTemplates,

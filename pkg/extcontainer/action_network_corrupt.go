@@ -31,7 +31,7 @@ func getNetworkCorruptPackagesDescription() action_kit_api.ActionDescription {
 		Label:       "Package Corruption",
 		Description: "Inject corrupt packets by introducing single bit error at a random offset into network traffic.",
 		Version:     extbuild.GetSemverVersionStringOrUnknown(),
-		Icon:        extutil.Ptr(targetIcon),
+		Icon:        extutil.Ptr(corruptIcon),
 		TargetSelection: &action_kit_api.TargetSelection{
 			TargetType:         targetID,
 			SelectionTemplates: &targetSelectionTemplates,

@@ -32,7 +32,7 @@ func getNetworkDelayDescription() action_kit_api.ActionDescription {
 		Label:       "Delay Traffic",
 		Description: "Inject latency into egress network traffic.",
 		Version:     extbuild.GetSemverVersionStringOrUnknown(),
-		Icon:        extutil.Ptr(targetIcon),
+		Icon:        extutil.Ptr(delayIcon),
 		TargetSelection: &action_kit_api.TargetSelection{
 			TargetType:         targetID,
 			SelectionTemplates: &targetSelectionTemplates,

@@ -24,7 +24,7 @@ func getStressIoDescription() action_kit_api.ActionDescription {
 		Label:       "Stress Container IO",
 		Description: "Stresses memory in the container cgroup for the given duration.",
 		Version:     extbuild.GetSemverVersionStringOrUnknown(),
-		Icon:        extutil.Ptr(targetIcon),
+		Icon:        extutil.Ptr(stressIOIcon),
 		TargetSelection: &action_kit_api.TargetSelection{
 			TargetType:         targetID,
 			SelectionTemplates: &targetSelectionTemplates,

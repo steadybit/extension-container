@@ -42,7 +42,7 @@ func (a *pauseAction) Describe() action_kit_api.ActionDescription {
 		Label:       "Pause Container",
 		Description: "Pauses the container for the given duration.",
 		Version:     extbuild.GetSemverVersionStringOrUnknown(),
-		Icon:        extutil.Ptr(targetIcon),
+		Icon:        extutil.Ptr(pauseIcon),
 		TargetSelection: &action_kit_api.TargetSelection{
 			TargetType:         targetID,
 			SelectionTemplates: &targetSelectionTemplates,

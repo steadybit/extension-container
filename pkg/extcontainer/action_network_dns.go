@@ -30,7 +30,7 @@ func getNetworkBlockDnsDescription() action_kit_api.ActionDescription {
 		Label:       "Block DNS",
 		Description: "Blocks access to DNS servers",
 		Version:     extbuild.GetSemverVersionStringOrUnknown(),
-		Icon:        extutil.Ptr(targetIcon),
+		Icon:        extutil.Ptr(dnsIcon),
 		TargetSelection: &action_kit_api.TargetSelection{
 			TargetType:         targetID,
 			SelectionTemplates: &targetSelectionTemplates,

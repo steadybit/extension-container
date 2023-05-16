@@ -31,7 +31,7 @@ func getNetworkPackageLossDescription() action_kit_api.ActionDescription {
 		Label:       "Drop Outgoing Traffic",
 		Description: "Cause packet loss for outgoing network traffic (egress).",
 		Version:     extbuild.GetSemverVersionStringOrUnknown(),
-		Icon:        extutil.Ptr(targetIcon),
+		Icon:        extutil.Ptr(lossIcon),
 		TargetSelection: &action_kit_api.TargetSelection{
 			TargetType:         targetID,
 			SelectionTemplates: &targetSelectionTemplates,

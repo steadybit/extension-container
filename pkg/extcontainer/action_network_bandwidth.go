@@ -31,7 +31,7 @@ func getNetworkLimitBandwidthDescription() action_kit_api.ActionDescription {
 		Label:       "Limit Bandwidth",
 		Description: "Limit available network bandwidth.",
 		Version:     extbuild.GetSemverVersionStringOrUnknown(),
-		Icon:        extutil.Ptr(targetIcon),
+		Icon:        extutil.Ptr(bandwidthIcon),
 		TargetSelection: &action_kit_api.TargetSelection{
 			TargetType:         targetID,
 			SelectionTemplates: &targetSelectionTemplates,

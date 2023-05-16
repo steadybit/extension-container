@@ -31,7 +31,7 @@ func getNetworkBlackholeDescription() action_kit_api.ActionDescription {
 		Label:       "Block Traffic",
 		Description: "Blocks network traffic (incoming and outgoing).",
 		Version:     extbuild.GetSemverVersionStringOrUnknown(),
-		Icon:        extutil.Ptr(targetIcon),
+		Icon:        extutil.Ptr(blackHoleIcon),
 		TargetSelection: &action_kit_api.TargetSelection{
 			TargetType:         targetID,
 			SelectionTemplates: &targetSelectionTemplates,

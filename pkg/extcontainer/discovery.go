@@ -78,7 +78,7 @@ func getTargetDescription() discovery_kit_api.TargetDescription {
 		Label: discovery_kit_api.PluralLabel{One: "Container", Other: "Containers"},
 
 		// Category for the targets to appear in
-		Category: extutil.Ptr("Container"),
+		Category: extutil.Ptr("basic"),
 
 		// Specify attributes shown in table columns and to be used for sorting
 		Table: discovery_kit_api.Table{
