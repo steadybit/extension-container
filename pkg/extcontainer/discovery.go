@@ -100,7 +100,34 @@ func getTargetDescription() discovery_kit_api.TargetDescription {
 func getAttributeDescriptions() discovery_kit_api.AttributeDescriptions {
 	return discovery_kit_api.AttributeDescriptions{
 		Attributes: []discovery_kit_api.AttributeDescription{
-			//TODO
+			{
+				Attribute: "container.name",
+				Label:     discovery_kit_api.PluralLabel{One: "Container Name", Other: "Container Names"},
+			},
+			{
+				Attribute: "container.host",
+				Label:     discovery_kit_api.PluralLabel{One: "Container Host", Other: "Container Hosts"},
+			},
+			{
+				Attribute: "container.image",
+				Label:     discovery_kit_api.PluralLabel{One: "Container Image", Other: "Container Images"},
+			},
+			{
+				Attribute: "container.id",
+				Label:     discovery_kit_api.PluralLabel{One: "Container ID", Other: "Container IDs"},
+			},
+			{
+				Attribute: "container.id.stripped",
+				Label:     discovery_kit_api.PluralLabel{One: "Container ID (stripped)", Other: "Container IDs (stripped)"},
+			},
+			{
+				Attribute: "container.engine",
+				Label:     discovery_kit_api.PluralLabel{One: "Container Engine", Other: "Container Engines"},
+			},
+			{
+				Attribute: "container.engine.version",
+				Label:     discovery_kit_api.PluralLabel{One: "Container Engine Version", Other: "Container Engine Versions"},
+			},
 		},
 	}
 }
