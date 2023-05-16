@@ -13,6 +13,7 @@ import (
 	"github.com/steadybit/extension-container/pkg/stress"
 	extension_kit "github.com/steadybit/extension-kit"
 	"github.com/steadybit/extension-kit/extutil"
+	"golang.org/x/sync/syncmap"
 )
 
 type stressOptsProvider func(request action_kit_api.PrepareActionRequestBody) (stress.StressOpts, error)
@@ -21,7 +22,7 @@ type stressAction struct {
 	runc         runc.Runc
 	description  action_kit_api.ActionDescription
 	optsProvider stressOptsProvider
-	stresses     map[uuid.UUID]*stress.Stress //FIXME don't use the local state; or do locking
+	stresses     syncmap.Map
 }
 
 type StressActionState struct {
@@ -44,7 +45,7 @@ func newStressAction(
 		description:  description(),
 		optsProvider: optsProvider,
 		runc:         runc,
-		stresses:     make(map[uuid.UUID]*stress.Stress),
+		stresses:     syncmap.Map{},
 	}
 }
 
@@ -79,7 +80,7 @@ func (a *stressAction) Start(_ context.Context, state *StressActionState) (*acti
 		return nil, extension_kit.ToError("Failed to stress container", err)
 	}
 
-	a.stresses[state.ExecutionId] = s
+	a.stresses.Store(state.ExecutionId, s)
 
 	if err := s.Start(); err != nil {
 		return nil, extension_kit.ToError("Failed to stress container", err)
@@ -140,14 +141,14 @@ func (a *stressAction) Stop(_ context.Context, state *StressActionState) (*actio
 }
 
 func (a *stressAction) isStressCompleted(executionId uuid.UUID) (bool, error) {
-	s, ok := a.stresses[executionId]
+	s, ok := a.stresses.Load(executionId)
 	if !ok {
 		return true, nil
 	}
 
 	select {
-	case err := <-s.Wait():
-		delete(a.stresses, executionId)
+	case err := <-s.(*stress.Stress).Wait():
+		a.stresses.Delete(executionId)
 		return true, err
 	default:
 		return false, nil
@@ -155,11 +156,11 @@ func (a *stressAction) isStressCompleted(executionId uuid.UUID) (bool, error) {
 }
 
 func (a *stressAction) cancelStressContainer(executionId uuid.UUID) bool {
-	s, ok := a.stresses[executionId]
+	s, ok := a.stresses.Load(executionId)
 	if !ok {
 		return false
 	}
 
-	s.Stop()
+	s.(*stress.Stress).Stop()
 	return true
 }
