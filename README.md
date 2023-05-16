@@ -1,14 +1,18 @@
 # Steadybit extension-container
 
-This [Steadybit](https://www.steadybit.com/) extension provides a container discovery and various actions for container targets.
+This [Steadybit](https://www.steadybit.com/) extension provides a host discovery and the various actions for container targets.
 
 Learn about the capabilities of this extension in our [Reliability Hub](https://hub.steadybit.com/extension/com.github.steadybit.extension_container).
 
 ## Configuration
 
-| Environment Variable | Helm value          | Meaning                                                | Required | Default      |
-|----------------------|---------------------|--------------------------------------------------------|----------|--------------|
-|                      | `container.runtime` | The Container-Runtime (`docker`, `containerd`, `crio`) | yes      | `containerd` |
+| Environment Variable                       | Helm value                                             | Meaning                                                                                                                    | Required | Default |
+|--------------------------------------------|--------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------|----------|---------|
+| `STEADYBIT_EXTENSION_RUNTIME`              | `container.runtime`                                    | The container runtime to user either `docker`, `containerd` or `cri-o`. Will be automatically configured if not specified. | yes      | (auto)  |
+| `STEADYBIT_EXTENSION_SOCKET`               | `containerRuntimes.(docker/containerd/cri-o).socket`   | The socket used to connect to the container runtime. Will be automatically configured if not specified.                    | yes      | (auto)  |
+| `STEADYBIT_EXTENSION_CONTAINERD_NAMESPACE` |                                                        | The containerd namespace to use.                                                                                           | yes      | k8s.io  |
+| `STEADYBIT_EXTENSION_RUNC_ROOT`            | `containerRuntimes.(docker/containerd/cri-o).runcRoot` | The runc root to use.                                                                                                      | yes      | (auto)  |
+| `STEADYBIT_EXTENSION_RUNC_DEBUG`           |                                                        | Activate debug mode for run.                                                                                               | yes      | k8s.io  |
 
 The extension supports all environment variables provided by [steadybit/extension-kit](https://github.com/steadybit/extension-kit#environment-variables).
 
@@ -40,7 +44,7 @@ $ helm upgrade steadybit-extension-container \
     --timeout 5m0s \
     --create-namespace \
     --namespace steadybit-extension \
-    --set container.runtimer docker \
+    --set container.runtime=docker \
     steadybit-extension-container/steadybit-extension-container
 ```
 

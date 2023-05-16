@@ -12,6 +12,8 @@ type Specification struct {
 	Socket              string `json:"socket" required:"false"`
 	Runtime             string `json:"runtime" required:"false"`
 	ContainerdNamespace string `json:"containerdNamespace" required:"true" default:"k8s.io"`
+	RuncRoot            string `json:"runcRoot" required:"false"`
+	RuncDebug           bool   `json:"runcDebug" required:"false"`
 }
 
 var (

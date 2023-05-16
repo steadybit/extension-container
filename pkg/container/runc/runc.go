@@ -8,6 +8,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/rs/zerolog/log"
+	"github.com/steadybit/extension-container/config"
+	"github.com/steadybit/extension-container/pkg/container/types"
 	"github.com/steadybit/extension-container/pkg/utils"
 	"io"
 	"os"
@@ -29,6 +31,18 @@ type Container struct {
 	Rootfs      string            `json:"rootfs"`
 	Created     time.Time         `json:"created"`
 	Annotations map[string]string `json:"annotations"`
+}
+
+func NewRunc(runtime types.Runtime) *Runc {
+	root := config.Config.RuncRoot
+	if root == "" {
+		root = runtime.DefaultRuncRoot()
+	}
+
+	return &Runc{
+		Root:  root,
+		Debug: config.Config.RuncDebug,
+	}
 }
 
 func (r *Runc) State(ctx context.Context, id string) (*Container, error) {

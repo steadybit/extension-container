@@ -83,10 +83,15 @@ func getTargetDescription() discovery_kit_api.TargetDescription {
 		// Specify attributes shown in table columns and to be used for sorting
 		Table: discovery_kit_api.Table{
 			Columns: []discovery_kit_api.Column{
-				// TODO
+				{Attribute: "k8s.container.name", FallbackAttributes: &[]string{"container.name"}},
+				{Attribute: "k8s.pod.name"},
+				{Attribute: "k8s.namespace"},
+				{Attribute: "container.host"},
+				{Attribute: "aws.zone", FallbackAttributes: &[]string{"google.zone", "azure.region", "azure.zone"}},
 			},
 			OrderBy: []discovery_kit_api.OrderBy{
-				// TODO
+				{Attribute: "k8s.container.name", Direction: discovery_kit_api.ASC},
+				{Attribute: "k8s.container.name", Direction: discovery_kit_api.ASC},
 			},
 		},
 	}

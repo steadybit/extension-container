@@ -57,9 +57,7 @@ func (a *stopAction) Describe() action_kit_api.ActionDescription {
 		Icon:        extutil.Ptr(targetIcon),
 		TargetSelection: &action_kit_api.TargetSelection{
 			TargetType:         targetID,
-			SelectionTemplates: extutil.Ptr([]action_kit_api.TargetSelectionTemplate{
-				//TODO
-			}),
+			SelectionTemplates: &targetSelectionTemplates,
 		},
 		Category:    extutil.Ptr("state"),
 		Kind:        action_kit_api.Attack,
