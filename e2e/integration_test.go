@@ -156,7 +156,7 @@ func testNetworkDelay(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			}
 			require.NoError(t, action.Cancel())
 
-			netperf.AssertLatency(t, 0, unaffectedLatency*120/100)
+			netperf.AssertLatency(t, 0, unaffectedLatency+20*time.Millisecond)
 		})
 	}
 }
