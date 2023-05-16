@@ -48,7 +48,7 @@ func getStressCpuDescription() action_kit_api.ActionDescription {
 				Name:         "workers",
 				Label:        "Container CPUs",
 				Description:  extutil.Ptr("How many workers should be used to stress the CPU?"),
-				Type:         action_kit_api.String,
+				Type:         action_kit_api.StressngWorkers,
 				DefaultValue: extutil.Ptr("0"),
 				Required:     extutil.Ptr(true),
 				Order:        extutil.Ptr(1),

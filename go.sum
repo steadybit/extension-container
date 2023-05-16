@@ -34,8 +34,8 @@ github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/docker/distribution v2.8.2+incompatible h1:T3de5rq0dB1j30rp0sA2rER+m322EBzniBPB6ZIzuh8=
 github.com/docker/distribution v2.8.2+incompatible/go.mod h1:J2gT2udsDAN96Uj4KfcMRqY0/ypR+oyYUYmja8H+y+w=
-github.com/docker/docker v23.0.6+incompatible h1:aBD4np894vatVX99UTx/GyOUOK4uEcROwA3+bQhEcoU=
-github.com/docker/docker v23.0.6+incompatible/go.mod h1:eEKB0N0r5NX/I1kEveEz05bcu8tLC/8azJZsviup8Sk=
+github.com/docker/docker v24.0.0+incompatible h1:z4bf8HvONXX9Tde5lGBMQ7yCJgNahmJumdrStZAbeY4=
+github.com/docker/docker v24.0.0+incompatible/go.mod h1:eEKB0N0r5NX/I1kEveEz05bcu8tLC/8azJZsviup8Sk=
 github.com/docker/go-connections v0.4.0 h1:El9xVISelRB7BuFusrZozjnkIM5YnzCViNKohAFqRJQ=
 github.com/docker/go-connections v0.4.0/go.mod h1:Gbd7IOopHjR8Iph03tsViu4nIes5XhDvyHbTtUxmeec=
 github.com/docker/go-events v0.0.0-20190806004212-e31b211e4f1c h1:+pKlWGMw7gf6bQ+oDZB4KHQFypsfjYlq/C4rfL7D3g8=
@@ -185,8 +185,8 @@ github.com/sirupsen/logrus v1.9.0 h1:trlNQbNUG3OdDrDil03MCb1H2o9nJ1x4/5LYw7byDE0
 github.com/sirupsen/logrus v1.9.0/go.mod h1:naHLuLoDiP4jHNo9R0sCBMtWGeIprob74mVsIT4qYEQ=
 github.com/spf13/pflag v1.0.5 h1:iy+VFUOCP1a+8yFto/drg2CJ5u0yRoB7fZw3DKv/JXA=
 github.com/spf13/pflag v1.0.5/go.mod h1:McXfInJRrz4CZXVZOBLb0bTZqETkiAhM9Iw0y3An2Bg=
-github.com/steadybit/action-kit/go/action_kit_api/v2 v2.6.0 h1:Btl83NzcJyjdGElESddwgQaF3ksndmL7tP5KFbBXjWw=
-github.com/steadybit/action-kit/go/action_kit_api/v2 v2.6.0/go.mod h1:ZF094T/qu+po7BBm7peXedds6Fr5/cfioBNCUqCV07Y=
+github.com/steadybit/action-kit/go/action_kit_api/v2 v2.6.1 h1:+2hNanjQhyPEW3R6olpoMr/kmiop5f6U/lSZeIqEfjI=
+github.com/steadybit/action-kit/go/action_kit_api/v2 v2.6.1/go.mod h1:ZF094T/qu+po7BBm7peXedds6Fr5/cfioBNCUqCV07Y=
 github.com/steadybit/action-kit/go/action_kit_commons v1.0.0 h1:uFU2PgkYf/Wu+6xoPgrib//VgpHTXuVJNPaDQvTMaq4=
 github.com/steadybit/action-kit/go/action_kit_commons v1.0.0/go.mod h1:W63CxwoHlh0xcfnHF6y5aAuEG/i+OU92OcOBHUTWd5A=
 github.com/steadybit/action-kit/go/action_kit_sdk v1.1.2 h1:I4+XRJuItskcrDnuCL/jMOQXZg/3DgEyrQqpQXYNYIs=
