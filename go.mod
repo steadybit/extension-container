@@ -11,12 +11,14 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/rs/zerolog v1.29.1
 	github.com/steadybit/action-kit/go/action_kit_api/v2 v2.6.0
+	github.com/steadybit/action-kit/go/action_kit_commons v0.0.0-20230516094200-4dd54232dcf4
 	github.com/steadybit/action-kit/go/action_kit_sdk v1.1.2
 	github.com/steadybit/action-kit/go/action_kit_test v0.0.0-20230515080616-0b242c279b57
 	github.com/steadybit/discovery-kit/go/discovery_kit_api v1.3.0
 	github.com/steadybit/event-kit/go/event_kit_api v1.1.0
 	github.com/steadybit/extension-kit v1.7.17
 	github.com/stretchr/testify v1.8.2
+	golang.org/x/sync v0.2.0
 	google.golang.org/grpc v1.55.0
 	k8s.io/api v0.27.1
 	k8s.io/cri-api v0.27.1
@@ -82,7 +84,6 @@ require (
 	golang.org/x/mod v0.10.0 // indirect
 	golang.org/x/net v0.10.0 // indirect
 	golang.org/x/oauth2 v0.6.0 // indirect
-	golang.org/x/sync v0.2.0 // indirect
 	golang.org/x/sys v0.8.0 // indirect
 	golang.org/x/term v0.8.0 // indirect
 	golang.org/x/text v0.9.0 // indirect
