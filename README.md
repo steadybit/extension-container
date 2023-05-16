@@ -1,16 +1,18 @@
 # Steadybit extension-container
 
-TODO describe what your extension is doing here from a user perspective.
+This [Steadybit](https://www.steadybit.com/) extension provides a container discovery and various actions for container targets.
+
+Learn about the capabilities of this extension in our [Reliability Hub](https://hub.steadybit.com/extension/com.github.steadybit.extension_container).
 
 ## Configuration
 
-| Environment Variable | Meaning | Default |
-|----------------------|---------|---------|
-| `TODO`               | Todo    |         |
+| Environment Variable | Helm value          | Meaning                                                | Required | Default      |
+|----------------------|---------------------|--------------------------------------------------------|----------|--------------|
+|                      | `container.runtime` | The Container-Runtime (`docker`, `containerd`, `crio`) | yes      | `containerd` |
 
 The extension supports all environment variables provided by [steadybit/extension-kit](https://github.com/steadybit/extension-kit#environment-variables).
 
-## Running the Extension
+## Installation
 
 ### Using Docker
 
@@ -41,3 +43,8 @@ $ helm upgrade steadybit-extension-container \
     --set container.runtimer docker \
     steadybit-extension-container/steadybit-extension-container
 ```
+
+## Register the extension
+
+Make sure to register the extension at the steadybit platform. Please refer to
+the [documentation](https://docs.steadybit.com/integrate-with-steadybit/extensions/extension-installation) for more information.
