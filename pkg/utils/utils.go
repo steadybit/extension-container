@@ -73,6 +73,20 @@ func ReadNamespaces(pid int) ([]specs.LinuxNamespace, error) {
 	return namespaces, nil
 }
 
+// HasHostNetwork determines weather the given process has the same network as the init process.
+func HasHostNetwork(pid int) (bool, error) {
+	ns, err := ReadNamespaces(pid)
+	if err != nil {
+		return false, err
+	}
+	for _, n := range ns {
+		if n.Type == specs.NetworkNamespace {
+			return n.Path == "/proc/1/net/ns", nil
+		}
+	}
+	return true, nil
+}
+
 func toRuncNamespaceType(t string) specs.LinuxNamespaceType {
 	switch t {
 	case "net":

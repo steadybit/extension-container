@@ -4,15 +4,11 @@
 package runc
 
 import (
-	"context"
 	"encoding/json"
-	"fmt"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/rs/zerolog/log"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"strconv"
 )
 
 type SpecEditor func(spec *specs.Spec)
@@ -144,19 +140,4 @@ func FilterNamespaces(ns []specs.LinuxNamespace, types ...specs.LinuxNamespaceTy
 		}
 	}
 	return result
-}
-
-// HasHostNetwork determines weather the given process has the same network as the init process.
-func HasHostNetwork(ctx context.Context, pid int) (bool, error) {
-	initNetNS, err := exec.CommandContext(ctx, "readlink", "/proc/1/net/ns").CombinedOutput()
-	if err != nil {
-		return false, fmt.Errorf("%s: %s", err, initNetNS)
-	}
-
-	pidNetNS, err := exec.CommandContext(ctx, "readlink", filepath.Join("/proc", strconv.Itoa(pid), "ns", "net")).CombinedOutput()
-	if err != nil {
-		return false, fmt.Errorf("%s: %s", err, pidNetNS)
-	}
-
-	return string(initNetNS) == string(pidNetNS), nil
 }

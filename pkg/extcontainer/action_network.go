@@ -143,7 +143,7 @@ func (a *networkAction) hasHostNetwork(ctx context.Context, containerId string) 
 	if err != nil {
 		return false, err
 	}
-	return runc.HasHostNetwork(ctx, containerState.Pid)
+	return utils.HasHostNetwork(containerState.Pid)
 }
 
 func (a *networkAction) Start(ctx context.Context, state *NetworkActionState) (*action_kit_api.StartResult, error) {
