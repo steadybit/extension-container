@@ -21,7 +21,7 @@ func NewStressCpuContainerAction(r runc.Runc) action_kit_sdk.Action[StressAction
 func getStressCpuDescription() action_kit_api.ActionDescription {
 	return action_kit_api.ActionDescription{
 		Id:          fmt.Sprintf("%s.stress_cpu", BaseActionID),
-		Label:       "Stress Container CPU",
+		Label:       "Stress CPU",
 		Description: "Stresses CPU in the container cgroup for the given duration.",
 		Version:     extbuild.GetSemverVersionStringOrUnknown(),
 		Icon:        extutil.Ptr(targetIcon),
