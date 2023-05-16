@@ -15,7 +15,8 @@ import (
 	"github.com/steadybit/extension-container/pkg/container/runc"
 	"github.com/steadybit/extension-container/pkg/container/types"
 	"github.com/steadybit/extension-container/pkg/extcontainer"
-	"github.com/steadybit/extension-kit/extbuild"
+  "github.com/steadybit/extension-container/pkg/utils"
+  "github.com/steadybit/extension-kit/extbuild"
 	"github.com/steadybit/extension-kit/exthealth"
 	"github.com/steadybit/extension-kit/exthttp"
 	"github.com/steadybit/extension-kit/extlogging"
@@ -27,7 +28,7 @@ func main() {
 	extbuild.PrintBuildInformation()
 
 	exthealth.SetReady(false)
-	exthealth.StartProbes(8081)
+	exthealth.StartProbes(int(utils.GetOwnHealthPort()))
 
 	config.ParseConfiguration()
 	config.ValidateConfiguration()
@@ -71,7 +72,7 @@ func main() {
 	exthealth.SetReady(true)
 
 	exthttp.Listen(exthttp.ListenOpts{
-		Port: 8080,
+		Port: int(utils.GetOwnPort()),
 	})
 }
 

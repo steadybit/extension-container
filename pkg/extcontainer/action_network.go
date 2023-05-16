@@ -14,6 +14,7 @@ import (
 	"github.com/steadybit/action-kit/go/action_kit_sdk"
 	"github.com/steadybit/extension-container/pkg/container/runc"
 	"github.com/steadybit/extension-container/pkg/network"
+	"github.com/steadybit/extension-container/pkg/utils"
 	extension_kit "github.com/steadybit/extension-kit"
 	"github.com/steadybit/extension-kit/extutil"
 	"net"
@@ -236,6 +237,15 @@ func mapToNetworkFilter(ctx context.Context, r runc.Runc, cfg network.TargetCont
 		}
 		excludes = append(excludes, networkutils.NewNetWithPortRanges([]net.IPNet{*cidr}, networkutils.PortRange{From: uint16(restrictedEndpoint.PortMin), To: uint16(restrictedEndpoint.PortMax)})...)
 	}
+
+	ownIps := networkutils.GetOwnIPs()
+	ownPort := utils.GetOwnPort()
+	ownHealthPort := utils.GetOwnHealthPort()
+	nets := networkutils.IpToNet(ownIps)
+
+	log.Debug().Msgf("Adding own ip %s to exclude list (Ports %d and %d)", ownIps, ownPort, ownHealthPort)
+	excludes = append(excludes, networkutils.NewNetWithPortRanges(nets, networkutils.PortRange{From: ownPort, To: ownPort})...)
+	excludes = append(excludes, networkutils.NewNetWithPortRanges(nets, networkutils.PortRange{From: ownHealthPort, To: ownHealthPort})...)
 
 	return networkutils.Filter{
 		Include: includes,
