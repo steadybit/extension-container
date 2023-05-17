@@ -42,7 +42,6 @@ func getStressMemoryDescription() action_kit_api.ActionDescription {
 				Required:     extutil.Ptr(true),
 				Order:        extutil.Ptr(0),
 				MinValue:     extutil.Ptr(1),
-				MaxValue:     extutil.Ptr(100),
 			},
 			{
 				Name:         "duration",
