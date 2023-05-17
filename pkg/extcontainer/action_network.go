@@ -104,14 +104,14 @@ func (a *networkAction) Prepare(ctx context.Context, state *NetworkActionState, 
 	}
 
 	if extutil.ToBool(request.Config["failOnHostNetwork"]) {
-		hasHostNetwork, err := a.hasHostNetwork(ctx, containerId[0])
+		usingHostNetwork, err := a.isUsingHostNetwork(ctx, containerId[0])
 		if err != nil {
 			return nil, extension_kit.ToError("Failed to check if container is using host network.", err)
 		}
-		if hasHostNetwork {
+		if usingHostNetwork {
 			return &action_kit_api.PrepareResult{
 				Error: &action_kit_api.ActionKitError{
-					Title:  "Container is using host network.",
+					Title:  "Container is using host network and failOnHostNetwork = true.",
 					Status: extutil.Ptr(action_kit_api.Failed),
 				},
 			}, nil
@@ -138,12 +138,12 @@ func (a *networkAction) Prepare(ctx context.Context, state *NetworkActionState, 
 	return nil, nil
 }
 
-func (a *networkAction) hasHostNetwork(ctx context.Context, containerId string) (bool, error) {
+func (a *networkAction) isUsingHostNetwork(ctx context.Context, containerId string) (bool, error) {
 	containerState, err := a.runc.State(ctx, RemovePrefix(containerId))
 	if err != nil {
 		return false, err
 	}
-	return utils.HasHostNetwork(containerState.Pid)
+	return utils.IsUsingHostNetwork(containerState.Pid)
 }
 
 func (a *networkAction) Start(ctx context.Context, state *NetworkActionState) (*action_kit_api.StartResult, error) {
