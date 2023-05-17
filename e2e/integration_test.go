@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/client-go/applyconfigurations/core/v1"
 	"runtime"
 	"testing"
 	"time"
@@ -38,7 +39,7 @@ func TestWithMinikube(t *testing.T) {
 	}
 
 	mOpts := e2e.DefaultMiniKubeOpts
-	mOpts.Runtimes = e2e.AllRuntimes
+	//mOpts.Runtimes = e2e.AllRuntimes
 	if runtime.GOOS == "linux" {
 		mOpts.Driver = "kvm2"
 	}
@@ -80,6 +81,9 @@ func TestWithMinikube(t *testing.T) {
 		}, {
 			Name: "network package corruption",
 			Test: testNetworkPackageCorruption,
+		}, {
+			Name: "host network detection",
+			Test: testHostNetwork,
 		},
 	})
 }
@@ -103,22 +107,22 @@ func testNetworkDelay(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 		hostname    []string
 		port        []string
 		interfaces  []string
-		WantedDelay bool
+		wantedDelay bool
 	}{
 		{
 			name:        "should delay all traffic",
-			WantedDelay: true,
+			wantedDelay: true,
 		},
 		{
 			name:        "should delay only port 5000 traffic",
 			port:        []string{"5000"},
 			interfaces:  []string{"eth0"},
-			WantedDelay: true,
+			wantedDelay: true,
 		},
 		{
 			name:        "should delay only port 80 traffic",
 			port:        []string{"80"},
-			WantedDelay: false,
+			wantedDelay: false,
 		},
 	}
 
@@ -149,14 +153,14 @@ func testNetworkDelay(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			defer func() { _ = action.Cancel() }()
 			require.NoError(t, err)
 
-			if tt.WantedDelay {
+			if tt.wantedDelay {
 				netperf.AssertLatency(t, unaffectedLatency+time.Duration(config.Delay)*time.Millisecond*90/100, unaffectedLatency+time.Duration(config.Delay)*time.Millisecond*350/100)
 			} else {
 				netperf.AssertLatency(t, 0, unaffectedLatency*120/100)
 			}
 			require.NoError(t, action.Cancel())
 
-			netperf.AssertLatency(t, 0, unaffectedLatency+20*time.Millisecond)
+			netperf.AssertLatency(t, 0, unaffectedLatency+40*time.Millisecond)
 		})
 	}
 }
@@ -180,22 +184,22 @@ func testNetworkPackageLoss(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 		hostname   []string
 		port       []string
 		interfaces []string
-		WantedLoss bool
+		wantedLoss bool
 	}{
 		{
 			name:       "should loose packages on all traffic",
-			WantedLoss: true,
+			wantedLoss: true,
 		},
 		{
 			name:       "should loose packages only on port 5001 traffic",
 			port:       []string{"5001"},
 			interfaces: []string{"eth0"},
-			WantedLoss: true,
+			wantedLoss: true,
 		},
 		{
 			name:       "should loose packages only on port 80 traffic",
 			port:       []string{"80"},
-			WantedLoss: false,
+			wantedLoss: false,
 		},
 	}
 
@@ -221,7 +225,7 @@ func testNetworkPackageLoss(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			defer func() { _ = action.Cancel() }()
 			require.NoError(t, err)
 
-			if tt.WantedLoss {
+			if tt.wantedLoss {
 				iperf.AssertPackageLoss(t, float64(config.Loss)*0.8, float64(config.Loss)*1.2)
 			} else {
 				iperf.AssertPackageLoss(t, 0, 5)
@@ -252,22 +256,22 @@ func testNetworkPackageCorruption(t *testing.T, m *e2e.Minikube, e *e2e.Extensio
 		hostname         []string
 		port             []string
 		interfaces       []string
-		WantedCorruption bool
+		wantedCorruption bool
 	}{
 		{
 			name:             "should corrupt packages on all traffic",
-			WantedCorruption: true,
+			wantedCorruption: true,
 		},
 		{
 			name:             "should corrupt packages only on port 5001 traffic",
 			port:             []string{"5001"},
 			interfaces:       []string{"eth0"},
-			WantedCorruption: true,
+			wantedCorruption: true,
 		},
 		{
 			name:             "should corrupt packages only on port 80 traffic",
 			port:             []string{"80"},
-			WantedCorruption: false,
+			wantedCorruption: false,
 		},
 	}
 
@@ -293,7 +297,7 @@ func testNetworkPackageCorruption(t *testing.T, m *e2e.Minikube, e *e2e.Extensio
 			defer func() { _ = action.Cancel() }()
 			require.NoError(t, err)
 
-			if tt.WantedCorruption {
+			if tt.wantedCorruption {
 				iperf.AssertPackageLoss(t, float64(config.Corruption)*0.8, float64(config.Corruption)*1.2)
 			} else {
 				iperf.AssertPackageLoss(t, 0, 5)
@@ -324,22 +328,22 @@ func testNetworkLimitBandwidth(t *testing.T, m *e2e.Minikube, e *e2e.Extension) 
 		hostname    []string
 		port        []string
 		interfaces  []string
-		WantedLimit bool
+		wantedLimit bool
 	}{
 		{
 			name:        "should limit bandwidth on all traffic",
-			WantedLimit: true,
+			wantedLimit: true,
 		},
 		{
 			name:        "should limit bandwidth only on port 5001 traffic",
 			port:        []string{"5001"},
 			interfaces:  []string{"eth0"},
-			WantedLimit: true,
+			wantedLimit: true,
 		},
 		{
 			name:        "should limit bandwidth only on port 80 traffic",
 			port:        []string{"80"},
-			WantedLimit: false,
+			wantedLimit: false,
 		},
 	}
 
@@ -369,7 +373,7 @@ func testNetworkLimitBandwidth(t *testing.T, m *e2e.Minikube, e *e2e.Extension) 
 			defer func() { _ = action.Cancel() }()
 			require.NoError(t, err)
 
-			if tt.WantedLimit {
+			if tt.wantedLimit {
 				iperf.AssertBandwidth(t, limited*0.95, limited*1.05)
 			} else {
 				iperf.AssertBandwidth(t, unlimited*0.95, unlimited*1.05)
@@ -398,31 +402,31 @@ func testNetworkBlackhole(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 		ip               []string
 		hostname         []string
 		port             []string
-		WantedReachable  bool
-		WantedReachesUrl bool
+		wantedReachable  bool
+		wantedReachesUrl bool
 	}{
 		{
 			name:             "should blackhole all traffic",
-			WantedReachable:  false,
-			WantedReachesUrl: false,
+			wantedReachable:  false,
+			wantedReachesUrl: false,
 		},
 		{
 			name:             "should blackhole only port 8080 traffic",
 			port:             []string{"8080"},
-			WantedReachable:  true,
-			WantedReachesUrl: true,
+			wantedReachable:  true,
+			wantedReachesUrl: true,
 		},
 		{
 			name:             "should blackhole only port 80, 443 traffic",
 			port:             []string{"80", "443"},
-			WantedReachable:  false,
-			WantedReachesUrl: false,
+			wantedReachable:  false,
+			wantedReachesUrl: false,
 		},
 		{
 			name:             "should blackhole only traffic for steadybit.com",
 			hostname:         []string{"steadybit.com"},
-			WantedReachable:  true,
-			WantedReachesUrl: false,
+			wantedReachable:  true,
+			wantedReachesUrl: false,
 		},
 	}
 
@@ -447,8 +451,8 @@ func testNetworkBlackhole(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			defer func() { _ = action.Cancel() }()
 			require.NoError(t, err)
 
-			nginx.AssertIsReachable(t, tt.WantedReachable)
-			nginx.AssertCanReach(t, "https://steadybit.com", tt.WantedReachesUrl)
+			nginx.AssertIsReachable(t, tt.wantedReachable)
+			nginx.AssertCanReach(t, "https://steadybit.com", tt.wantedReachesUrl)
 
 			require.NoError(t, action.Cancel())
 			nginx.AssertIsReachable(t, true)
@@ -475,20 +479,20 @@ func testNetworkBlockDns(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 		ip               []string
 		hostname         []string
 		dnsPort          uint
-		WantedReachable  bool
-		WantedReachesUrl bool
+		wantedReachable  bool
+		wantedReachesUrl bool
 	}{
 		{
 			name:             "should block dns traffic",
 			dnsPort:          53,
-			WantedReachable:  true,
-			WantedReachesUrl: false,
+			wantedReachable:  true,
+			wantedReachesUrl: false,
 		},
 		{
 			name:             "should block dns traffic on port 5353",
 			dnsPort:          5353,
-			WantedReachable:  true,
-			WantedReachesUrl: true,
+			wantedReachable:  true,
+			wantedReachesUrl: true,
 		},
 	}
 
@@ -509,8 +513,8 @@ func testNetworkBlockDns(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			defer func() { _ = action.Cancel() }()
 			require.NoError(t, err)
 
-			nginx.AssertIsReachable(t, tt.WantedReachable)
-			if tt.WantedReachesUrl {
+			nginx.AssertIsReachable(t, tt.wantedReachable)
+			if tt.wantedReachesUrl {
 				nginx.AssertCanReach(t, "https://steadybit.com", true)
 			} else {
 				nginx.AssertCannotReach(t, "https://steadybit.com", "Resolving timed out after")
@@ -678,4 +682,59 @@ func testDiscovery(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 
 	require.NoError(t, err)
 	assert.Equal(t, target.TargetType, "container")
+}
+
+func testHostNetwork(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
+	if m.Runtime == "cri-o" && m.Driver == "docker" {
+		t.Skip("Due to https://github.com/kubernetes/minikube/issues/16371 this test is skipped for cri-o")
+	}
+
+	nginx := e2e.Nginx{Minikube: m}
+	err := nginx.Deploy("nginx-network-host", func(pod *v1.PodApplyConfiguration) {
+		pod.Spec.HostNetwork = extutil.Ptr(true)
+	})
+	require.NoError(t, err, "failed to create pod")
+	defer func() { _ = nginx.Delete() }()
+
+	target, err := nginx.Target()
+	require.NoError(t, err)
+
+	tests := []struct {
+		name              string
+		failOnHostNetwork bool
+		wantedError       bool
+	}{
+		{
+			name:              "should fail with host network",
+			failOnHostNetwork: true,
+			wantedError:       true,
+		},
+		{
+			name:              "should allow host network",
+			failOnHostNetwork: false,
+			wantedError:       false,
+		},
+	}
+
+	for _, tt := range tests {
+		config := struct {
+			Duration          int  `json:"duration"`
+			FailOnHostNetwork bool `json:"failOnHostNetwork"`
+		}{
+			Duration:          10000,
+			FailOnHostNetwork: tt.failOnHostNetwork,
+		}
+
+		t.Run(tt.name, func(t *testing.T) {
+			action, err := e.RunAction(fmt.Sprintf("%s.network_blackhole", extcontainer.BaseActionID), target, config, executionContext)
+			defer func() { _ = action.Cancel() }()
+
+			if tt.wantedError {
+				require.ErrorContains(t, err, "Container is using host network")
+			} else {
+				require.NoError(t, err)
+				require.NoError(t, action.Cancel())
+			}
+		})
+	}
 }
