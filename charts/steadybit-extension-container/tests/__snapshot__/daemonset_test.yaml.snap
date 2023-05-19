@@ -9,13 +9,15 @@ manifest should match snapshot using containerd:
     spec:
       selector:
         matchLabels:
+          app: steadybit-extension-container
           app.kubernetes.io/name: steadybit-extension-container
       template:
         metadata:
           annotations:
-            container.apparmor.security.beta.kubernetes.io/extension: unconfined
-            steadybit.com/extension-auto-discovery: "{\n  \"extensions\": [\n    {\n      \"port\": \"8080\",\n      \"types\": [\"ACTION\", \"DISCOVERY\"],\n      \"tls\": {\n          \n    }\n    }\n  ]\n}\n"
+            container.apparmor.security.beta.kubernetes.io/steadybit-extension-container: unconfined
+            steadybit.com/extension-auto-discovery: "{\n  \"extensions\": [\n    {\n      \"port\": 8080,\n      \"types\": [\"ACTION\",\"DISCOVERY\"],\n      \"tls\": {\n        \n      }\n    }\n  ]\n}\n"
           labels:
+            app: steadybit-extension-container
             app.kubernetes.io/name: steadybit-extension-container
             steadybit.com/extension: "true"
         spec:
@@ -31,7 +33,7 @@ manifest should match snapshot using containerd:
                 httpGet:
                   path: /health/liveness
                   port: 8081
-              name: extension
+              name: steadybit-extension-container
               readinessProbe:
                 httpGet:
                   path: /health/readiness
@@ -63,6 +65,8 @@ manifest should match snapshot using containerd:
                   name: runtime-socket
                 - mountPath: /run/containerd/runc/k8s.io
                   name: runtime-runc-root
+          dnsPolicy: ClusterFirst
+          hostNetwork: false
           hostPID: true
           volumes:
             - emptyDir: {}
@@ -90,13 +94,15 @@ manifest should match snapshot using crio:
     spec:
       selector:
         matchLabels:
+          app: steadybit-extension-container
           app.kubernetes.io/name: steadybit-extension-container
       template:
         metadata:
           annotations:
-            container.apparmor.security.beta.kubernetes.io/extension: unconfined
-            steadybit.com/extension-auto-discovery: "{\n  \"extensions\": [\n    {\n      \"port\": \"8080\",\n      \"types\": [\"ACTION\", \"DISCOVERY\"],\n      \"tls\": {\n          \n    }\n    }\n  ]\n}\n"
+            container.apparmor.security.beta.kubernetes.io/steadybit-extension-container: unconfined
+            steadybit.com/extension-auto-discovery: "{\n  \"extensions\": [\n    {\n      \"port\": 8080,\n      \"types\": [\"ACTION\",\"DISCOVERY\"],\n      \"tls\": {\n        \n      }\n    }\n  ]\n}\n"
           labels:
+            app: steadybit-extension-container
             app.kubernetes.io/name: steadybit-extension-container
             steadybit.com/extension: "true"
         spec:
@@ -112,7 +118,7 @@ manifest should match snapshot using crio:
                 httpGet:
                   path: /health/liveness
                   port: 8081
-              name: extension
+              name: steadybit-extension-container
               readinessProbe:
                 httpGet:
                   path: /health/readiness
@@ -144,6 +150,8 @@ manifest should match snapshot using crio:
                   name: runtime-socket
                 - mountPath: /run/runc
                   name: runtime-runc-root
+          dnsPolicy: ClusterFirst
+          hostNetwork: false
           hostPID: true
           volumes:
             - emptyDir: {}
@@ -171,13 +179,15 @@ manifest should match snapshot using docker:
     spec:
       selector:
         matchLabels:
+          app: steadybit-extension-container
           app.kubernetes.io/name: steadybit-extension-container
       template:
         metadata:
           annotations:
-            container.apparmor.security.beta.kubernetes.io/extension: unconfined
-            steadybit.com/extension-auto-discovery: "{\n  \"extensions\": [\n    {\n      \"port\": \"8080\",\n      \"types\": [\"ACTION\", \"DISCOVERY\"],\n      \"tls\": {\n          \n    }\n    }\n  ]\n}\n"
+            container.apparmor.security.beta.kubernetes.io/steadybit-extension-container: unconfined
+            steadybit.com/extension-auto-discovery: "{\n  \"extensions\": [\n    {\n      \"port\": 8080,\n      \"types\": [\"ACTION\",\"DISCOVERY\"],\n      \"tls\": {\n        \n      }\n    }\n  ]\n}\n"
           labels:
+            app: steadybit-extension-container
             app.kubernetes.io/name: steadybit-extension-container
             steadybit.com/extension: "true"
         spec:
@@ -193,7 +203,7 @@ manifest should match snapshot using docker:
                 httpGet:
                   path: /health/liveness
                   port: 8081
-              name: extension
+              name: steadybit-extension-container
               readinessProbe:
                 httpGet:
                   path: /health/readiness
@@ -225,6 +235,8 @@ manifest should match snapshot using docker:
                   name: runtime-socket
                 - mountPath: /run/docker/runtime-runc/moby
                   name: runtime-runc-root
+          dnsPolicy: ClusterFirst
+          hostNetwork: false
           hostPID: true
           volumes:
             - emptyDir: {}
@@ -252,13 +264,15 @@ manifest should match snapshot with TLS:
     spec:
       selector:
         matchLabels:
+          app: steadybit-extension-container
           app.kubernetes.io/name: steadybit-extension-container
       template:
         metadata:
           annotations:
-            container.apparmor.security.beta.kubernetes.io/extension: unconfined
-            steadybit.com/extension-auto-discovery: "{\n  \"extensions\": [\n    {\n      \"port\": \"8080\",\n      \"types\": [\"ACTION\", \"DISCOVERY\"],\n      \"tls\": {\n        \"server\": {\n          \"extraCertsFile\": \"/opt/steadybit/agent/etc/extension-mtls/server-cert/tls.crt\"\n          }\n          \n    }\n    }\n  ]\n}\n"
+            container.apparmor.security.beta.kubernetes.io/steadybit-extension-container: unconfined
+            steadybit.com/extension-auto-discovery: "{\n  \"extensions\": [\n    {\n      \"port\": 8080,\n      \"types\": [\"ACTION\",\"DISCOVERY\"],\n      \"tls\": {\n        \"server\": {\n          \"extraCertsFile\": \"server-cert/tls.crt\"\n        }\n        \n      }\n    }\n  ]\n}\n"
           labels:
+            app: steadybit-extension-container
             app.kubernetes.io/name: steadybit-extension-container
             steadybit.com/extension: "true"
         spec:
@@ -278,7 +292,7 @@ manifest should match snapshot with TLS:
                 httpGet:
                   path: /health/liveness
                   port: 8081
-              name: extension
+              name: steadybit-extension-container
               readinessProbe:
                 httpGet:
                   path: /health/readiness
@@ -306,13 +320,15 @@ manifest should match snapshot with TLS:
                   name: tmp-dir
                 - mountPath: /sys/fs/cgroup
                   name: cgroup-root
-                - mountPath: /etc/extension/certificates/server-cert
-                  name: certificate-server-cert
-                  readOnly: true
                 - mountPath: /var/run/docker.sock
                   name: runtime-socket
                 - mountPath: /run/docker/runtime-runc/moby
                   name: runtime-runc-root
+                - mountPath: /etc/extension/certificates/server-cert
+                  name: certificate-server-cert
+                  readOnly: true
+          dnsPolicy: ClusterFirst
+          hostNetwork: false
           hostPID: true
           volumes:
             - emptyDir: {}
@@ -321,10 +337,6 @@ manifest should match snapshot with TLS:
                 path: /sys/fs/cgroup
                 type: Directory
               name: cgroup-root
-            - name: certificate-server-cert
-              secret:
-                optional: false
-                secretName: server-cert
             - hostPath:
                 path: /var/run/docker.sock
                 type: Socket
@@ -333,6 +345,10 @@ manifest should match snapshot with TLS:
                 path: /run/docker/runtime-runc/moby
                 type: Directory
               name: runtime-runc-root
+            - name: certificate-server-cert
+              secret:
+                optional: false
+                secretName: server-cert
 manifest should match snapshot with extra env vars:
   1: |
     apiVersion: apps/v1
@@ -344,13 +360,15 @@ manifest should match snapshot with extra env vars:
     spec:
       selector:
         matchLabels:
+          app: steadybit-extension-container
           app.kubernetes.io/name: steadybit-extension-container
       template:
         metadata:
           annotations:
-            container.apparmor.security.beta.kubernetes.io/extension: unconfined
-            steadybit.com/extension-auto-discovery: "{\n  \"extensions\": [\n    {\n      \"port\": \"8080\",\n      \"types\": [\"ACTION\", \"DISCOVERY\"],\n      \"tls\": {\n          \n    }\n    }\n  ]\n}\n"
+            container.apparmor.security.beta.kubernetes.io/steadybit-extension-container: unconfined
+            steadybit.com/extension-auto-discovery: "{\n  \"extensions\": [\n    {\n      \"port\": 8080,\n      \"types\": [\"ACTION\",\"DISCOVERY\"],\n      \"tls\": {\n        \n      }\n    }\n  ]\n}\n"
           labels:
+            app: steadybit-extension-container
             app.kubernetes.io/name: steadybit-extension-container
             steadybit.com/extension: "true"
         spec:
@@ -373,7 +391,7 @@ manifest should match snapshot with extra env vars:
                 httpGet:
                   path: /health/liveness
                   port: 8081
-              name: extension
+              name: steadybit-extension-container
               readinessProbe:
                 httpGet:
                   path: /health/readiness
@@ -405,6 +423,8 @@ manifest should match snapshot with extra env vars:
                   name: runtime-socket
                 - mountPath: /run/containerd/runc/k8s.io
                   name: runtime-runc-root
+          dnsPolicy: ClusterFirst
+          hostNetwork: false
           hostPID: true
           volumes:
             - emptyDir: {}
@@ -432,30 +452,32 @@ manifest should match snapshot with mutual TLS:
     spec:
       selector:
         matchLabels:
+          app: steadybit-extension-container
           app.kubernetes.io/name: steadybit-extension-container
       template:
         metadata:
           annotations:
-            container.apparmor.security.beta.kubernetes.io/extension: unconfined
+            container.apparmor.security.beta.kubernetes.io/steadybit-extension-container: unconfined
             steadybit.com/extension-auto-discovery: |
               {
                 "extensions": [
                   {
-                    "port": "8080",
-                    "types": ["ACTION", "DISCOVERY"],
+                    "port": 8080,
+                    "types": ["ACTION","DISCOVERY"],
                     "tls": {
                       "server": {
-                        "extraCertsFile": "/opt/steadybit/agent/etc/extension-mtls/server-cert/tls.crt"
-                        },
-                        "client": {
-                        "certChainFile": "/opt/steadybit/agent/etc/extension-mtls/client-cert-a/tls.crt",
-                        "certKeyFile": "/opt/steadybit/agent/etc/extension-mtls/client-cert-a/tls.key"
+                        "extraCertsFile": "server-cert/tls.crt"
+                      },
+                      "client": {
+                        "certChainFile": "client-cert-a/tls.crt",
+                        "certKeyFile": "client-cert-a/tls.key"
                       }
-                  }
+                    }
                   }
                 ]
               }
           labels:
+            app: steadybit-extension-container
             app.kubernetes.io/name: steadybit-extension-container
             steadybit.com/extension: "true"
         spec:
@@ -477,7 +499,7 @@ manifest should match snapshot with mutual TLS:
                 httpGet:
                   path: /health/liveness
                   port: 8081
-              name: extension
+              name: steadybit-extension-container
               readinessProbe:
                 httpGet:
                   path: /health/readiness
@@ -505,16 +527,18 @@ manifest should match snapshot with mutual TLS:
                   name: tmp-dir
                 - mountPath: /sys/fs/cgroup
                   name: cgroup-root
+                - mountPath: /var/run/docker.sock
+                  name: runtime-socket
+                - mountPath: /run/docker/runtime-runc/moby
+                  name: runtime-runc-root
                 - mountPath: /etc/extension/certificates/client-cert-a
                   name: certificate-client-cert-a
                   readOnly: true
                 - mountPath: /etc/extension/certificates/server-cert
                   name: certificate-server-cert
                   readOnly: true
-                - mountPath: /var/run/docker.sock
-                  name: runtime-socket
-                - mountPath: /run/docker/runtime-runc/moby
-                  name: runtime-runc-root
+          dnsPolicy: ClusterFirst
+          hostNetwork: false
           hostPID: true
           volumes:
             - emptyDir: {}
@@ -523,14 +547,6 @@ manifest should match snapshot with mutual TLS:
                 path: /sys/fs/cgroup
                 type: Directory
               name: cgroup-root
-            - name: certificate-client-cert-a
-              secret:
-                optional: false
-                secretName: client-cert-a
-            - name: certificate-server-cert
-              secret:
-                optional: false
-                secretName: server-cert
             - hostPath:
                 path: /var/run/docker.sock
                 type: Socket
@@ -539,3 +555,11 @@ manifest should match snapshot with mutual TLS:
                 path: /run/docker/runtime-runc/moby
                 type: Directory
               name: runtime-runc-root
+            - name: certificate-client-cert-a
+              secret:
+                optional: false
+                secretName: client-cert-a
+            - name: certificate-server-cert
+              secret:
+                optional: false
+                secretName: server-cert
