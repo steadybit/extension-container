@@ -1,3 +1,5 @@
+<img src="./logo.svg" height="130" align="right" alt="Container logo">
+
 # Steadybit extension-container
 
 This [Steadybit](https://www.steadybit.com/) extension provides a host discovery and the various actions for container targets.
