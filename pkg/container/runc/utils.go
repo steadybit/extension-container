@@ -69,6 +69,12 @@ func WithMountIfNotPresent(mount specs.Mount) SpecEditor {
 	}
 }
 
+func WithHostname(hostname string) SpecEditor {
+	return func(spec *specs.Spec) {
+		spec.Hostname = hostname
+	}
+}
+
 func WithAnnotations(annotations map[string]string) SpecEditor {
 	return func(spec *specs.Spec) {
 		spec.Annotations = annotations

@@ -63,6 +63,7 @@ func runResolvingSidecar(ctx context.Context, r runc.Runc, config TargetContaine
 
 	if err = runc.EditSpec(
 		bundle,
+		runc.WithHostname(fmt.Sprintf("dig-", id)),
 		runc.WithAnnotations(map[string]string{
 			"com.steadybit.sidecar": "true",
 		}),

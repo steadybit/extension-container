@@ -119,6 +119,7 @@ func executeIpCommands(ctx context.Context, r runc.Runc, config TargetContainerC
 
 	if err = runc.EditSpec(
 		bundle,
+		runc.WithHostname(fmt.Sprintf("ip-%s", id)),
 		runc.WithAnnotations(map[string]string{
 			"com.steadybit.sidecar": "true",
 		}),
@@ -156,6 +157,7 @@ func executeTcCommands(ctx context.Context, r runc.Runc, config TargetContainerC
 
 	if err = runc.EditSpec(
 		bundle,
+		runc.WithHostname(fmt.Sprintf("tc-%s", id)),
 		runc.WithAnnotations(map[string]string{
 			"com.steadybit.sidecar": "true",
 		}),

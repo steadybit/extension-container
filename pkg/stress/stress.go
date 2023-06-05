@@ -81,6 +81,7 @@ func New(r runc.Runc, targetId string, opts StressOpts) (*Stress, error) {
 	}
 
 	if err := runc.EditSpec(bundle,
+		runc.WithHostname(fmt.Sprintf("stress-ng-%s", id)),
 		runc.WithAnnotations(map[string]string{
 			"com.steadybit.sidecar": "true",
 		}),
