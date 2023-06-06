@@ -174,12 +174,17 @@ func (a *networkAction) Stop(ctx context.Context, state *NetworkActionState) (*a
 		return nil, extension_kit.ToError("Failed to deserialize network settings.", err)
 	}
 
-	err = network.Revert(ctx, a.runc, state.ContainerConfig, opts)
+	msgs, err := network.Revert(ctx, a.runc, state.ContainerConfig, opts)
 	if err != nil {
 		return nil, extension_kit.ToError("Failed to revert network settings.", err)
 	}
 
-	return nil, nil
+	result := &action_kit_api.StopResult{}
+	if len(msgs) > 0 {
+		result.Messages = extutil.Ptr(msgs)
+	}
+
+	return result, nil
 }
 
 func parsePortRanges(raw []string) ([]networkutils.PortRange, error) {
