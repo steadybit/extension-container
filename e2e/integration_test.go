@@ -34,6 +34,7 @@ func TestWithMinikube(t *testing.T) {
 		ExtraArgs: func(m *e2e.Minikube) []string {
 			return []string{
 				"--set", fmt.Sprintf("container.runtime=%s", m.Runtime),
+				"--set", "logging.level=DEBUG",
 			}
 		},
 	}
@@ -84,6 +85,9 @@ func TestWithMinikube(t *testing.T) {
 		}, {
 			Name: "host network detection",
 			Test: testHostNetwork,
+		}, {
+			Name: "network delay two containers on the same network",
+			Test: testNetworkDelayOnTwoContainers,
 		},
 	})
 }
@@ -737,4 +741,47 @@ func testHostNetwork(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			}
 		})
 	}
+}
+
+func testNetworkDelayOnTwoContainers(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
+	if m.Runtime == "cri-o" && m.Driver == "docker" {
+		t.Skip("Due to https://github.com/kubernetes/minikube/issues/16371 this test is skipped for cri-o")
+	}
+
+	nginx := e2e.Nginx{Minikube: m}
+	err := nginx.Deploy("nginx-double", func(pod *v1.PodApplyConfiguration) {
+		pod.Spec.Containers = append(pod.Spec.Containers, v1.ContainerApplyConfiguration{
+			Name:  extutil.Ptr("nginx-2"),
+			Image: extutil.Ptr("nginx:stable-alpine"),
+			Ports: []v1.ContainerPortApplyConfiguration{
+				{
+					ContainerPort: extutil.Ptr(int32(80)),
+				},
+			},
+		},
+		)
+	})
+	require.NoError(t, err, "failed to create pod")
+	defer func() { _ = nginx.Delete() }()
+
+	target, err := nginx.Target()
+	require.NoError(t, err)
+	target2, err := e2e.NewContainerTarget(m, nginx.Pod, "nginx-2")
+	require.NoError(t, err)
+
+	config := struct {
+		Duration int `json:"duration"`
+		Delay    int `json:"networkDelay"`
+	}{
+		Duration: 10000,
+		Delay:    200,
+	}
+
+	action, err := e.RunAction(fmt.Sprintf("%s.network_delay", extcontainer.BaseActionID), target, config, executionContext)
+	defer func() { _ = action.Cancel() }()
+	require.NoError(t, err)
+
+	action2, err2 := e.RunAction(fmt.Sprintf("%s.network_delay", extcontainer.BaseActionID), target2, config, executionContext)
+	defer func() { _ = action2.Cancel() }()
+	require.NoError(t, err2)
 }

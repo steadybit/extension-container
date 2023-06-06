@@ -9,10 +9,12 @@ import (
 	"fmt"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/rs/zerolog/log"
+	"github.com/steadybit/action-kit/go/action_kit_api/v2"
 	"github.com/steadybit/action-kit/go/action_kit_commons/networkutils"
 	"github.com/steadybit/extension-container/pkg/container/runc"
 	"github.com/steadybit/extension-container/pkg/utils"
-	"io"
+	"github.com/steadybit/extension-kit/extutil"
+	"os"
 	"sync/atomic"
 )
 
@@ -49,7 +51,47 @@ func Apply(ctx context.Context, r runc.Runc, config TargetContainerConfig, opts 
 		Str("config", config.ContainerID).
 		Msg("applying network config")
 
+	if err := checkNamespacesActive(config.Namespaces); err != nil {
+		return fmt.Errorf("container exited? %w", err)
+	}
+
 	return generateAndRunCommands(ctx, r, config, opts, networkutils.ModeAdd)
+}
+
+func Revert(ctx context.Context, r runc.Runc, config TargetContainerConfig, opts networkutils.Opts) (action_kit_api.Messages, error) {
+
+	if err := checkNamespacesActive(config.Namespaces); err != nil {
+		log.Info().
+			Str("config", config.ContainerID).
+			AnErr("reason", err).
+			Msg("skipping revert network config")
+
+		return []action_kit_api.Message{
+			{
+				Level:   extutil.Ptr(action_kit_api.Info),
+				Message: fmt.Sprintf("Skipped revert network config. Target container exited? %s", err),
+			},
+		}, nil
+	}
+
+	log.Info().
+		Str("config", config.ContainerID).
+		Msg("reverting network config")
+
+	return nil, generateAndRunCommands(ctx, r, config, opts, networkutils.ModeDelete)
+}
+
+func checkNamespacesActive(namespaces []specs.LinuxNamespace) error {
+	for _, ns := range namespaces {
+		if ns.Path == "" {
+			continue
+		}
+
+		if _, err := os.Stat(ns.Path); err != nil && os.IsNotExist(err) {
+			return fmt.Errorf("namespace %s doesn't exist", ns.Path)
+		}
+	}
+	return nil
 }
 
 func generateAndRunCommands(ctx context.Context, r runc.Runc, config TargetContainerConfig, opts networkutils.Opts, mode networkutils.Mode) error {
@@ -85,28 +127,19 @@ func generateAndRunCommands(ctx context.Context, r runc.Runc, config TargetConta
 	if tcCommands != nil {
 		err = executeTcCommands(ctx, r, config, tcCommands)
 		if err != nil {
-			return err
+			return networkutils.FilterTcBatchErrors(err, mode, tcCommands)
 		}
 	}
 
 	return nil
 }
 
-func Revert(ctx context.Context, r runc.Runc, config TargetContainerConfig, opts networkutils.Opts) error {
-	log.Info().
-		Str("config", config.ContainerID).
-		Msg("reverting network config")
-
-	return generateAndRunCommands(ctx, r, config, opts, networkutils.ModeDelete)
-
-}
-
 func getNextContainerId() string {
 	return fmt.Sprintf("sb-network-%d", counter.Add(1))
 }
 
-func executeIpCommands(ctx context.Context, r runc.Runc, config TargetContainerConfig, family networkutils.Family, batch io.Reader) error {
-	if batch == nil {
+func executeIpCommands(ctx context.Context, r runc.Runc, config TargetContainerConfig, family networkutils.Family, cmds []string) error {
+	if len(cmds) == 0 {
 		return nil
 	}
 
@@ -130,9 +163,10 @@ func executeIpCommands(ctx context.Context, r runc.Runc, config TargetContainerC
 		return err
 	}
 
+	log.Debug().Strs("cmds", cmds).Str("family", string(family)).Msg("running ip commands")
 	var outb bytes.Buffer
 	err = r.Run(ctx, id, bundle, runc.IoOpts{
-		Stdin:  batch,
+		Stdin:  networkutils.ToReader(cmds),
 		Stdout: &outb,
 		Stderr: &outb,
 	})
@@ -143,8 +177,8 @@ func executeIpCommands(ctx context.Context, r runc.Runc, config TargetContainerC
 	return nil
 }
 
-func executeTcCommands(ctx context.Context, r runc.Runc, config TargetContainerConfig, batch io.Reader) error {
-	if batch == nil {
+func executeTcCommands(ctx context.Context, r runc.Runc, config TargetContainerConfig, cmds []string) error {
+	if len(cmds) == 0 {
 		return nil
 	}
 
@@ -168,14 +202,18 @@ func executeTcCommands(ctx context.Context, r runc.Runc, config TargetContainerC
 		return err
 	}
 
+	log.Debug().Strs("cmds", cmds).Msg("running tc commands")
 	var outb bytes.Buffer
 	err = r.Run(ctx, id, bundle, runc.IoOpts{
-		Stdin:  batch,
+		Stdin:  networkutils.ToReader(cmds),
 		Stdout: &outb,
 		Stderr: &outb,
 	})
 	defer func() { _ = r.Delete(context.Background(), id, true) }()
 	if err != nil {
+		if parsed := networkutils.ParseTcBatchError(bytes.NewReader(outb.Bytes())); parsed != nil {
+			return parsed
+		}
 		return fmt.Errorf("tc failed: %w, output: %s", err, outb.String())
 	}
 	return nil
