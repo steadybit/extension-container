@@ -69,7 +69,7 @@ func Revert(ctx context.Context, r runc.Runc, config TargetContainerConfig, opts
 		return []action_kit_api.Message{
 			{
 				Level:   extutil.Ptr(action_kit_api.Info),
-				Message: fmt.Sprintf("Skipped revert network config. Target container exited? %s", err),
+				Message: fmt.Sprintf("Skipped revert network config. Target container %s exited? %s", config.ContainerID, err),
 			},
 		}, nil
 	}
