@@ -751,13 +751,9 @@ func testNetworkDelayOnTwoContainers(t *testing.T, m *e2e.Minikube, e *e2e.Exten
 	nginx := e2e.Nginx{Minikube: m}
 	err := nginx.Deploy("nginx-double", func(pod *v1.PodApplyConfiguration) {
 		pod.Spec.Containers = append(pod.Spec.Containers, v1.ContainerApplyConfiguration{
-			Name:  extutil.Ptr("nginx-2"),
-			Image: extutil.Ptr("nginx:stable-alpine"),
-			Ports: []v1.ContainerPortApplyConfiguration{
-				{
-					ContainerPort: extutil.Ptr(int32(80)),
-				},
-			},
+			Name:    extutil.Ptr("sleeper"),
+			Image:   extutil.Ptr("alpine:latest"),
+			Command: []string{"sleep", "10000"},
 		},
 		)
 	})
@@ -766,7 +762,7 @@ func testNetworkDelayOnTwoContainers(t *testing.T, m *e2e.Minikube, e *e2e.Exten
 
 	target, err := nginx.Target()
 	require.NoError(t, err)
-	target2, err := e2e.NewContainerTarget(m, nginx.Pod, "nginx-2")
+	target2, err := e2e.NewContainerTarget(m, nginx.Pod, "sleeper")
 	require.NoError(t, err)
 
 	config := struct {
