@@ -54,3 +54,18 @@ $ helm upgrade steadybit-extension-container \
 
 Make sure to register the extension at the steadybit platform. Please refer to
 the [documentation](https://docs.steadybit.com/integrate-with-steadybit/extensions/extension-installation) for more information.
+
+## Anatomy of the extension / Security
+
+We try to limit the needed access needed for the extension to the absolute minimum. So the extension itself can run as a non-root user on a read-only root file-system and will by default if deployed using the provided helm-chart.
+In order do execute certain actions the extension needs certain capabilities.
+
+### discovery / state attacks
+
+For discovery and executing state attacks such as stop or pause container the extension needs access to the container runtime socket.
+
+### resource and network attacks
+
+Resource attacks starting stress-ng processes, the network attacks are starting ip or tc processes as runc container reusing the target container's linux namespace(s), control group(s) and user.
+This requires the following capabilities: SYS_ADMIN, SYS_RESOURCE, SYS_PTRACE, KILL, NET_ADMIN, DAC_OVERRIDE, SETUID, SETGID, AUDIT_WRITE.
+The needed binaries are included in the extension container image.
