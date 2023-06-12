@@ -6,7 +6,7 @@ tasks:
     command: make run
 
 ports:
-  - port: 8080
+  - port: 8086
     onOpen: notify
     name: Extension
     description: Extension HTTP interface

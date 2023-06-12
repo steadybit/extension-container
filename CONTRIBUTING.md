@@ -5,7 +5,7 @@
 1. Clone the repository
 2. `$ make tidy`
 3. `$ make run`
-4. `$ open http://localhost:8080`
+4. `$ open http://localhost:8086`
 
 ## Tasks
 

@@ -13,7 +13,7 @@ func GetOwnPort() uint16 {
 			return uint16(uInt)
 		}
 	}
-	return 8080
+	return 8086
 }
 
 func GetOwnHealthPort() uint16 {
@@ -24,5 +24,5 @@ func GetOwnHealthPort() uint16 {
 			return uint16(uInt)
 		}
 	}
-	return 8081
+	return 8082
 }

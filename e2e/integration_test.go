@@ -30,7 +30,7 @@ var (
 func TestWithMinikube(t *testing.T) {
 	extFactory := e2e.HelmExtensionFactory{
 		Name: "extension-container",
-		Port: 8080,
+		Port: 8086,
 		ExtraArgs: func(m *e2e.Minikube) []string {
 			return []string{
 				"--set", fmt.Sprintf("container.runtime=%s", m.Runtime),

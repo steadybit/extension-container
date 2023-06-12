@@ -15,7 +15,7 @@ manifest should match snapshot using containerd:
         metadata:
           annotations:
             container.apparmor.security.beta.kubernetes.io/steadybit-extension-container: unconfined
-            steadybit.com/extension-auto-discovery: "{\n  \"extensions\": [\n    {\n      \"port\": 8080,\n      \"types\": [\"ACTION\",\"DISCOVERY\"],\n      \"tls\": {\n        \n      }\n    }\n  ]\n}\n"
+            steadybit.com/extension-auto-discovery: "{\n  \"extensions\": [\n    {\n      \"port\": 8086,\n      \"types\": [\"ACTION\",\"DISCOVERY\"],\n      \"tls\": {\n        \n      }\n    }\n  ]\n}\n"
           labels:
             app: steadybit-extension-container
             app.kubernetes.io/name: steadybit-extension-container
@@ -32,12 +32,12 @@ manifest should match snapshot using containerd:
               livenessProbe:
                 httpGet:
                   path: /health/liveness
-                  port: 8081
+                  port: 8082
               name: steadybit-extension-container
               readinessProbe:
                 httpGet:
                   path: /health/readiness
-                  port: 8081
+                  port: 8082
               securityContext:
                 capabilities:
                   add:
@@ -65,8 +65,8 @@ manifest should match snapshot using containerd:
                   name: runtime-socket
                 - mountPath: /run/containerd/runc/k8s.io
                   name: runtime-runc-root
-          dnsPolicy: ClusterFirst
-          hostNetwork: false
+          dnsPolicy: ClusterFirstWithHostNet
+          hostNetwork: true
           hostPID: true
           volumes:
             - emptyDir: {}
@@ -100,7 +100,7 @@ manifest should match snapshot using crio:
         metadata:
           annotations:
             container.apparmor.security.beta.kubernetes.io/steadybit-extension-container: unconfined
-            steadybit.com/extension-auto-discovery: "{\n  \"extensions\": [\n    {\n      \"port\": 8080,\n      \"types\": [\"ACTION\",\"DISCOVERY\"],\n      \"tls\": {\n        \n      }\n    }\n  ]\n}\n"
+            steadybit.com/extension-auto-discovery: "{\n  \"extensions\": [\n    {\n      \"port\": 8086,\n      \"types\": [\"ACTION\",\"DISCOVERY\"],\n      \"tls\": {\n        \n      }\n    }\n  ]\n}\n"
           labels:
             app: steadybit-extension-container
             app.kubernetes.io/name: steadybit-extension-container
@@ -117,12 +117,12 @@ manifest should match snapshot using crio:
               livenessProbe:
                 httpGet:
                   path: /health/liveness
-                  port: 8081
+                  port: 8082
               name: steadybit-extension-container
               readinessProbe:
                 httpGet:
                   path: /health/readiness
-                  port: 8081
+                  port: 8082
               securityContext:
                 capabilities:
                   add:
@@ -150,8 +150,8 @@ manifest should match snapshot using crio:
                   name: runtime-socket
                 - mountPath: /run/runc
                   name: runtime-runc-root
-          dnsPolicy: ClusterFirst
-          hostNetwork: false
+          dnsPolicy: ClusterFirstWithHostNet
+          hostNetwork: true
           hostPID: true
           volumes:
             - emptyDir: {}
@@ -185,7 +185,7 @@ manifest should match snapshot using docker:
         metadata:
           annotations:
             container.apparmor.security.beta.kubernetes.io/steadybit-extension-container: unconfined
-            steadybit.com/extension-auto-discovery: "{\n  \"extensions\": [\n    {\n      \"port\": 8080,\n      \"types\": [\"ACTION\",\"DISCOVERY\"],\n      \"tls\": {\n        \n      }\n    }\n  ]\n}\n"
+            steadybit.com/extension-auto-discovery: "{\n  \"extensions\": [\n    {\n      \"port\": 8086,\n      \"types\": [\"ACTION\",\"DISCOVERY\"],\n      \"tls\": {\n        \n      }\n    }\n  ]\n}\n"
           labels:
             app: steadybit-extension-container
             app.kubernetes.io/name: steadybit-extension-container
@@ -202,12 +202,12 @@ manifest should match snapshot using docker:
               livenessProbe:
                 httpGet:
                   path: /health/liveness
-                  port: 8081
+                  port: 8082
               name: steadybit-extension-container
               readinessProbe:
                 httpGet:
                   path: /health/readiness
-                  port: 8081
+                  port: 8082
               securityContext:
                 capabilities:
                   add:
@@ -235,8 +235,8 @@ manifest should match snapshot using docker:
                   name: runtime-socket
                 - mountPath: /run/docker/runtime-runc/moby
                   name: runtime-runc-root
-          dnsPolicy: ClusterFirst
-          hostNetwork: false
+          dnsPolicy: ClusterFirstWithHostNet
+          hostNetwork: true
           hostPID: true
           volumes:
             - emptyDir: {}
@@ -270,7 +270,7 @@ manifest should match snapshot with TLS:
         metadata:
           annotations:
             container.apparmor.security.beta.kubernetes.io/steadybit-extension-container: unconfined
-            steadybit.com/extension-auto-discovery: "{\n  \"extensions\": [\n    {\n      \"port\": 8080,\n      \"types\": [\"ACTION\",\"DISCOVERY\"],\n      \"tls\": {\n        \"server\": {\n          \"extraCertsFile\": \"server-cert/tls.crt\"\n        }\n        \n      }\n    }\n  ]\n}\n"
+            steadybit.com/extension-auto-discovery: "{\n  \"extensions\": [\n    {\n      \"port\": 8086,\n      \"types\": [\"ACTION\",\"DISCOVERY\"],\n      \"tls\": {\n        \"server\": {\n          \"extraCertsFile\": \"server-cert/tls.crt\"\n        }\n        \n      }\n    }\n  ]\n}\n"
           labels:
             app: steadybit-extension-container
             app.kubernetes.io/name: steadybit-extension-container
@@ -291,12 +291,12 @@ manifest should match snapshot with TLS:
               livenessProbe:
                 httpGet:
                   path: /health/liveness
-                  port: 8081
+                  port: 8082
               name: steadybit-extension-container
               readinessProbe:
                 httpGet:
                   path: /health/readiness
-                  port: 8081
+                  port: 8082
               securityContext:
                 capabilities:
                   add:
@@ -327,8 +327,8 @@ manifest should match snapshot with TLS:
                 - mountPath: /etc/extension/certificates/server-cert
                   name: certificate-server-cert
                   readOnly: true
-          dnsPolicy: ClusterFirst
-          hostNetwork: false
+          dnsPolicy: ClusterFirstWithHostNet
+          hostNetwork: true
           hostPID: true
           volumes:
             - emptyDir: {}
@@ -366,7 +366,7 @@ manifest should match snapshot with extra env vars:
         metadata:
           annotations:
             container.apparmor.security.beta.kubernetes.io/steadybit-extension-container: unconfined
-            steadybit.com/extension-auto-discovery: "{\n  \"extensions\": [\n    {\n      \"port\": 8080,\n      \"types\": [\"ACTION\",\"DISCOVERY\"],\n      \"tls\": {\n        \n      }\n    }\n  ]\n}\n"
+            steadybit.com/extension-auto-discovery: "{\n  \"extensions\": [\n    {\n      \"port\": 8086,\n      \"types\": [\"ACTION\",\"DISCOVERY\"],\n      \"tls\": {\n        \n      }\n    }\n  ]\n}\n"
           labels:
             app: steadybit-extension-container
             app.kubernetes.io/name: steadybit-extension-container
@@ -390,12 +390,12 @@ manifest should match snapshot with extra env vars:
               livenessProbe:
                 httpGet:
                   path: /health/liveness
-                  port: 8081
+                  port: 8082
               name: steadybit-extension-container
               readinessProbe:
                 httpGet:
                   path: /health/readiness
-                  port: 8081
+                  port: 8082
               securityContext:
                 capabilities:
                   add:
@@ -423,8 +423,8 @@ manifest should match snapshot with extra env vars:
                   name: runtime-socket
                 - mountPath: /run/containerd/runc/k8s.io
                   name: runtime-runc-root
-          dnsPolicy: ClusterFirst
-          hostNetwork: false
+          dnsPolicy: ClusterFirstWithHostNet
+          hostNetwork: true
           hostPID: true
           volumes:
             - emptyDir: {}
@@ -462,7 +462,7 @@ manifest should match snapshot with mutual TLS:
               {
                 "extensions": [
                   {
-                    "port": 8080,
+                    "port": 8086,
                     "types": ["ACTION","DISCOVERY"],
                     "tls": {
                       "server": {
@@ -498,12 +498,12 @@ manifest should match snapshot with mutual TLS:
               livenessProbe:
                 httpGet:
                   path: /health/liveness
-                  port: 8081
+                  port: 8082
               name: steadybit-extension-container
               readinessProbe:
                 httpGet:
                   path: /health/readiness
-                  port: 8081
+                  port: 8082
               securityContext:
                 capabilities:
                   add:
@@ -537,8 +537,8 @@ manifest should match snapshot with mutual TLS:
                 - mountPath: /etc/extension/certificates/server-cert
                   name: certificate-server-cert
                   readOnly: true
-          dnsPolicy: ClusterFirst
-          hostNetwork: false
+          dnsPolicy: ClusterFirstWithHostNet
+          hostNetwork: true
           hostPID: true
           volumes:
             - emptyDir: {}

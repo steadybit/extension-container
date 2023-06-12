@@ -25,7 +25,7 @@ The extension supports all environment variables provided by [steadybit/extensio
 ```sh
 $ docker run \
   --rm \
-  -p 8080 \
+  -p 8086 \
   --privileged \
   --pid=host \
   -v /var/run/docker.sock:/var/run/docker.sock \
