@@ -33,7 +33,7 @@ func GetConfigForContainer(ctx context.Context, r runc.Runc, targetId string) (T
 
 	state, err := r.State(ctx, targetId)
 	if err != nil {
-		return config, fmt.Errorf("could not load state of target container: %w", err)
+		return config, fmt.Errorf("could not read state of target container: %w", err)
 	}
 	config.Pid = state.Pid
 
