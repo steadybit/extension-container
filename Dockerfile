@@ -8,6 +8,7 @@ FROM golang:1.20-bullseye AS build
 ARG NAME
 ARG VERSION
 ARG REVISION
+ARG ADDITIONAL_BUILD_PARAMS
 
 WORKDIR /app
 
@@ -26,7 +27,7 @@ RUN go build \
     -X 'github.com/steadybit/extension-kit/extbuild.Version=${VERSION}' \
     -X 'github.com/steadybit/extension-kit/extbuild.Revision=${REVISION}'" \
     -o ./extension \
-    main.go \
+    ${ADDITIONAL_BUILD_PARAMS} \
     && setcap "cap_setuid,cap_setgid,cap_sys_admin,cap_dac_override+eip" ./extension
 
 ##

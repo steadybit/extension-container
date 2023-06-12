@@ -60,4 +60,4 @@ run: tidy build
 container:
 	docker buildx build --platform="linux/amd64" -f Dockerfile.sidecar --output type=tar,dest=sidecar_linux_amd64.tar .
 	docker buildx build --platform="linux/arm64" -f Dockerfile.sidecar --output type=tar,dest=sidecar_linux_arm64.tar .
-	docker buildx build -t extension-container:latest --output=type=docker .
+	docker buildx build --build-arg ADDITIONAL_BUILD_PARAMS="-cover" -t extension-container:latest --output=type=docker .
