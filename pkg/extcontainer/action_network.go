@@ -195,6 +195,9 @@ func parsePortRanges(raw []string) ([]networkutils.PortRange, error) {
 	var ranges []networkutils.PortRange
 
 	for _, r := range raw {
+		if len(r) == 0 {
+			continue
+		}
 		parsed, err := networkutils.ParsePortRange(r)
 		if err != nil {
 			return nil, err
