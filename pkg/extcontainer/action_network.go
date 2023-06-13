@@ -214,7 +214,8 @@ func mapToNetworkFilter(ctx context.Context, r runc.Runc, cfg network.TargetCont
 		extutil.ToStringArray(config["hostname"])...,
 	)
 
-	includeIps, err := network.ResolveHostnames(ctx, r, cfg, toResolve...)
+	dig := networkutils.HostnameResolver{Dig: &network.RuncDigRunner{Runc: r, Cfg: cfg}}
+	includeIps, err := dig.Resolve(ctx, toResolve...)
 	if err != nil {
 		return networkutils.Filter{}, err
 	}
