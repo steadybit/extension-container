@@ -50,7 +50,16 @@ func getStressMemoryDescription() action_kit_api.ActionDescription {
 				Type:         action_kit_api.Duration,
 				DefaultValue: extutil.Ptr("30s"),
 				Required:     extutil.Ptr(true),
-				Order:        extutil.Ptr(1),
+				Order:        extutil.Ptr(2),
+			},
+			{
+				Name:         "failOnOomKill",
+				Label:        "Fail on OOM Kill",
+				Description:  extutil.Ptr("Should an OOM kill be considered a failure?"),
+				Type:         action_kit_api.Boolean,
+				DefaultValue: extutil.Ptr("false"),
+				Required:     extutil.Ptr(true),
+				Order:        extutil.Ptr(3),
 			},
 		},
 	}
