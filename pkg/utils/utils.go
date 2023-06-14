@@ -99,6 +99,7 @@ func toRuncNamespaceType(t string) specs.LinuxNamespaceType {
 }
 
 func CopyFileFromProcessToBundle(bundle string, pid int, path string) error {
+	//TODO nsenter realy needed? replace with copy command
 	var out bytes.Buffer
 	cmd := RootCommandContext(context.Background(), "nsenter", "-t", "1", "-C", "--", "cat", filepath.Join("/proc", strconv.Itoa(pid), "root", path))
 	cmd.Stdout = &out

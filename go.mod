@@ -12,13 +12,13 @@ require (
 	github.com/rs/zerolog v1.29.1
 	github.com/steadybit/action-kit/go/action_kit_api/v2 v2.6.1
 	github.com/steadybit/action-kit/go/action_kit_commons v1.0.4
-	github.com/steadybit/action-kit/go/action_kit_sdk v1.1.3
+	github.com/steadybit/action-kit/go/action_kit_sdk v1.1.4
 	github.com/steadybit/action-kit/go/action_kit_test v1.0.5
 	github.com/steadybit/discovery-kit/go/discovery_kit_api v1.3.0
 	github.com/steadybit/event-kit/go/event_kit_api v1.1.0
 	github.com/steadybit/extension-kit v1.7.19
 	github.com/stretchr/testify v1.8.3
-	golang.org/x/sync v0.2.0
+	golang.org/x/sync v0.3.0
 	google.golang.org/grpc v1.55.0
 	k8s.io/api v0.27.1
 	k8s.io/apimachinery v0.27.1
@@ -84,7 +84,7 @@ require (
 	go.opentelemetry.io/otel v1.16.0 // indirect
 	go.opentelemetry.io/otel/metric v1.16.0 // indirect
 	go.opentelemetry.io/otel/trace v1.16.0 // indirect
-	golang.org/x/mod v0.10.0 // indirect
+	golang.org/x/mod v0.11.0 // indirect
 	golang.org/x/net v0.11.0 // indirect
 	golang.org/x/oauth2 v0.6.0 // indirect
 	golang.org/x/sys v0.9.0 // indirect
