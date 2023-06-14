@@ -14,7 +14,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/client-go/applyconfigurations/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
+	acorev1 "k8s.io/client-go/applyconfigurations/core/v1"
 	"runtime"
 	"testing"
 	"time"
@@ -553,24 +554,70 @@ func testStressCpu(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 }
 
 func testStressMemory(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
-	nginx := e2e.Nginx{Minikube: m}
-	err := nginx.Deploy("nginx-stress-mem")
-	require.NoError(t, err, "failed to create pod")
-	defer func() { _ = nginx.Delete() }()
+	tests := []struct {
+		name          string
+		failOnOomKill bool
+		performKill   bool
+		wantedErr     *string
+	}{
+		{
+			name:          "should perform successfully",
+			failOnOomKill: false,
+			performKill:   false,
+			wantedErr:     nil,
+		}, {
+			name:          "should fail on oom kill",
+			failOnOomKill: true,
+			performKill:   true,
+			wantedErr:     extutil.Ptr("exit status 137"),
+		}, {
+			name:          "should not fail on oom kill",
+			failOnOomKill: false,
+			performKill:   true,
+			wantedErr:     nil,
+		},
+	}
 
-	target, err := nginx.Target()
-	require.NoError(t, err)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			nginx := e2e.Nginx{Minikube: m}
+			err := nginx.Deploy("nginx-stress-mem", func(p *acorev1.PodApplyConfiguration) {
+				p.Spec.Containers[0].Resources = &acorev1.ResourceRequirementsApplyConfiguration{
+					Limits: &corev1.ResourceList{
+						"memory": resource.MustParse("50Mi"),
+					},
+				}
+			})
+			require.NoError(t, err, "failed to create pod")
+			defer func() { _ = nginx.Delete() }()
 
-	config := struct {
-		Duration   int `json:"duration"`
-		Percentage int `json:"percentage"`
-	}{Duration: 5000, Percentage: 50}
+			target, err := nginx.Target()
+			require.NoError(t, err)
 
-	action, err := e.RunAction(fmt.Sprintf("%s.stress_mem", extcontainer.BaseActionID), target, config, executionContext)
-	defer func() { _ = action.Cancel() }()
-	require.NoError(t, err)
-	e2e.AssertProcessRunningInContainer(t, m, nginx.Pod, "nginx", "stress-ng", false)
-	require.NoError(t, action.Cancel())
+			config := struct {
+				Duration      int  `json:"duration"`
+				Percentage    int  `json:"percentage"`
+				FailOnOomKill bool `json:"failOnOomKill"`
+			}{Duration: 5000, Percentage: 10, FailOnOomKill: tt.failOnOomKill}
+
+			action, err := e.RunAction(fmt.Sprintf("%s.stress_mem", extcontainer.BaseActionID), target, config, executionContext)
+			defer func() { _ = action.Cancel() }()
+			require.NoError(t, err)
+
+			e2e.AssertProcessRunningInContainer(t, m, nginx.Pod, "nginx", "stress-ng", false)
+
+			if tt.performKill {
+				require.NoError(t, m.SshExec("sudo pkill -9 stress-ng").Run())
+			}
+
+			if tt.wantedErr == nil {
+				require.NoError(t, action.Cancel())
+			} else {
+				err := action.Wait()
+				require.ErrorContains(t, err, *tt.wantedErr)
+			}
+		})
+	}
 }
 
 func testStressIo(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
@@ -694,7 +741,7 @@ func testHostNetwork(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	}
 
 	nginx := e2e.Nginx{Minikube: m}
-	err := nginx.Deploy("nginx-network-host", func(pod *v1.PodApplyConfiguration) {
+	err := nginx.Deploy("nginx-network-host", func(pod *acorev1.PodApplyConfiguration) {
 		pod.Spec.HostNetwork = extutil.Ptr(true)
 	})
 	require.NoError(t, err, "failed to create pod")
@@ -749,8 +796,8 @@ func testNetworkDelayOnTwoContainers(t *testing.T, m *e2e.Minikube, e *e2e.Exten
 	}
 
 	nginx := e2e.Nginx{Minikube: m}
-	err := nginx.Deploy("nginx-double", func(pod *v1.PodApplyConfiguration) {
-		pod.Spec.Containers = append(pod.Spec.Containers, v1.ContainerApplyConfiguration{
+	err := nginx.Deploy("nginx-double", func(pod *acorev1.PodApplyConfiguration) {
+		pod.Spec.Containers = append(pod.Spec.Containers, acorev1.ContainerApplyConfiguration{
 			Name:    extutil.Ptr("sleeper"),
 			Image:   extutil.Ptr("alpine:latest"),
 			Command: []string{"sleep", "10000"},

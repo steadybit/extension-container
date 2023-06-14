@@ -14,6 +14,7 @@ import (
 	extension_kit "github.com/steadybit/extension-kit"
 	"github.com/steadybit/extension-kit/extutil"
 	"golang.org/x/sync/syncmap"
+	"os/exec"
 )
 
 type stressOptsProvider func(request action_kit_api.PrepareActionRequestBody) (stress.StressOpts, error)
@@ -26,9 +27,10 @@ type stressAction struct {
 }
 
 type StressActionState struct {
-	ContainerId string
-	StressOpts  stress.StressOpts
-	ExecutionId uuid.UUID
+	ContainerId     string
+	StressOpts      stress.StressOpts
+	ExecutionId     uuid.UUID
+	IgnoreExitCodes []int
 }
 
 // Make sure stressAction implements all required interfaces
@@ -71,6 +73,9 @@ func (a *stressAction) Prepare(_ context.Context, state *StressActionState, requ
 	state.ContainerId = containerId[0]
 	state.StressOpts = opts
 	state.ExecutionId = request.ExecutionId
+	if !extutil.ToBool(request.Config["failOnOomKill"]) {
+		state.IgnoreExitCodes = []int{137}
+	}
 	return nil, nil
 }
 
@@ -98,6 +103,25 @@ func (a *stressAction) Start(_ context.Context, state *StressActionState) (*acti
 
 func (a *stressAction) Status(_ context.Context, state *StressActionState) (*action_kit_api.StatusResult, error) {
 	completed, err := a.isStressCompleted(state.ExecutionId)
+
+	if exitErr, ok := err.(*exec.ExitError); ok {
+		exitCode := exitErr.ExitCode()
+
+		for _, ignore := range state.IgnoreExitCodes {
+			if exitCode == ignore {
+				return &action_kit_api.StatusResult{
+					Completed: true,
+					Messages: &[]action_kit_api.Message{
+						{
+							Level:   extutil.Ptr(action_kit_api.Warn),
+							Message: fmt.Sprintf("stress-ng exited unexpectedly: %s", err.Error()),
+						},
+					},
+				}, nil
+			}
+		}
+
+	}
 
 	if err != nil {
 		return &action_kit_api.StatusResult{

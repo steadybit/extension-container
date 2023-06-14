@@ -1,1 +1,1 @@
-{{- include "extensionlib.daemonset" (list . 8086 8082 (list "ACTION" "DISCOVERY") "unconfined" "Unconfined" (list "SYS_ADMIN" "SYS_RESOURCE" "SYS_PTRACE" "KILL" "NET_ADMIN" "DAC_OVERRIDE" "SETUID" "SETGID" "AUDIT_WRITE") true "ClusterFirstWithHostNet" true) -}}
+{{- include "extensionlib.daemonset" (list . 8086 8082 (list "ACTION" "DISCOVERY") "unconfined" "Unconfined" (.Values.securityContext.capabilities.add) true "ClusterFirstWithHostNet" true) -}}

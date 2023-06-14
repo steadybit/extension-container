@@ -51,7 +51,10 @@ func (o *StressOpts) Args() []string {
 		args = append(args, "--temp-path", o.TempPath)
 	}
 	if o.VmWorkers != nil {
-		args = append(args, "--vm", strconv.Itoa(*o.VmWorkers), "--vm-bytes", o.VmBytes)
+		args = append(args, "--vm", strconv.Itoa(*o.VmWorkers), "--vm-bytes", o.VmBytes, "--vm-hang", "0")
+	}
+	if log.Trace().Enabled() {
+		args = append(args, "-v")
 	}
 	return args
 }
@@ -89,6 +92,7 @@ func New(r runc.Runc, targetId string, opts StressOpts) (*Stress, error) {
 		runc.WithProcessCwd("/tmp"),
 		runc.WithCgroupPath(cgroupPath, "stress"),
 		runc.WithSelectedNamespaces(namespaces, specs.PIDNamespace, specs.UTSNamespace),
+		runc.WithCapabilities("CAP_SYS_RESOURCE"),
 		runc.WithMountIfNotPresent(specs.Mount{
 			Destination: "/tmp",
 			Type:        "tmpfs",
