@@ -129,7 +129,7 @@ func (c *Client) Stop(ctx context.Context, id string, graceful bool) error {
 		select {
 		case exitStatus := <-waitChannel:
 			if exitStatus.Error() != nil {
-				return fmt.Errorf("failed to stop container %s during grace period : %w", id, err)
+				return fmt.Errorf("failed to stop container %s during grace period : %w", id, exitStatus.Error())
 			}
 			log.Info().Str("containerId", id).Msgf("container stopped gracefully.")
 			return nil
