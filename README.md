@@ -18,6 +18,21 @@ Learn about the capabilities of this extension in our [Reliability Hub](https://
 
 The extension supports all environment variables provided by [steadybit/extension-kit](https://github.com/steadybit/extension-kit#environment-variables).
 
+
+## Needed capabilities
+
+The capabilities needed by this extension are: (which are provided by the helm chart)
+
+- SYS_ADMIN
+- SYS_RESOURCE
+- SYS_PTRACE
+- KILL
+- NET_ADMIN
+- DAC_OVERRIDE
+- SETUID
+- SETGID
+- AUDIT_WRITE
+
 ## Installation
 
 ### Using Docker
