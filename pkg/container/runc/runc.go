@@ -19,8 +19,10 @@ import (
 )
 
 type Runc struct {
-	Root  string
-	Debug bool
+	Root          string
+	Debug         bool
+	SystemdCgroup bool
+	Rootless      string
 }
 
 type Container struct {
@@ -40,8 +42,10 @@ func NewRunc(runtime types.Runtime) *Runc {
 	}
 
 	return &Runc{
-		Root:  root,
-		Debug: config.Config.RuncDebug,
+		SystemdCgroup: config.Config.RuncSystemdCgroup,
+		Rootless:      config.Config.RuncRootless,
+		Root:          root,
+		Debug:         config.Config.RuncDebug,
 	}
 }
 
@@ -110,6 +114,12 @@ func (r *Runc) args() []string {
 	}
 	if r.Debug {
 		out = append(out, "--debug")
+	}
+	if r.SystemdCgroup {
+		out = append(out, "--systemd-cgroup")
+	}
+	if r.Rootless != "" {
+		out = append(out, "--rootless", r.Rootless)
 	}
 	return out
 }

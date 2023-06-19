@@ -1,0 +1,4 @@
+unixSocket: /run/steadybit/extension-container.sock
+types:
+  - ACTION
+  - DISCOVERY

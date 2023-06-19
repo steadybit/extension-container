@@ -80,7 +80,7 @@ func New(r runc.Runc, targetId string, opts StressOpts) (*Stress, error) {
 	}
 
 	id := getNextContainerId(targetId)
-	bundle, cleanupBundle, err := r.PrepareBundle(ctx, "sidecar.tar", id)
+	bundle, cleanupBundle, err := r.PrepareBundle(ctx, utils.SidecarImagePath, id)
 	if err != nil {
 		return nil, fmt.Errorf("could not prepare bundle: %w", err)
 	}

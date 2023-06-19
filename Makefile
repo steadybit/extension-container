@@ -24,7 +24,7 @@ tidy:
 audit:
 	go vet ./...
 	go run honnef.co/go/tools/cmd/staticcheck@latest -checks=all,-ST1000,-U1000,-ST1003 ./...
-	go test -race -vet=off -coverprofile=coverage.out -timeout 30m ./...
+	go test -race -vet=off -coverprofile=coverage.out -timeout 30m -failfast ./...
 	go mod verify
 
 ## charttesting: Run Helm chart unit tests
@@ -47,8 +47,7 @@ chartlint:
 ## build: build the extension
 .PHONY: build
 build:
-	go mod verify
-	go build -o=./extension
+	goreleaser build --clean --snapshot --single-target -o extension
 
 ## run: run the extension
 .PHONY: run
@@ -60,4 +59,12 @@ run: tidy build
 container:
 	docker buildx build --platform="linux/amd64" -f Dockerfile.sidecar --output type=tar,dest=sidecar_linux_amd64.tar .
 	docker buildx build --platform="linux/arm64" -f Dockerfile.sidecar --output type=tar,dest=sidecar_linux_arm64.tar .
-	docker buildx build --build-arg ADDITIONAL_BUILD_PARAMS="-cover" -t extension-container:latest --output=type=docker .
+	docker buildx build --build-arg BUILD_WITH_COVERAGE="true" -t extension-container:latest --output=type=docker .
+
+
+## container: build the linux packages
+.PHONY: linuxpkg
+linuxpkg:
+	docker buildx build --platform="linux/amd64" -f Dockerfile.sidecar --output type=tar,dest=sidecar_linux_amd64.tar .
+	docker buildx build --platform="linux/arm64" -f Dockerfile.sidecar --output type=tar,dest=sidecar_linux_arm64.tar .
+	goreleaser release --clean --snapshot --skip-sign

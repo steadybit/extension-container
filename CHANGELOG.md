@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.1.1
+
+- add support for unix domain sockets
+- build linux packages
+
 ## v1.1.0
 
  - prefix container labels with `container.`

@@ -4,3 +4,5 @@
 /e2e/e2e-coverage-containerd.out
 /e2e/e2e-coverage-cri-o.out
 /e2e/e2e-coverage-docker.out
+/gpg.key
+/dist

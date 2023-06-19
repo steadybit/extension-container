@@ -6,6 +6,7 @@ package e2e
 import (
 	"context"
 	"fmt"
+	"github.com/rs/zerolog/log"
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
 	"github.com/steadybit/action-kit/go/action_kit_test/e2e"
 	"github.com/steadybit/discovery-kit/go/discovery_kit_api"
@@ -16,7 +17,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	acorev1 "k8s.io/client-go/applyconfigurations/core/v1"
-	"runtime"
+	"os"
+	"os/exec"
+	"strings"
 	"testing"
 	"time"
 )
@@ -36,17 +39,15 @@ func TestWithMinikube(t *testing.T) {
 			return []string{
 				"--set", fmt.Sprintf("container.runtime=%s", m.Runtime),
 				"--set", "logging.level=DEBUG",
+				"--set", "extraEnv[0].name=STEADYBIT_EXTENSION_RUNC_ROOTLESS",
+				"--set-string", "extraEnv[0].value=false",
+				"--set", "extraEnv[1].name=STEADYBIT_EXTENSION_SYSTEMD_CGROUP",
+				"--set-string", "extraEnv[1].value=false",
 			}
 		},
 	}
 
-	mOpts := e2e.DefaultMiniKubeOpts
-	mOpts.Runtimes = e2e.AllRuntimes
-	if runtime.GOOS == "linux" {
-		mOpts.Driver = "kvm2"
-	}
-
-	e2e.WithMinikube(t, mOpts, &extFactory, []e2e.WithMinikubeTestCase{
+	e2e.WithMinikube(t, getMinikubeOptions(), &extFactory, []e2e.WithMinikubeTestCase{
 		{
 			Name: "target discovery",
 			Test: testDiscovery,
@@ -91,6 +92,37 @@ func TestWithMinikube(t *testing.T) {
 			Test: testNetworkDelayOnTwoContainers,
 		},
 	})
+}
+
+func getMinikubeOptions() e2e.MinikubeOpts {
+	mOpts := e2e.DefaultMiniKubeOpts
+
+	if rawRuntimes, _ := os.LookupEnv("E2E_RUNTIMES"); rawRuntimes != "" {
+		mOpts.Runtimes = []e2e.Runtime{}
+	OUTER:
+		for _, rawRuntime := range strings.Split(rawRuntimes, ",") {
+			lower := strings.ToLower(strings.TrimSpace(rawRuntime))
+			for _, runtime := range e2e.AllRuntimes {
+				if lower == string(runtime) {
+					mOpts.Runtimes = append(mOpts.Runtimes, runtime)
+					continue OUTER
+				}
+			}
+			log.Info().Msgf("Ignoring unknown runtime %s", rawRuntime)
+		}
+	} else {
+		mOpts.Runtimes = e2e.AllRuntimes
+	}
+
+	if exec.Command("kvm-ok").Run() != nil {
+		log.Info().Msg("KVM is not available, using docker driver")
+		mOpts.Driver = "docker"
+	} else {
+		log.Info().Msg("KVM is available, using kvm2 driver")
+		mOpts.Driver = "kvm2"
+	}
+
+	return mOpts
 }
 
 func testNetworkDelay(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
