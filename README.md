@@ -38,7 +38,7 @@ The capabilities needed by this extension are: (which are provided by the helm c
 ### Using Docker
 
 ```sh
-$ docker run \
+docker run \
   --rm \
   -p 8086 \
   --privileged \
@@ -53,9 +53,9 @@ $ docker run \
 ### Using Helm in Kubernetes
 
 ```sh
-$ helm repo add steadybit-extension-container https://steadybit.github.io/extension-container
-$ helm repo update
-$ helm upgrade steadybit-extension-container \
+helm repo add steadybit-extension-container https://steadybit.github.io/extension-container
+helm repo update
+helm upgrade steadybit-extension-container \
     --install \
     --wait \
     --timeout 5m0s \
