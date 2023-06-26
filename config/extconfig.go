@@ -9,11 +9,11 @@ import (
 )
 
 type Specification struct {
-	Socket              string `json:"socket" required:"false"`
-	Runtime             string `json:"runtime" required:"false"`
-	ContainerdNamespace string `json:"containerdNamespace" required:"true" default:"k8s.io"`
-	RuncRoot            string `json:"runcRoot" required:"false"`
-	RuncDebug           bool   `json:"runcDebug" required:"false"`
+	Socket              string `json:"containerSocket" split_words:"true" required:"false"`
+	Runtime             string `json:"containerRuntime" split_words:"true" required:"false"`
+	ContainerdNamespace string `json:"containerdNamespace" split_words:"true" required:"true" default:"k8s.io"`
+	RuncRoot            string `json:"runcRoot" split_words:"true" required:"false"`
+	RuncDebug           bool   `json:"runcDebug" split_words:"true" required:"false"`
 }
 
 var (
