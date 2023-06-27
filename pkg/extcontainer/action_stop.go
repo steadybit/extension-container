@@ -67,7 +67,7 @@ func (a *stopAction) Describe() action_kit_api.ActionDescription {
 				Name:         "graceful",
 				Label:        "Graceful",
 				Description:  extutil.Ptr("Stopped the container gracefully using SIGTERM or immediately killed using the SIGKILL signal?"),
-				Type:         action_kit_api.String,
+				Type:         action_kit_api.Boolean,
 				DefaultValue: extutil.Ptr("true"),
 				Required:     extutil.Ptr(true),
 				Order:        extutil.Ptr(0),
