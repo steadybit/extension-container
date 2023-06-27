@@ -103,32 +103,35 @@ func (a *stressAction) Start(_ context.Context, state *StressActionState) (*acti
 
 func (a *stressAction) Status(_ context.Context, state *StressActionState) (*action_kit_api.StatusResult, error) {
 	completed, err := a.isStressCompleted(state.ExecutionId)
+	if err != nil {
+		errMessage := err.Error()
 
-	if exitErr, ok := err.(*exec.ExitError); ok {
-		exitCode := exitErr.ExitCode()
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			exitCode := exitErr.ExitCode()
+			if len(exitErr.Stderr) > 0 {
+				errMessage = fmt.Sprintf("%s\n%s", exitErr.Error(), string(exitErr.Stderr))
+			}
 
-		for _, ignore := range state.IgnoreExitCodes {
-			if exitCode == ignore {
-				return &action_kit_api.StatusResult{
-					Completed: true,
-					Messages: &[]action_kit_api.Message{
-						{
-							Level:   extutil.Ptr(action_kit_api.Warn),
-							Message: fmt.Sprintf("stress-ng exited unexpectedly: %s", err.Error()),
+			for _, ignore := range state.IgnoreExitCodes {
+				if exitCode == ignore {
+					return &action_kit_api.StatusResult{
+						Completed: true,
+						Messages: &[]action_kit_api.Message{
+							{
+								Level:   extutil.Ptr(action_kit_api.Warn),
+								Message: fmt.Sprintf("stress-ng exited unexpectedly: %s", errMessage),
+							},
 						},
-					},
-				}, nil
+					}, nil
+				}
 			}
 		}
 
-	}
-
-	if err != nil {
 		return &action_kit_api.StatusResult{
 			Completed: true,
 			Error: &action_kit_api.ActionKitError{
 				Status: extutil.Ptr(action_kit_api.Failed),
-				Title:  fmt.Sprintf("Failed to stress container: %s", err),
+				Title:  fmt.Sprintf("Failed to stress container: %s", errMessage),
 			},
 		}, nil
 	}

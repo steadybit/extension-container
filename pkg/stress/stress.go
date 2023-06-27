@@ -11,6 +11,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/steadybit/extension-container/pkg/container/runc"
 	"github.com/steadybit/extension-container/pkg/utils"
+	"os/exec"
 	"strconv"
 	"sync/atomic"
 	"time"
@@ -117,10 +118,12 @@ func New(r runc.Runc, targetId string, opts StressOpts) (*Stress, error) {
 				Stdout: &outb,
 				Stderr: &outb,
 			})
-			if err != nil {
-				wait <- fmt.Errorf("could not start stress-ng: %w\n%s", err, outb.String())
+
+			if exitErr, ok := err.(*exec.ExitError); ok {
+				exitErr.Stderr = outb.Bytes()
+				wait <- exitErr
 			} else {
-				wait <- nil
+				wait <- err
 			}
 		}()
 		return nil
