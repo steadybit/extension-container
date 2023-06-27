@@ -4,6 +4,7 @@
 package stress
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"github.com/opencontainers/runtime-spec/specs-go"
@@ -67,20 +68,20 @@ func New(r runc.Runc, targetId string, opts StressOpts) (*Stress, error) {
 		return nil, fmt.Errorf("could not load state of target container: %w", err)
 	}
 
-	id := getNextContainerId()
-	bundle, cleanupBundle, err := r.PrepareBundle(ctx, "sidecar.tar", id)
-	if err != nil {
-		return nil, err
-	}
-
 	cgroupPath, err := utils.ReadCgroupPath(state.Pid)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not read cgroup of target container: %w", err)
 	}
 
 	namespaces, err := utils.ReadNamespaces(state.Pid)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not read namespaces of target container: %w", err)
+	}
+
+	id := getNextContainerId()
+	bundle, cleanupBundle, err := r.PrepareBundle(ctx, "sidecar.tar", id)
+	if err != nil {
+		return nil, fmt.Errorf("could not prepare bundle: %w", err)
 	}
 
 	if err := runc.EditSpec(bundle,
@@ -99,7 +100,7 @@ func New(r runc.Runc, targetId string, opts StressOpts) (*Stress, error) {
 			Options:     []string{"noexec", "nosuid", "nodev", "rprivate"},
 		}),
 	); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not create config.json: %w", err)
 	}
 
 	wait := make(chan error)
@@ -110,7 +111,17 @@ func New(r runc.Runc, targetId string, opts StressOpts) (*Stress, error) {
 			Strs("args", opts.Args()).
 			Msg("Starting stress-ng")
 		go func() {
-			wait <- r.Run(ctx, id, bundle, runc.InheritStdIo())
+			var outb bytes.Buffer
+			err := r.Run(ctx, id, bundle, runc.IoOpts{
+				Stdin:  nil,
+				Stdout: &outb,
+				Stderr: &outb,
+			})
+			if err != nil {
+				wait <- fmt.Errorf("could not start stress-ng: %w\n%s", err, outb.String())
+			} else {
+				wait <- nil
+			}
 		}()
 		return nil
 	}
