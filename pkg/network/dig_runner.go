@@ -20,7 +20,7 @@ type RuncDigRunner struct {
 }
 
 func (d RuncDigRunner) Run(ctx context.Context, arg []string, stdin io.Reader) ([]byte, error) {
-	id := getNextContainerId()
+	id := getNextContainerId(d.Cfg.ContainerID)
 
 	bundle, cleanup, err := d.Runc.PrepareBundle(ctx, "sidecar.tar", id)
 	defer func() { _ = cleanup() }()

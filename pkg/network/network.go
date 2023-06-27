@@ -134,8 +134,8 @@ func generateAndRunCommands(ctx context.Context, r runc.Runc, config TargetConta
 	return nil
 }
 
-func getNextContainerId() string {
-	return fmt.Sprintf("sb-network-%d", counter.Add(1))
+func getNextContainerId(targedId string) string {
+	return fmt.Sprintf("sb-network-%d-%s", counter.Add(1), targedId[:8])
 }
 
 func executeIpCommands(ctx context.Context, r runc.Runc, config TargetContainerConfig, family networkutils.Family, cmds []string) error {
@@ -143,7 +143,7 @@ func executeIpCommands(ctx context.Context, r runc.Runc, config TargetContainerC
 		return nil
 	}
 
-	id := getNextContainerId()
+	id := getNextContainerId(config.ContainerID)
 	bundle, cleanup, err := r.PrepareBundle(ctx, "sidecar.tar", id)
 	defer func() { _ = cleanup() }()
 	if err != nil {
@@ -182,7 +182,7 @@ func executeTcCommands(ctx context.Context, r runc.Runc, config TargetContainerC
 		return nil
 	}
 
-	id := getNextContainerId()
+	id := getNextContainerId(config.ContainerID)
 	bundle, cleanup, err := r.PrepareBundle(ctx, "sidecar.tar", id)
 	defer func() { _ = cleanup() }()
 	if err != nil {

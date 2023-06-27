@@ -78,14 +78,14 @@ func New(r runc.Runc, targetId string, opts StressOpts) (*Stress, error) {
 		return nil, fmt.Errorf("could not read namespaces of target container: %w", err)
 	}
 
-	id := getNextContainerId()
+	id := getNextContainerId(targetId)
 	bundle, cleanupBundle, err := r.PrepareBundle(ctx, "sidecar.tar", id)
 	if err != nil {
 		return nil, fmt.Errorf("could not prepare bundle: %w", err)
 	}
 
 	if err := runc.EditSpec(bundle,
-		runc.WithHostname(fmt.Sprintf("stress-ng-%s", id)),
+		runc.WithHostname(id),
 		runc.WithAnnotations(map[string]string{
 			"com.steadybit.sidecar": "true",
 		}),
@@ -142,8 +142,8 @@ func New(r runc.Runc, targetId string, opts StressOpts) (*Stress, error) {
 	}, nil
 }
 
-func getNextContainerId() string {
-	return fmt.Sprintf("sb-stress-%d", counter.Add(1))
+func getNextContainerId(targetId string) string {
+	return fmt.Sprintf("sb-stress-%d-%s", counter.Add(1), targetId[:8])
 }
 
 func (s *Stress) Wait() <-chan error {
