@@ -152,10 +152,14 @@ func (d *containerDiscovery) getDiscoveredTargets(w http.ResponseWriter, r *http
 func (d *containerDiscovery) mapTarget(container types.Container, hostname string, version string) discovery_kit_api.Target {
 	attributes := make(map[string][]string)
 
-	attributes["container.name"] = container.Names()
+  containerNames := container.Names()
+  for i, name := range containerNames {
+    containerNames[i] = strings.TrimPrefix(name, "/")
+  }
+	attributes["container.name"] = containerNames
 	if hostname != "" {
 		attributes["container.host"] = []string{hostname}
-		for _, name := range container.Names() {
+		for _, name := range containerNames {
 			attributes["container.host/name"] = append(attributes["container.name"], fmt.Sprintf("%s/%s", hostname, name))
 		}
 	}
