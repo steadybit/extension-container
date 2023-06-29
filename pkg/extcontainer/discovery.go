@@ -5,6 +5,7 @@ package extcontainer
 
 import (
 	"fmt"
+	dockerparser "github.com/novln/docker-parser"
 	"github.com/steadybit/discovery-kit/go/discovery_kit_api"
 	"github.com/steadybit/extension-container/pkg/container/types"
 	extension_kit "github.com/steadybit/extension-kit"
@@ -113,6 +114,18 @@ func getAttributeDescriptions() discovery_kit_api.AttributeDescriptions {
 				Label:     discovery_kit_api.PluralLabel{One: "Container Image", Other: "Container Images"},
 			},
 			{
+				Attribute: "container.image.registry",
+				Label:     discovery_kit_api.PluralLabel{One: "Container Image Registry", Other: "Container Image Registries"},
+			},
+			{
+				Attribute: "container.image.repository",
+				Label:     discovery_kit_api.PluralLabel{One: "Container Image Repository", Other: "Container Image Repositories"},
+			},
+			{
+				Attribute: "container.image.tag",
+				Label:     discovery_kit_api.PluralLabel{One: "Container Image Tag", Other: "Container Image Tags"},
+			},
+			{
 				Attribute: "container.id",
 				Label:     discovery_kit_api.PluralLabel{One: "Container ID", Other: "Container IDs"},
 			},
@@ -164,6 +177,19 @@ func (d *containerDiscovery) mapTarget(container types.Container, hostname strin
 		}
 	}
 	attributes["container.image"] = []string{container.ImageName()}
+
+	if ref, _ := dockerparser.Parse(container.ImageName()); ref != nil {
+		if ref.Repository() != "" {
+			attributes["container.image.repository"] = []string{ref.Repository()}
+		}
+		if ref.Registry() != "" {
+			attributes["container.image.registry"] = []string{ref.Registry()}
+		}
+		if ref.Tag() != "" {
+			attributes["container.image.tag"] = []string{ref.Tag()}
+		}
+	}
+
 	attributes["container.id"] = []string{AddPrefix(container.Id(), d.client.Runtime())}
 	attributes["container.id.stripped"] = []string{container.Id()}
 	attributes["container.engine"] = []string{string(d.client.Runtime())}

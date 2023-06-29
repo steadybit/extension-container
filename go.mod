@@ -7,6 +7,7 @@ require (
 	github.com/docker/docker v24.0.2+incompatible
 	github.com/google/uuid v1.3.0
 	github.com/kelseyhightower/envconfig v1.4.0
+	github.com/novln/docker-parser v1.0.0
 	github.com/opencontainers/runtime-spec v1.1.0-rc.3
 	github.com/pkg/errors v0.9.1
 	github.com/rs/zerolog v1.29.1
