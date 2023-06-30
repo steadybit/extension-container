@@ -10,7 +10,8 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/steadybit/extension-container/pkg/container/types"
 	"github.com/steadybit/extension-container/pkg/extcontainer"
-	"syscall"
+  "strings"
+  "syscall"
 	"time"
 )
 
@@ -85,6 +86,9 @@ func (c *Client) Pause(ctx context.Context, id string) error {
 
 	task, err := container.Task(ctx, nil)
 	if err != nil {
+    if strings.Contains(err.Error(), "no running task found") {
+      return fmt.Errorf("couldn't pause container as container %s wasn't running: %w", id, err)
+    }
 		return fmt.Errorf("failed to load task for container %s: %w", id, err)
 	}
 	return task.Pause(ctx)
@@ -98,6 +102,9 @@ func (c *Client) Unpause(ctx context.Context, id string) error {
 
 	task, err := container.Task(ctx, nil)
 	if err != nil {
+    if strings.Contains(err.Error(), "no running task found") {
+      return fmt.Errorf("couldn't unpause container as container %s wasn't running: %w", id, err)
+    }
 		return fmt.Errorf("failed to load task for container %s: %w", id, err)
 	}
 	return task.Resume(ctx)
@@ -111,6 +118,9 @@ func (c *Client) Stop(ctx context.Context, id string, graceful bool) error {
 
 	task, err := container.Task(ctx, nil)
 	if err != nil {
+    if strings.Contains(err.Error(), "no running task found") {
+      return fmt.Errorf("couldn't stop container as container %s wasn't running: %w", id, err)
+    }
 		return fmt.Errorf("failed to load task for container %s: %w", id, err)
 	}
 
