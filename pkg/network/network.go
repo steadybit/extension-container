@@ -60,7 +60,7 @@ func Apply(ctx context.Context, r runc.Runc, config TargetContainerConfig, opts 
 
 func Revert(ctx context.Context, r runc.Runc, config TargetContainerConfig, opts networkutils.Opts) (action_kit_api.Messages, error) {
 
-	if err := checkNamespacesExists(config.Namespaces); err != nil {
+	if err := checkNamespacesExists(config.Namespaces, specs.NetworkNamespace, specs.UTSNamespace); err != nil {
 		log.Info().
 			Str("config", config.ContainerID).
 			AnErr("reason", err).
