@@ -51,7 +51,7 @@ func Apply(ctx context.Context, r runc.Runc, config TargetContainerConfig, opts 
 		Str("config", config.ContainerID).
 		Msg("applying network config")
 
-	if err := checkNamespacesActive(config.Namespaces); err != nil {
+	if err := checkNamespacesExists(config.Namespaces, specs.NetworkNamespace, specs.UTSNamespace); err != nil {
 		return fmt.Errorf("container exited? %w", err)
 	}
 
@@ -60,7 +60,7 @@ func Apply(ctx context.Context, r runc.Runc, config TargetContainerConfig, opts 
 
 func Revert(ctx context.Context, r runc.Runc, config TargetContainerConfig, opts networkutils.Opts) (action_kit_api.Messages, error) {
 
-	if err := checkNamespacesActive(config.Namespaces); err != nil {
+	if err := checkNamespacesExists(config.Namespaces); err != nil {
 		log.Info().
 			Str("config", config.ContainerID).
 			AnErr("reason", err).
@@ -81,9 +81,21 @@ func Revert(ctx context.Context, r runc.Runc, config TargetContainerConfig, opts
 	return nil, generateAndRunCommands(ctx, r, config, opts, networkutils.ModeDelete)
 }
 
-func checkNamespacesActive(namespaces []specs.LinuxNamespace) error {
+func checkNamespacesExists(namespaces []specs.LinuxNamespace, wantedTypes ...specs.LinuxNamespaceType) error {
 	for _, ns := range namespaces {
-		if ns.Path == "" {
+		wanted := false
+		if len(wantedTypes) == 0 {
+			wanted = true
+		} else {
+			for _, wantedType := range wantedTypes {
+				if ns.Type == wantedType {
+					wanted = true
+					break
+				}
+			}
+		}
+
+		if !wanted || ns.Path == "" {
 			continue
 		}
 
@@ -91,6 +103,7 @@ func checkNamespacesActive(namespaces []specs.LinuxNamespace) error {
 			return fmt.Errorf("namespace %s doesn't exist", ns.Path)
 		}
 	}
+
 	return nil
 }
 
