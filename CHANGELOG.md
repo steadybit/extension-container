@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.0.3
+
+ - Bugfix: Blackhole and DNS container isn't reverted properly when container failed (and not the pod)
+
 ## v1.0.2
 
  - New: new container.image attributes for registry, repository, and tag
@@ -9,7 +13,7 @@
  - Bugfix: Removing trailing / in container.name
  - Bugfix: Datatype for stop-container's `graceful` parameter
  - Bugfix: Blackhole container isn't reverted properly when container failed (and not the pod)
- 
+
 
 ## v1.0.1
 
