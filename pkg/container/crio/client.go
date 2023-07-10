@@ -62,7 +62,13 @@ func dialer(ctx context.Context, addr string) (net.Conn, error) {
 }
 
 func (c *Client) List(ctx context.Context) ([]types.Container, error) {
-	containerList, err := c.cri.ListContainers(ctx, &criapi.ListContainersRequest{})
+	containerList, err := c.cri.ListContainers(ctx, &criapi.ListContainersRequest{
+		Filter: &criapi.ContainerFilter{
+			State: &criapi.ContainerStateValue{
+				State: criapi.ContainerState_CONTAINER_RUNNING,
+			},
+		},
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to list CRI-O containers: %w", err)
 	}

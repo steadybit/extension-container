@@ -8,6 +8,7 @@ import (
 	"fmt"
 	dtypes "github.com/docker/docker/api/types"
 	dcontainer "github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/client"
 	"github.com/steadybit/extension-container/pkg/container/types"
 	"github.com/steadybit/extension-container/pkg/extcontainer"
@@ -40,7 +41,14 @@ func New(address string) (types.Client, error) {
 }
 
 func (c *Client) List(ctx context.Context) ([]types.Container, error) {
-	containers, err := c.docker.ContainerList(ctx, dtypes.ContainerListOptions{})
+	statusFilter := filters.NewArgs()
+	statusFilter.Add("status", "restarting")
+	statusFilter.Add("status", "running")
+	statusFilter.Add("status", "paused")
+
+	containers, err := c.docker.ContainerList(ctx, dtypes.ContainerListOptions{
+		Filters: statusFilter,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to list containers: %w", err)
 	}
