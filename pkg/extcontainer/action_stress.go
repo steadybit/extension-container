@@ -158,7 +158,7 @@ func (a *stressAction) Stop(_ context.Context, state *StressActionState) (*actio
 	if stopped {
 		messages = append(messages, action_kit_api.Message{
 			Level:   extutil.Ptr(action_kit_api.Info),
-			Message: fmt.Sprintf("Cancelled stress container %s", state.ContainerId),
+			Message: fmt.Sprintf("Canceled stress container %s", state.ContainerId),
 		})
 	}
 

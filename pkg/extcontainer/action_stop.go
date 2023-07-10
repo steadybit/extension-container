@@ -136,7 +136,7 @@ func (a *stopAction) Stop(_ context.Context, state *StopActionState) (*action_ki
 	if stopped {
 		messages = append(messages, action_kit_api.Message{
 			Level:   extutil.Ptr(action_kit_api.Info),
-			Message: fmt.Sprintf("Cancelled stop container %s", state.ContainerId),
+			Message: fmt.Sprintf("Canceled stop container %s", state.ContainerId),
 		})
 	}
 
