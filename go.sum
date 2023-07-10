@@ -187,8 +187,8 @@ github.com/sirupsen/logrus v1.9.3 h1:dueUQJ1C2q9oE3F7wvmSGAaVtTmUizReu6fjN8uqzbQ
 github.com/sirupsen/logrus v1.9.3/go.mod h1:naHLuLoDiP4jHNo9R0sCBMtWGeIprob74mVsIT4qYEQ=
 github.com/spf13/pflag v1.0.5 h1:iy+VFUOCP1a+8yFto/drg2CJ5u0yRoB7fZw3DKv/JXA=
 github.com/spf13/pflag v1.0.5/go.mod h1:McXfInJRrz4CZXVZOBLb0bTZqETkiAhM9Iw0y3An2Bg=
-github.com/steadybit/action-kit/go/action_kit_api/v2 v2.6.1 h1:+2hNanjQhyPEW3R6olpoMr/kmiop5f6U/lSZeIqEfjI=
-github.com/steadybit/action-kit/go/action_kit_api/v2 v2.6.1/go.mod h1:ZF094T/qu+po7BBm7peXedds6Fr5/cfioBNCUqCV07Y=
+github.com/steadybit/action-kit/go/action_kit_api/v2 v2.6.3 h1:kTv3HF7BYJbB94JpuHLG/d6TKGTDm0XjUes1N5BQxSI=
+github.com/steadybit/action-kit/go/action_kit_api/v2 v2.6.3/go.mod h1:ZF094T/qu+po7BBm7peXedds6Fr5/cfioBNCUqCV07Y=
 github.com/steadybit/action-kit/go/action_kit_commons v1.0.4 h1:lkB1Tf5RO6GwGCC0xBqqO7r2kATe7jgLBh9HfsVf7sQ=
 github.com/steadybit/action-kit/go/action_kit_commons v1.0.4/go.mod h1:8+sXPb5wnqXz/ITAJp5o85viwZsXaWWlLYAVxNxbf0s=
 github.com/steadybit/action-kit/go/action_kit_sdk v1.1.4 h1:3N3STdye1D7/1P/DgK6auCKL10fyFzL+lmdOzzRxJDI=
