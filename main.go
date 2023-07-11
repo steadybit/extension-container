@@ -9,7 +9,6 @@ import (
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
 	"github.com/steadybit/action-kit/go/action_kit_sdk"
 	"github.com/steadybit/discovery-kit/go/discovery_kit_api"
-	"github.com/steadybit/event-kit/go/event_kit_api"
 	"github.com/steadybit/extension-container/config"
 	"github.com/steadybit/extension-container/pkg/container"
 	"github.com/steadybit/extension-container/pkg/container/runc"
@@ -81,7 +80,6 @@ func main() {
 type ExtensionListResponse struct {
 	action_kit_api.ActionList       `json:",inline"`
 	discovery_kit_api.DiscoveryList `json:",inline"`
-	event_kit_api.EventListenerList `json:",inline"`
 }
 
 func getExtensionList() ExtensionListResponse {
