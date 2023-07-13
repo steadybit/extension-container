@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.1.0
+
+ - prefix container labels with `container.`
+
 ## v1.0.3
 
  - Bugfix: Blackhole and DNS container isn't reverted properly when container failed (and not the pod)

@@ -165,10 +165,10 @@ func (d *containerDiscovery) getDiscoveredTargets(w http.ResponseWriter, r *http
 func (d *containerDiscovery) mapTarget(container types.Container, hostname string, version string) discovery_kit_api.Target {
 	attributes := make(map[string][]string)
 
-  containerNames := container.Names()
-  for i, name := range containerNames {
-    containerNames[i] = strings.TrimPrefix(name, "/")
-  }
+	containerNames := container.Names()
+	for i, name := range containerNames {
+		containerNames[i] = strings.TrimPrefix(name, "/")
+	}
 	attributes["container.name"] = containerNames
 	if hostname != "" {
 		attributes["container.host"] = []string{hostname}
@@ -235,7 +235,7 @@ func addLabelOrK8sAttribute(attributes map[string][]string, key, value string) {
 	case "io.kubernetes.container.name":
 		key = "k8s.container.name"
 	default:
-		key = "label." + key
+		key = "container.label." + key
 	}
 
 	attributes[key] = append(attributes[key], value)
