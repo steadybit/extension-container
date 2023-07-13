@@ -18,7 +18,6 @@
  - Bugfix: Datatype for stop-container's `graceful` parameter
  - Bugfix: Blackhole container isn't reverted properly when container failed (and not the pod)
 
-
 ## v1.0.1
 
  - Bugfixes
