@@ -17,6 +17,24 @@ import (
 	"syscall"
 )
 
+var SidecarImagePath = getSidecarImagePath()
+
+func getSidecarImagePath() string {
+	if _, err := os.Stat("./sidecar.tar"); err == nil {
+		return "./sidecar.tar"
+	}
+
+	if executable, err := os.Executable(); err == nil {
+		executableDir := filepath.Dir(filepath.Clean(executable))
+		candidate := filepath.Join(executableDir, "sidecar.tar")
+		if _, err := os.Stat(candidate); err == nil {
+			return candidate
+		}
+	}
+
+	return "sidecar.tar"
+}
+
 func ReadCgroupPath(pid int) (string, error) {
 	var out bytes.Buffer
 	cmd := RootCommandContext(context.Background(), "nsenter", "-t", "1", "-C", "--", "cat", filepath.Join("/proc", strconv.Itoa(pid), "cgroup"))
@@ -55,7 +73,7 @@ func ReadNamespaces(pid int) ([]specs.LinuxNamespace, error) {
 	cmd.Stderr = &out
 
 	if err := cmd.Run(); err != nil {
-		return nil, fmt.Errorf("%s: %s", err, out.String())
+		return nil, fmt.Errorf("lsns %s: %s", err, out.String())
 	}
 
 	var namespaces []specs.LinuxNamespace

@@ -3,17 +3,15 @@
 ##
 ## Build
 ##
-FROM golang:1.20-bullseye AS build
+FROM golang:1.20-bookworm AS build
 
-ARG NAME
-ARG VERSION
-ARG REVISION
-ARG ADDITIONAL_BUILD_PARAMS
+ARG BUILD_WITH_COVERAGE
 
 WORKDIR /app
 
-RUN apt-get -qq update \
-    && apt-get -qq install -y --no-install-recommends build-essential libcap2-bin
+RUN echo 'deb [trusted=yes] https://repo.goreleaser.com/apt/ /' > /etc/apt/sources.list.d/goreleaser.list \
+    && apt-get -qq update \
+    && apt-get -qq install -y --no-install-recommends build-essential libcap2-bin goreleaser
 
 COPY go.mod ./
 COPY go.sum ./
@@ -21,19 +19,13 @@ RUN go mod download
 
 COPY . .
 
-RUN go build \
-    -ldflags="\
-    -X 'github.com/steadybit/extension-kit/extbuild.ExtensionName=${NAME}' \
-    -X 'github.com/steadybit/extension-kit/extbuild.Version=${VERSION}' \
-    -X 'github.com/steadybit/extension-kit/extbuild.Revision=${REVISION}'" \
-    -o ./extension \
-    ${ADDITIONAL_BUILD_PARAMS} \
+RUN goreleaser build --snapshot --single-target -o extension \
     && setcap "cap_setuid,cap_setgid,cap_sys_admin,cap_dac_override+eip" ./extension
 
 ##
 ## Runtime
 ##
-FROM debian:bullseye-slim
+FROM debian:bookworm-slim
 
 ARG USERNAME=steadybit
 ARG USER_UID=10000

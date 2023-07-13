@@ -23,8 +23,8 @@ func AutoDetect() (runtime types.Runtime) {
 }
 
 func NewClient() (types.Client, error) {
-	runtime := types.Runtime(config.Config.Runtime)
-	socket := config.Config.Socket
+	runtime := types.Runtime(config.Config.ContainerRuntime)
+	socket := config.Config.ContainerSocket
 
 	if runtime == "" {
 		runtime = AutoDetect()

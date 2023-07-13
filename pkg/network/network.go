@@ -157,7 +157,7 @@ func executeIpCommands(ctx context.Context, r runc.Runc, config TargetContainerC
 	}
 
 	id := getNextContainerId(config.ContainerID)
-	bundle, cleanup, err := r.PrepareBundle(ctx, "sidecar.tar", id)
+	bundle, cleanup, err := r.PrepareBundle(ctx, utils.SidecarImagePath, id)
 	defer func() { _ = cleanup() }()
 	if err != nil {
 		return err
@@ -196,7 +196,7 @@ func executeTcCommands(ctx context.Context, r runc.Runc, config TargetContainerC
 	}
 
 	id := getNextContainerId(config.ContainerID)
-	bundle, cleanup, err := r.PrepareBundle(ctx, "sidecar.tar", id)
+	bundle, cleanup, err := r.PrepareBundle(ctx, utils.SidecarImagePath, id)
 	defer func() { _ = cleanup() }()
 	if err != nil {
 		return err

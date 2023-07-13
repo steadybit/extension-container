@@ -11,6 +11,7 @@ import (
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/rs/zerolog/log"
 	"github.com/steadybit/extension-container/pkg/container/runc"
+	"github.com/steadybit/extension-container/pkg/utils"
 )
 
 type Interface struct {
@@ -37,7 +38,7 @@ type ExtraMount struct {
 func ListInterfaces(ctx context.Context, r runc.Runc, config TargetContainerConfig) ([]Interface, error) {
 	id := getNextContainerId(config.ContainerID)
 
-	bundle, cleanup, err := r.PrepareBundle(ctx, "sidecar.tar", id)
+	bundle, cleanup, err := r.PrepareBundle(ctx, utils.SidecarImagePath, id)
 	defer func() { _ = cleanup() }()
 	if err != nil {
 		return nil, err
