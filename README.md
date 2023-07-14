@@ -39,21 +39,6 @@ The capabilities needed by this extension are: (which are provided by the helm c
 
 ## Installation
 
-### Using Docker
-
-```sh
-docker run \
-  --rm \
-  -p 8086 \
-  --privileged \
-  --pid=host \
-  -v /var/run/docker.sock:/var/run/docker.sock \
-  -v /run/docker/runtime-runc/moby:/run/docker/runtime-runc/moby\
-  -v /sys/fs/cgroup:/sys/fs/cgroup\
-  --name steadybit-extension-container \
-  ghcr.io/steadybit/extension-container:latest
-```
-
 ### Using Helm in Kubernetes
 
 ```sh
@@ -68,6 +53,30 @@ helm upgrade steadybit-extension-container \
     --set container.runtime=docker \
     steadybit-extension-container/steadybit-extension-container
 ```
+
+### Using Docker
+
+This extension is by default deployed using our [outpost.sh docker compose script](https://docs.steadybit.com/install-and-configure/install-outpost-agent-preview/install-as-docker-container).
+
+Or you can run it manually:
+
+```sh
+docker run \
+  --rm \
+  -p 8086 \
+  --privileged \
+  --pid=host \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  -v /run/docker/runtime-runc/moby:/run/docker/runtime-runc/moby\
+  -v /sys/fs/cgroup:/sys/fs/cgroup\
+  --name steadybit-extension-container \
+  ghcr.io/steadybit/extension-container:latest
+```
+
+### Linux Package
+
+Please use our [outpost-linux.sh script](https://docs.steadybit.com/install-and-configure/install-outpost-agent-preview/install-on-linux-hosts) to install the extension on your Linux machine.
+The script will download the latest version of the extension and install it using the package manager.
 
 ## Register the extension
 
