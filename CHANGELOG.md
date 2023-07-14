@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.1.2
+
+- fix rpm dependencies
+
 ## v1.1.1
 
 - add support for unix domain sockets

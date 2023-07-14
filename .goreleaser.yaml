@@ -81,7 +81,7 @@ nfpms:
     overrides:
       rpm:
         dependencies:
-          - /usr/bin/runc
+          - runc
           - /usr/sbin/capsh
         recommends:
           - kernel-modules-extra
