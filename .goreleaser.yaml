@@ -83,4 +83,5 @@ nfpms:
         dependencies:
           - /usr/bin/runc
           - /usr/sbin/capsh
+        recommends:
           - kernel-modules-extra
