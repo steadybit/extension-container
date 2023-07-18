@@ -763,9 +763,18 @@ func testDiscovery(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	target, err := e2e.PollForTarget(ctx, e, "container", func(target discovery_kit_api.Target) bool {
 		return e2e.HasAttribute(target, "k8s.pod.name", "nginx-discovery")
 	})
-
 	require.NoError(t, err)
 	assert.Equal(t, target.TargetType, "container")
+
+	targets, err := e.DiscoverTargets("container")
+	require.NoError(t, err)
+	for _, target := range targets {
+		for _, img := range target.Attributes["container.image"] {
+			println(img)
+
+			assert.NotContains(t, img, "pause", "pause container should not be discovered")
+		}
+	}
 }
 
 func testHostNetwork(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {

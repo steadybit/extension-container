@@ -154,12 +154,32 @@ func (d *containerDiscovery) getDiscoveredTargets(w http.ResponseWriter, r *http
 	hostname, _ := os.Hostname()
 	version, _ := d.client.Version(r.Context())
 
-	targets := make([]discovery_kit_api.Target, len(containers))
-	for i, container := range containers {
-		targets[i] = d.mapTarget(container, hostname, version)
+	var targets []discovery_kit_api.Target
+	for _, container := range containers {
+		if ignoreContainer(container) {
+			continue
+		}
+
+		targets = append(targets, d.mapTarget(container, hostname, version))
 	}
 
 	exthttp.WriteBody(w, discovery_kit_api.DiscoveredTargets{Targets: targets})
+}
+
+func ignoreContainer(container types.Container) bool {
+	if label := container.Labels()["io.cri-containerd.kind"]; label == "sandbox" {
+		return true
+	}
+
+	if label := container.Labels()["io.kubernetes.docker.type"]; label == "podsandbox" {
+		return true
+	}
+
+	if label := container.Labels()["com.amazonaws.ecs.container-name"]; label == "~internal~ecs~pause" {
+		return true
+	}
+
+	return false
 }
 
 func (d *containerDiscovery) mapTarget(container types.Container, hostname string, version string) discovery_kit_api.Target {
