@@ -38,7 +38,8 @@ RUN groupadd --gid $USER_GID $USERNAME \
 RUN apt-get -qq update \
     && apt-get -qq install -y --no-install-recommends runc libcap2-bin\
     && apt-get -y autoremove \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && mkdir -p /run/systemd/system
 
 USER $USERNAME
 
