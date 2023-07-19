@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.1.4
+
+- Exclude not-running containerd container from discovery
+
 ## v1.1.3
 
 - Exclude pause containers from Kubernetes and ECS in discovery
