@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.1.3
+
+- Exclude pause containers from Kubernetes and ECS in discovery
+- Fix error for runc inspecting containers using the systemd cgroup manager
+
 ## v1.1.2
 
 - fix rpm dependencies

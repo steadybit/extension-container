@@ -48,6 +48,6 @@ WORKDIR /
 COPY  ./sidecar_linux_$TARGETARCH.tar /sidecar.tar
 COPY --from=build /app/extension /extension
 
-EXPOSE 8086
+EXPOSE 8086 8082
 
 ENTRYPOINT ["/extension"]
