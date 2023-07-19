@@ -10,8 +10,8 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/steadybit/extension-container/pkg/container/types"
 	"github.com/steadybit/extension-container/pkg/extcontainer"
-  "strings"
-  "syscall"
+	"strings"
+	"syscall"
 	"time"
 )
 
@@ -42,8 +42,16 @@ func (c *Client) List(ctx context.Context) ([]types.Container, error) {
 		return nil, fmt.Errorf("failed to list containers: %w", err)
 	}
 
-	result := make([]types.Container, 0, len(containers))
+	var result []types.Container
 	for _, container := range containers {
+		if status, err := getStatus(ctx, container); status.Status != containerd.Running &&
+			status.Status != containerd.Paused && status.Status != containerd.Pausing {
+			if err != nil {
+				log.Warn().Err(err).Msg("Failed to get status for container")
+			}
+			continue
+		}
+
 		if mapped, err := toContainer(ctx, container); err == nil {
 			result = append(result, mapped)
 		}
@@ -53,6 +61,16 @@ func (c *Client) List(ctx context.Context) ([]types.Container, error) {
 	}
 
 	return result, nil
+}
+
+func getStatus(ctx context.Context, container containerd.Container) (containerd.Status, error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	task, err := container.Task(ctx, nil)
+	if err != nil {
+		return containerd.Status{}, err
+	}
+	return task.Status(ctx)
 }
 
 func (c *Client) GetPid(ctx context.Context, containerId string) (int, error) {
@@ -86,9 +104,9 @@ func (c *Client) Pause(ctx context.Context, id string) error {
 
 	task, err := container.Task(ctx, nil)
 	if err != nil {
-    if strings.Contains(err.Error(), "no running task found") {
-      return fmt.Errorf("couldn't pause container as container %s wasn't running: %w", id, err)
-    }
+		if strings.Contains(err.Error(), "no running task found") {
+			return fmt.Errorf("couldn't pause container as container %s wasn't running: %w", id, err)
+		}
 		return fmt.Errorf("failed to load task for container %s: %w", id, err)
 	}
 	return task.Pause(ctx)
@@ -102,9 +120,9 @@ func (c *Client) Unpause(ctx context.Context, id string) error {
 
 	task, err := container.Task(ctx, nil)
 	if err != nil {
-    if strings.Contains(err.Error(), "no running task found") {
-      return fmt.Errorf("couldn't unpause container as container %s wasn't running: %w", id, err)
-    }
+		if strings.Contains(err.Error(), "no running task found") {
+			return fmt.Errorf("couldn't unpause container as container %s wasn't running: %w", id, err)
+		}
 		return fmt.Errorf("failed to load task for container %s: %w", id, err)
 	}
 	return task.Resume(ctx)
@@ -118,9 +136,9 @@ func (c *Client) Stop(ctx context.Context, id string, graceful bool) error {
 
 	task, err := container.Task(ctx, nil)
 	if err != nil {
-    if strings.Contains(err.Error(), "no running task found") {
-      return fmt.Errorf("couldn't stop container as container %s wasn't running: %w", id, err)
-    }
+		if strings.Contains(err.Error(), "no running task found") {
+			return fmt.Errorf("couldn't stop container as container %s wasn't running: %w", id, err)
+		}
 		return fmt.Errorf("failed to load task for container %s: %w", id, err)
 	}
 
