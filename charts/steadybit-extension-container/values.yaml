@@ -15,6 +15,10 @@ image:
   # image.pullPolicy -- Specifies when to pull the image container.
   pullPolicy: Always
 
+containerPorts:
+  http: 8086
+  health: 8082
+
 tls:
   server:
     certificate:

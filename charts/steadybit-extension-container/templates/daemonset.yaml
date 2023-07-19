@@ -1,1 +1,98 @@
-{{- include "extensionlib.daemonset" (list . 8086 8082 (list "ACTION" "DISCOVERY") "unconfined" "Unconfined" (.Values.securityContext.capabilities.add) true "ClusterFirstWithHostNet" true) -}}
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: {{ include "extensionlib.names.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+  {{- range $key, $value := .Values.extraLabels }}
+    {{ $key }}: {{ $value }}
+  {{- end }}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "extensionlib.names.name" . }}
+      app: {{ include "extensionlib.names.name" . }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "extensionlib.names.name" . }}
+        app: {{ include "extensionlib.names.name" . }}
+        steadybit.com/extension: "true"
+      annotations:
+        "container.apparmor.security.beta.kubernetes.io/{{ include "extensionlib.names.name" . }}": unconfined
+        {{- include "extensionlib.annotation" (list . .Values.containerPorts.http (list "ACTION" "DISCOVERY") ) | nindent 8 }}
+    spec:
+      hostNetwork: true
+      hostPID: true
+      dnsPolicy: ClusterFirstWithHostNet
+      containers:
+        - image: {{ .Values.image.name }}:{{ .Values.image.tag }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          name: {{ include "extensionlib.names.name" . }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.containerPorts.http }}
+            - name: health
+              containerPort: {{ .Values.containerPorts.health }}
+          env:
+            - name: STEADYBIT_EXTENSION_PORT
+              value: {{ .Values.containerPorts.http | quote }}
+            - name: STEADYBIT_EXTENSION_HEALTH_PORT
+              value: {{ .Values.containerPorts.health | quote }}
+            {{- include "extensionlib.deployment.env" (list .) | nindent 12 }}
+            {{- with .Values.extraEnv }}
+              {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- with .Values.extraEnvFrom }}
+          envFrom:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: tmp-dir
+              mountPath: /tmp
+            - name: cgroup-root
+              mountPath: /sys/fs/cgroup
+            {{- include "containerRuntime.volumeMounts" . | nindent 12 }}
+            {{- include "extensionlib.deployment.volumeMounts" (list .) | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /health/liveness
+              port: {{ .Values.containerPorts.health }}
+          readinessProbe:
+            httpGet:
+              path: /health/readiness
+              port: {{ .Values.containerPorts.health }}
+          securityContext:
+            seccompProfile:
+              type: Unconfined
+            capabilities:
+              add: {{ toJson .Values.securityContext.capabilities.add }}
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 10000
+            runAsGroup: 10000
+      volumes:
+        - name: tmp-dir
+          emptyDir: {}
+        - name: cgroup-root
+          hostPath:
+            path: /sys/fs/cgroup
+            type: Directory
+            {{- include "containerRuntime.volumes" . | nindent 8 }}
+            {{- include "extensionlib.deployment.volumes" (list .) | nindent 8 }}
+          {{- with .Values.nodeSelector }}
+      nodeSelector:
+          {{- toYaml . | nindent 8 }}
+          {{- end }}
+          {{- with .Values.affinity }}
+      affinity:
+          {{- toYaml . | nindent 8 }}
+          {{- end }}
+          {{- with .Values.tolerations }}
+      tolerations:
+          {{- toYaml . | nindent 8 }}
+          {{- end }}
+          {{- with .Values.topologySpreadConstraints }}
+      topologySpreadConstraints:
+          {{- toYaml . | nindent 8 }}
+          {{- end }}

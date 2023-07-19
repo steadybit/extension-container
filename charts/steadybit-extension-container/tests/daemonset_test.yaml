@@ -63,3 +63,10 @@ tests:
           name: env-secrets
     asserts:
       - matchSnapshot: {}
+  - it: manifest should match snapshot with different containerPorts
+    set:
+      containerPorts:
+        http: 9090
+        health: 9091
+    asserts:
+      - matchSnapshot: {}
