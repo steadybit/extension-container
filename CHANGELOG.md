@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.1.5
+
+- Don't spam the log with missing container warnings on containerd
+
 ## v1.1.4
 
 - Exclude not-running containerd container from discovery
