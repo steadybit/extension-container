@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/containerd/containerd"
+	"github.com/containerd/containerd/errdefs"
 	"github.com/rs/zerolog/log"
 	"github.com/steadybit/extension-container/pkg/container/types"
 	"github.com/steadybit/extension-container/pkg/extcontainer"
@@ -46,7 +47,7 @@ func (c *Client) List(ctx context.Context) ([]types.Container, error) {
 	for _, container := range containers {
 		if status, err := getStatus(ctx, container); status.Status != containerd.Running &&
 			status.Status != containerd.Paused && status.Status != containerd.Pausing {
-			if err != nil {
+			if err != nil && !errdefs.IsNotFound(err) {
 				log.Warn().Err(err).Msg("Failed to get status for container")
 			}
 			continue
