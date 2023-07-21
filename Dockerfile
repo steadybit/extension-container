@@ -6,6 +6,7 @@
 FROM golang:1.20-bookworm AS build
 
 ARG BUILD_WITH_COVERAGE
+ARG BUILD_SNAPSHOT=true
 
 WORKDIR /app
 
@@ -19,7 +20,7 @@ RUN go mod download
 
 COPY . .
 
-RUN goreleaser build --snapshot --single-target -o extension \
+RUN goreleaser build --snapshot="${BUILD_SNAPSHOT}" --single-target -o extension \
     && setcap "cap_setuid,cap_setgid,cap_sys_admin,cap_dac_override+eip" ./extension
 
 ##
