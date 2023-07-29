@@ -18,6 +18,14 @@ func NewStressIoContainerAction(r runc.Runc) action_kit_sdk.Action[StressActionS
 	return newStressAction(r, getStressIoDescription, stressIo)
 }
 
+type Mode string
+
+const (
+	ModeReadWriteAndFlush Mode = "read_write_and_flush"
+	ModeReadWrite         Mode = "read_write"
+	ModeFlush             Mode = "flush"
+)
+
 func getStressIoDescription() action_kit_api.ActionDescription {
 	return action_kit_api.ActionDescription{
 		Id:          fmt.Sprintf("%s.stress_io", BaseActionID),
@@ -34,13 +42,38 @@ func getStressIoDescription() action_kit_api.ActionDescription {
 		TimeControl: action_kit_api.External,
 		Parameters: []action_kit_api.ActionParameter{
 			{
+				Name:         "mode",
+				Label:        "Mode",
+				Description:  extutil.Ptr("How should the IO be stressed?"),
+				Type:         action_kit_api.String,
+				DefaultValue: extutil.Ptr(string(ModeReadWriteAndFlush)),
+				Required:     extutil.Ptr(true),
+				Order:        extutil.Ptr(0),
+				MinValue:     extutil.Ptr(1),
+				MaxValue:     extutil.Ptr(100),
+				Options: &[]action_kit_api.ParameterOption{
+					action_kit_api.ExplicitParameterOption{
+						Label: "read/write and flush",
+						Value: string(ModeReadWriteAndFlush),
+					},
+					action_kit_api.ExplicitParameterOption{
+						Label: "read/write only",
+						Value: string(ModeReadWrite),
+					},
+					action_kit_api.ExplicitParameterOption{
+						Label: "flush only",
+						Value: string(ModeFlush),
+					},
+				},
+			},
+			{
 				Name:         "workers",
 				Label:        "Workers",
 				Description:  extutil.Ptr("How many workers should continually write, read and remove temporary files?"),
 				Type:         action_kit_api.StressngWorkers,
 				DefaultValue: extutil.Ptr("0"),
 				Required:     extutil.Ptr(true),
-				Order:        extutil.Ptr(0),
+				Order:        extutil.Ptr(01),
 			},
 			{
 				Name:         "duration",
@@ -49,7 +82,7 @@ func getStressIoDescription() action_kit_api.ActionDescription {
 				Type:         action_kit_api.Duration,
 				DefaultValue: extutil.Ptr("30s"),
 				Required:     extutil.Ptr(true),
-				Order:        extutil.Ptr(1),
+				Order:        extutil.Ptr(2),
 			},
 			{
 				Name:         "path",
@@ -58,7 +91,7 @@ func getStressIoDescription() action_kit_api.ActionDescription {
 				Type:         action_kit_api.String,
 				DefaultValue: extutil.Ptr("/"),
 				Required:     extutil.Ptr(true),
-				Order:        extutil.Ptr(2),
+				Order:        extutil.Ptr(3),
 			},
 			{
 				Name:         "percentage",
@@ -76,11 +109,25 @@ func getStressIoDescription() action_kit_api.ActionDescription {
 }
 
 func stressIo(request action_kit_api.PrepareActionRequestBody) (stress.StressOpts, error) {
-	return stress.StressOpts{
-		HddWorkers: extutil.Ptr(extutil.ToInt(request.Config["workers"])),
-		HddBytes:   fmt.Sprintf("%d%%", int(request.Config["percentage"].(float64))),
-		IoWorkers:  extutil.Ptr(extutil.ToInt(request.Config["workers"])),
-		TempPath:   extutil.ToString(request.Config["path"]),
-		Timeout:    time.Duration(extutil.ToInt64(request.Config["duration"])) * time.Millisecond,
-	}, nil
+	workers := extutil.ToInt(request.Config["workers"])
+	mode := extutil.ToString(request.Config["mode"])
+	if mode == "" {
+		mode = string(ModeReadWriteAndFlush)
+	}
+
+	opts := stress.StressOpts{
+		TempPath: extutil.ToString(request.Config["path"]),
+		Timeout:  time.Duration(extutil.ToInt64(request.Config["duration"])) * time.Millisecond,
+	}
+
+	if mode == string(ModeReadWriteAndFlush) || mode == string(ModeReadWrite) {
+		opts.HddWorkers = &workers
+		opts.HddBytes = fmt.Sprintf("%d%%", int(request.Config["percentage"].(float64)))
+	}
+
+	if mode == string(ModeReadWriteAndFlush) || mode == string(ModeFlush) {
+		opts.IoWorkers = &workers
+	}
+
+	return opts, nil
 }

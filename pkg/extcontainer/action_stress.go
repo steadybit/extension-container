@@ -15,6 +15,7 @@ import (
 	"github.com/steadybit/extension-kit/extutil"
 	"golang.org/x/sync/syncmap"
 	"os/exec"
+	"strings"
 )
 
 type stressOptsProvider func(request action_kit_api.PrepareActionRequestBody) (stress.StressOpts, error)
@@ -95,7 +96,7 @@ func (a *stressAction) Start(_ context.Context, state *StressActionState) (*acti
 		Messages: extutil.Ptr([]action_kit_api.Message{
 			{
 				Level:   extutil.Ptr(action_kit_api.Info),
-				Message: fmt.Sprintf("Starting stress container %s", state.ContainerId),
+				Message: fmt.Sprintf("Starting stress container %s with args %s", state.ContainerId, strings.Join(state.StressOpts.Args(), " ")),
 			},
 		}),
 	}, nil

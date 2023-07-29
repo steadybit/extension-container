@@ -1,9 +1,13 @@
 # Changelog
 
+## (next)
+
+- Add mode for stress io attack to choose between read/write and/or flush stress
+
 ## v1.1.6
 
 - update dependencies
--
+
 ## v1.1.5
 
 - Don't spam the log with missing container warnings on containerd
