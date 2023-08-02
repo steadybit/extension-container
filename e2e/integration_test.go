@@ -764,7 +764,7 @@ func testDiscovery(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 		return e2e.HasAttribute(target, "k8s.pod.name", "nginx-discovery")
 	})
 	require.NoError(t, err)
-	assert.Equal(t, target.TargetType, "container")
+	assert.Equal(t, target.TargetType, "com.steadybit.extension_container.container")
 
 	targets, err := e.DiscoverTargets("com.steadybit.extension_container.container")
 	require.NoError(t, err)
