@@ -6,7 +6,7 @@ This [Steadybit](https://www.steadybit.com/) extension provides a host discovery
 targets.
 
 Learn about the capabilities of this extension in
-our [Reliability Hub](https://hub.steadybit.com/extension/com.github.steadybit.extension_container).
+our [Reliability Hub](https://hub.steadybit.com/extension/com.steadybit.extension_container).
 
 ## Configuration
 
