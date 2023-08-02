@@ -12,10 +12,10 @@ import (
 )
 
 const (
-	targetID     = "container"
+	targetID     = "com.steadybit.extension_container.container"
 	targetIcon   = "data:image/svg+xml,%3Csvg%20width='24'%20height='24'%20viewBox='0%200%2024%2024'%20fill='none'%20xmlns='http://www.w3.org/2000/svg'%3E%3Cpath%20fill-rule='evenodd'%20clip-rule='evenodd'%20d='M11.65%201.064a1%201%200%2001.7%200l10%203.744a1%201%200%2001.65.937v12.51a1%201%200%2001-.65.937l-10%203.744a1%201%200%2001-.7%200l-10-3.744a1%201%200%2001-.65-.937V5.745a1%201%200%2001.65-.937l10-3.744zM3%206.438v11.124l9%203.37%209-3.37V6.438l-9-3.37-9%203.37zm8.944.608a.89.89%200%2001.562%200l5.335%201.778a.889.889%200%20010%201.687l-5.335%201.777a.889.889%200%2001-.562%200L6.609%2010.51a.889.889%200%20010-1.687l5.335-1.778zm-4.737%206.228a1%201%200%2010-.633%201.897l5.335%201.779a1%201%200%2000.632%200l5.335-1.779a1%201%200%2010-.633-1.897l-5.018%201.672-5.018-1.672z'%20fill='currentcolor'/%3E%3C/svg%3E"
 	basePath     = "/container"
-	BaseActionID = "com.github.steadybit.extension_container"
+	BaseActionID = "com.steadybit.extension_container"
 
 	stopIcon         = "data:image/svg+xml;charset=UTF-8,%3csvg%20width='24'%20height='24'%20viewBox='0%200%2024%2024'%20fill='none'%20xmlns='http://www.w3.org/2000/svg'%20class='css-1mtffr1'%3e%3cpath%20fill-rule='evenodd'%20clip-rule='evenodd'%20d='M12%202.75a9.25%209.25%200%20100%2018.5%209.25%209.25%200%20000-18.5zM1.25%2012C1.25%206.063%206.063%201.25%2012%201.25S22.75%206.063%2022.75%2012%2017.937%2022.75%2012%2022.75%201.25%2017.937%201.25%2012z'%20fill='currentColor'%3e%3c/path%3e%3cpath%20d='M9%2010a1%201%200%20011-1h4a1%201%200%20011%201v4a1%201%200%2001-1%201h-4a1%201%200%2001-1-1v-4z'%20fill='currentColor'%3e%3c/path%3e%3c/svg%3e"
 	pauseIcon        = "data:image/svg+xml;charset=UTF-8,%3csvg%20width='24'%20height='24'%20viewBox='0%200%2024%2024'%20fill='none'%20xmlns='http://www.w3.org/2000/svg'%20class='css-1mtffr1'%3e%3cpath%20fill-rule='evenodd'%20clip-rule='evenodd'%20d='M12%202.75a9.25%209.25%200%20100%2018.5%209.25%209.25%200%20000-18.5zM1.25%2012C1.25%206.063%206.063%201.25%2012%201.25S22.75%206.063%2022.75%2012%2017.937%2022.75%2012%2022.75%201.25%2017.937%201.25%2012zM10%207.917a.75.75%200%2001.75.75v6.666a.75.75%200%2011-1.5%200V8.667a.75.75%200%2001.75-.75zm4.493%200a.75.75%200%2001.75.75v6.666a.75.75%200%2011-1.5%200V8.667a.75.75%200%2001.75-.75z'%20fill='currentColor'%3e%3c/path%3e%3c/svg%3e"
