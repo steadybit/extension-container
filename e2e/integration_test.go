@@ -760,13 +760,13 @@ func testDiscovery(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	target, err := e2e.PollForTarget(ctx, e, "container", func(target discovery_kit_api.Target) bool {
+	target, err := e2e.PollForTarget(ctx, e, "com.steadybit.extension_container.container", func(target discovery_kit_api.Target) bool {
 		return e2e.HasAttribute(target, "k8s.pod.name", "nginx-discovery")
 	})
 	require.NoError(t, err)
 	assert.Equal(t, target.TargetType, "container")
 
-	targets, err := e.DiscoverTargets("container")
+	targets, err := e.DiscoverTargets("com.steadybit.extension_container.container")
 	require.NoError(t, err)
 	for _, target := range targets {
 		for _, img := range target.Attributes["container.image"] {
