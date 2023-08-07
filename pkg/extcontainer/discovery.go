@@ -155,6 +155,7 @@ func (d *containerDiscovery) getDiscoveredTargets(w http.ResponseWriter, r *http
 	version, _ := d.client.Version(r.Context())
 
 	var targets []discovery_kit_api.Target
+	targets = []discovery_kit_api.Target{}
 	for _, container := range containers {
 		if ignoreContainer(container) {
 			continue
