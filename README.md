@@ -10,15 +10,16 @@ our [Reliability Hub](https://hub.steadybit.com/extension/com.steadybit.extensio
 
 ## Configuration
 
-| Environment Variable                       | Helm value                                             | Meaning                                                                                                                    | Required | Default |
-|--------------------------------------------|--------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------|----------|---------|
-| `STEADYBIT_EXTENSION_CONTAINER_RUNTIME`    | `container.runtime`                                    | The container runtime to user either `docker`, `containerd` or `cri-o`. Will be automatically configured if not specified. | yes      | (auto)  |
-| `STEADYBIT_EXTENSION_CONTAINER_SOCKET`     | `containerRuntimes.(docker/containerd/cri-o).socket`   | The socket used to connect to the container runtime. Will be automatically configured if not specified.                    | yes      | (auto)  |
-| `STEADYBIT_EXTENSION_CONTAINERD_NAMESPACE` |                                                        | The containerd namespace to use.                                                                                           | yes      | k8s.io  |
-| `STEADYBIT_EXTENSION_RUNC_ROOT`            | `containerRuntimes.(docker/containerd/cri-o).runcRoot` | The runc root to use.                                                                                                      | yes      | (auto)  |
-| `STEADYBIT_EXTENSION_RUNC_DEBUG`           |                                                        | Activate debug mode for runc.                                                                                              | yes      | k8s.io  |
-| `STEADYBIT_EXTENSION_RUNC_ROOTLESS`        |                                                        | Set value for runc --rootless parameter                                                                                    | yes      | k8s.io  |
-| `STEADYBIT_EXTENSION_RUNC_SYSTEMD_CGROUP`  |                                                        | Set value for runc --systemd-cgroup parameter                                                                              | yes      | k8s.io  |
+| Environment Variable                           | Helm value                                             | Meaning                                                                                                                    | Required | Default |
+|------------------------------------------------|--------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------|----------|---------|
+| `STEADYBIT_EXTENSION_CONTAINER_RUNTIME`        | `container.runtime`                                    | The container runtime to user either `docker`, `containerd` or `cri-o`. Will be automatically configured if not specified. | yes      | (auto)  |
+| `STEADYBIT_EXTENSION_CONTAINER_SOCKET`         | `containerRuntimes.(docker/containerd/cri-o).socket`   | The socket used to connect to the container runtime. Will be automatically configured if not specified.                    | yes      | (auto)  |
+| `STEADYBIT_EXTENSION_CONTAINERD_NAMESPACE`     |                                                        | The containerd namespace to use.                                                                                           | yes      | k8s.io  |
+| `STEADYBIT_EXTENSION_RUNC_ROOT`                | `containerRuntimes.(docker/containerd/cri-o).runcRoot` | The runc root to use.                                                                                                      | yes      | (auto)  |
+| `STEADYBIT_EXTENSION_RUNC_DEBUG`               |                                                        | Activate debug mode for runc.                                                                                              | yes      | k8s.io  |
+| `STEADYBIT_EXTENSION_RUNC_ROOTLESS`            |                                                        | Set value for runc --rootless parameter                                                                                    | yes      | k8s.io  |
+| `STEADYBIT_EXTENSION_RUNC_SYSTEMD_CGROUP`      |                                                        | Set value for runc --systemd-cgroup parameter                                                                              | yes      | k8s.io  |
+| `STEADYBIT_EXTENSION_DISABLE_DEFAULT_EXCLUDES` | `discovery.disableDefaultExcludes`                     | Disable Discovery excludes                                                                                                 | false    | `false` |
 
 The extension supports all environment variables provided
 by [steadybit/extension-kit](https://github.com/steadybit/extension-kit#environment-variables).
@@ -103,6 +104,6 @@ This requires the following capabilities: SYS_ADMIN, SYS_RESOURCE, SYS_PTRACE, K
 SETGID, AUDIT_WRITE.
 The needed binaries are included in the extension container image.
 
-### make resources as "do not discover"
+### mark resources as "do not discover"
 
-to mark container from discovery you can add the label `LABEL "steadybit.com.discovery-enabled"="false"` to the container Dockerfile.
+to exclude container from discovery you can add the label `LABEL "steadybit.com.discovery-enabled"="false"` to the container Dockerfile.
