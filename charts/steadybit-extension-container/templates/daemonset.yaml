@@ -42,7 +42,7 @@ spec:
             - name: STEADYBIT_EXTENSION_HEALTH_PORT
               value: {{ .Values.containerPorts.health | quote }}
             - name: STEADYBIT_EXTENSION_DISABLE_DEFAULT_EXCLUDES
-              value: {{ .Values.discovery.disableDefaultExcludes }}
+              value: {{ .Values.discovery.disableDefaultExcludes | quote }}
             {{- include "extensionlib.deployment.env" (list .) | nindent 12 }}
             {{- with .Values.extraEnv }}
               {{- toYaml . | nindent 12 }}
