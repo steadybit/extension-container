@@ -102,3 +102,7 @@ reusing the target container's linux namespace(s), control group(s) and user.
 This requires the following capabilities: SYS_ADMIN, SYS_RESOURCE, SYS_PTRACE, KILL, NET_ADMIN, DAC_OVERRIDE, SETUID,
 SETGID, AUDIT_WRITE.
 The needed binaries are included in the extension container image.
+
+### make resources as "do not discover"
+
+to mark container from discovery you can add the label `LABEL "steadybit.com.discovery-enabled"="false"` to the container Dockerfile.
