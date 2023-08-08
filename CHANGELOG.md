@@ -1,5 +1,10 @@
 # Changelog
 
+## next
+
+- update dependencies
+- ignore marked containers during discovery
+
 ## v1.1.7
 
 - Add mode for stress io attack to choose between read/write and/or flush stress
