@@ -4,17 +4,17 @@
 package extcontainer
 
 import (
-	"fmt"
-	dockerparser "github.com/novln/docker-parser"
-	"github.com/steadybit/discovery-kit/go/discovery_kit_api"
-	"github.com/steadybit/extension-container/pkg/container/types"
-	extension_kit "github.com/steadybit/extension-kit"
-	"github.com/steadybit/extension-kit/extbuild"
-	"github.com/steadybit/extension-kit/exthttp"
-	"github.com/steadybit/extension-kit/extutil"
-	"net/http"
-	"os"
-	"strings"
+  "fmt"
+  dockerparser "github.com/novln/docker-parser"
+  "github.com/steadybit/discovery-kit/go/discovery_kit_api"
+  "github.com/steadybit/extension-container/pkg/container/types"
+  extension_kit "github.com/steadybit/extension-kit"
+  "github.com/steadybit/extension-kit/extbuild"
+  "github.com/steadybit/extension-kit/exthttp"
+  "github.com/steadybit/extension-kit/extutil"
+  "net/http"
+  "os"
+  "strings"
 )
 
 const (
@@ -177,6 +177,14 @@ func ignoreContainer(container types.Container) bool {
 	}
 
 	if label := container.Labels()["com.amazonaws.ecs.container-name"]; label == "~internal~ecs~pause" {
+		return true
+	}
+
+  if label := container.Labels()["steadybit.com.discovery-enabled"]; label == "false" {
+		return true
+	}
+
+  if label := container.Labels()["com.steadybit.agent"]; label == "true" {
 		return true
 	}
 
