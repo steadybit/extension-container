@@ -30,6 +30,8 @@ manifest should match snapshot using containerd:
                   value: "8086"
                 - name: STEADYBIT_EXTENSION_HEALTH_PORT
                   value: "8082"
+                - name: STEADYBIT_EXTENSION_DISABLE_DEFAULT_EXCLUDES
+                  value: false
                 - name: STEADYBIT_LOG_LEVEL
                   value: INFO
                 - name: STEADYBIT_LOG_FORMAT
@@ -127,6 +129,8 @@ manifest should match snapshot using crio:
                   value: "8086"
                 - name: STEADYBIT_EXTENSION_HEALTH_PORT
                   value: "8082"
+                - name: STEADYBIT_EXTENSION_DISABLE_DEFAULT_EXCLUDES
+                  value: false
                 - name: STEADYBIT_LOG_LEVEL
                   value: INFO
                 - name: STEADYBIT_LOG_FORMAT
@@ -224,6 +228,8 @@ manifest should match snapshot using docker:
                   value: "8086"
                 - name: STEADYBIT_EXTENSION_HEALTH_PORT
                   value: "8082"
+                - name: STEADYBIT_EXTENSION_DISABLE_DEFAULT_EXCLUDES
+                  value: false
                 - name: STEADYBIT_LOG_LEVEL
                   value: INFO
                 - name: STEADYBIT_LOG_FORMAT
@@ -321,6 +327,8 @@ manifest should match snapshot with TLS:
                   value: "8086"
                 - name: STEADYBIT_EXTENSION_HEALTH_PORT
                   value: "8082"
+                - name: STEADYBIT_EXTENSION_DISABLE_DEFAULT_EXCLUDES
+                  value: false
                 - name: STEADYBIT_LOG_LEVEL
                   value: INFO
                 - name: STEADYBIT_LOG_FORMAT
@@ -429,6 +437,8 @@ manifest should match snapshot with different containerPorts:
                   value: "9090"
                 - name: STEADYBIT_EXTENSION_HEALTH_PORT
                   value: "9091"
+                - name: STEADYBIT_EXTENSION_DISABLE_DEFAULT_EXCLUDES
+                  value: false
                 - name: STEADYBIT_LOG_LEVEL
                   value: INFO
                 - name: STEADYBIT_LOG_FORMAT
@@ -526,6 +536,8 @@ manifest should match snapshot with extra env vars:
                   value: "8086"
                 - name: STEADYBIT_EXTENSION_HEALTH_PORT
                   value: "8082"
+                - name: STEADYBIT_EXTENSION_DISABLE_DEFAULT_EXCLUDES
+                  value: false
                 - name: STEADYBIT_LOG_LEVEL
                   value: INFO
                 - name: STEADYBIT_LOG_FORMAT
@@ -630,6 +642,8 @@ manifest should match snapshot with mutual TLS:
                   value: "8086"
                 - name: STEADYBIT_EXTENSION_HEALTH_PORT
                   value: "8082"
+                - name: STEADYBIT_EXTENSION_DISABLE_DEFAULT_EXCLUDES
+                  value: false
                 - name: STEADYBIT_LOG_LEVEL
                   value: INFO
                 - name: STEADYBIT_LOG_FORMAT
@@ -747,6 +761,8 @@ manifest should match snapshot with mutual TLS using containerPaths:
                   value: "8086"
                 - name: STEADYBIT_EXTENSION_HEALTH_PORT
                   value: "8082"
+                - name: STEADYBIT_EXTENSION_DISABLE_DEFAULT_EXCLUDES
+                  value: false
                 - name: STEADYBIT_LOG_LEVEL
                   value: INFO
                 - name: STEADYBIT_LOG_FORMAT
