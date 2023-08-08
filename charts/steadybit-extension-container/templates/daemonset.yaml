@@ -4,10 +4,10 @@ metadata:
   name: {{ include "extensionlib.names.fullname" . }}
   namespace: {{ .Release.Namespace }}
   labels:
+  {{- include "extensionlib.labels" (list .) | nindent 4 }}
   {{- range $key, $value := .Values.extraLabels }}
     {{ $key }}: {{ $value }}
   {{- end }}
-  {{- include "extensionlib.labels" (list .) | nindent 6 }}
 spec:
   selector:
     matchLabels:
