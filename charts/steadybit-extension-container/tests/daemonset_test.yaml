@@ -13,10 +13,14 @@ tests:
         runtime: containerd
     asserts:
       - matchSnapshot: { }
-  - it: manifest should match snapshot using crio
+  - it: manifest should match snapshot using crio using podAnnotations and Labels
     set:
       container:
         runtime: cri-o
+      podAnnotations:
+        some-annotation: "some-annotation-value"
+      podLabels:
+        some-label: "some-label-value"
     asserts:
       - matchSnapshot: { }
   - it: manifest should fail without runtime

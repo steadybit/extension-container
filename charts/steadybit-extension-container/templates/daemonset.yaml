@@ -20,9 +20,15 @@ spec:
         app: {{ include "extensionlib.names.name" . }}
         steadybit.com/extension: "true"
         {{- include "extensionlib.labels" (list .) | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
       annotations:
         "container.apparmor.security.beta.kubernetes.io/{{ include "extensionlib.names.name" . }}": unconfined
         {{- include "extensionlib.annotation" (list . .Values.containerPorts.http (list "ACTION" "DISCOVERY") ) | nindent 8 }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
     spec:
       hostNetwork: true
       hostPID: true
