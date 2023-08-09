@@ -85,3 +85,10 @@ tests:
         health: 9091
     asserts:
       - matchSnapshot: {}
+
+  - it: manifest should match snapshot with discover all deployments
+    set:
+      discovery:
+        disableDefaultExcludes: true
+    asserts:
+      - matchSnapshot: { }
