@@ -1,9 +1,10 @@
 # Changelog
 
-## next
+## v1.1.8
 
 - update dependencies
 - ignore marked containers during discovery
+- migration to new unified steadybit actionIds and targetTypes
 
 ## v1.1.7
 
