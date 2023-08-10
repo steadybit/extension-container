@@ -89,10 +89,15 @@ tests:
         health: 9091
     asserts:
       - matchSnapshot: {}
-
   - it: manifest should match snapshot with discover all deployments
     set:
       discovery:
         disableExcludes: true
     asserts:
-      - matchSnapshot: { }
+      - matchSnapshot: {}
+  - it: manifest should match snapshot with extra labels
+    set:
+      extraLabels:
+        tags.datadoghq.com/service: steadybit-extension
+    asserts:
+      - matchSnapshot: {}
