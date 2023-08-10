@@ -7,6 +7,7 @@ import (
 	"fmt"
 	dockerparser "github.com/novln/docker-parser"
 	"github.com/steadybit/discovery-kit/go/discovery_kit_api"
+	"github.com/steadybit/extension-container/config"
 	"github.com/steadybit/extension-container/pkg/container/types"
 	extension_kit "github.com/steadybit/extension-kit"
 	"github.com/steadybit/extension-kit/extbuild"
@@ -180,12 +181,11 @@ func ignoreContainer(container types.Container) bool {
 		return true
 	}
 
-	disableDefaultExcludes := os.Getenv("STEADYBIT_EXTENSION_DISABLE_DEFAULT_EXCLUDES")
-	if strings.ToLower(disableDefaultExcludes) == "true" {
+	if config.Config.DisableDiscoveryExcludes {
 		return false
 	}
 
-	if label := container.Labels()["steadybit.com.discovery-enabled"]; label == "false" {
+	if label := container.Labels()["steadybit.com.discovery-disabled"]; label == "false" {
 		return true
 	}
 

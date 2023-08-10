@@ -10,16 +10,16 @@ our [Reliability Hub](https://hub.steadybit.com/extension/com.steadybit.extensio
 
 ## Configuration
 
-| Environment Variable                           | Helm value                                             | Meaning                                                                                                                    | Required | Default |
-|------------------------------------------------|--------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------|----------|---------|
-| `STEADYBIT_EXTENSION_CONTAINER_RUNTIME`        | `container.runtime`                                    | The container runtime to user either `docker`, `containerd` or `cri-o`. Will be automatically configured if not specified. | yes      | (auto)  |
-| `STEADYBIT_EXTENSION_CONTAINER_SOCKET`         | `containerRuntimes.(docker/containerd/cri-o).socket`   | The socket used to connect to the container runtime. Will be automatically configured if not specified.                    | yes      | (auto)  |
-| `STEADYBIT_EXTENSION_CONTAINERD_NAMESPACE`     |                                                        | The containerd namespace to use.                                                                                           | yes      | k8s.io  |
-| `STEADYBIT_EXTENSION_RUNC_ROOT`                | `containerRuntimes.(docker/containerd/cri-o).runcRoot` | The runc root to use.                                                                                                      | yes      | (auto)  |
-| `STEADYBIT_EXTENSION_RUNC_DEBUG`               |                                                        | Activate debug mode for runc.                                                                                              | yes      | k8s.io  |
-| `STEADYBIT_EXTENSION_RUNC_ROOTLESS`            |                                                        | Set value for runc --rootless parameter                                                                                    | yes      | k8s.io  |
-| `STEADYBIT_EXTENSION_RUNC_SYSTEMD_CGROUP`      |                                                        | Set value for runc --systemd-cgroup parameter                                                                              | yes      | k8s.io  |
-| `STEADYBIT_EXTENSION_DISABLE_DEFAULT_EXCLUDES` | `discovery.disableDefaultExcludes`                     | Disable Discovery excludes                                                                                                 | false    | `false` |
+| Environment Variable                             | Helm value                                             | Meaning                                                                                                                    | Required | Default |
+|--------------------------------------------------|--------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------|----------|---------|
+| `STEADYBIT_EXTENSION_CONTAINER_RUNTIME`          | `container.runtime`                                    | The container runtime to user either `docker`, `containerd` or `cri-o`. Will be automatically configured if not specified. | yes      | (auto)  |
+| `STEADYBIT_EXTENSION_CONTAINER_SOCKET`           | `containerRuntimes.(docker/containerd/cri-o).socket`   | The socket used to connect to the container runtime. Will be automatically configured if not specified.                    | yes      | (auto)  |
+| `STEADYBIT_EXTENSION_CONTAINERD_NAMESPACE`       |                                                        | The containerd namespace to use.                                                                                           | yes      | k8s.io  |
+| `STEADYBIT_EXTENSION_RUNC_ROOT`                  | `containerRuntimes.(docker/containerd/cri-o).runcRoot` | The runc root to use.                                                                                                      | yes      | (auto)  |
+| `STEADYBIT_EXTENSION_RUNC_DEBUG`                 |                                                        | Activate debug mode for runc.                                                                                              | yes      | k8s.io  |
+| `STEADYBIT_EXTENSION_RUNC_ROOTLESS`              |                                                        | Set value for runc --rootless parameter                                                                                    | yes      | k8s.io  |
+| `STEADYBIT_EXTENSION_RUNC_SYSTEMD_CGROUP`        |                                                        | Set value for runc --systemd-cgroup parameter                                                                              | yes      | k8s.io  |
+| `STEADYBIT_EXTENSION_DISABLE_DISCOVERY_EXCLUDES` | `discovery.disableExcludes`                            | Ignore discovery excludes specified by `steadybit.com/discovery-disabled`                                                  | false    | `false` |
 
 The extension supports all environment variables provided
 by [steadybit/extension-kit](https://github.com/steadybit/extension-kit#environment-variables).
@@ -57,7 +57,8 @@ helm upgrade steadybit-extension-container \
 
 ### Using Docker
 
-This extension is by default deployed using our [outpost.sh docker compose script](https://docs.steadybit.com/install-and-configure/install-outpost-agent-preview/install-as-docker-container).
+This extension is by default deployed using
+our [outpost.sh docker compose script](https://docs.steadybit.com/install-and-configure/install-outpost-agent-preview/install-as-docker-container).
 
 Or you can run it manually:
 
@@ -76,7 +77,8 @@ docker run \
 
 ### Linux Package
 
-Please use our [outpost-linux.sh script](https://docs.steadybit.com/install-and-configure/install-outpost-agent-preview/install-on-linux-hosts) to install the extension on your Linux machine.
+Please use our [outpost-linux.sh script](https://docs.steadybit.com/install-and-configure/install-outpost-agent-preview/install-on-linux-hosts) to install the
+extension on your Linux machine.
 The script will download the latest version of the extension and install it using the package manager.
 
 ## Register the extension
@@ -106,4 +108,4 @@ The needed binaries are included in the extension container image.
 
 ### mark resources as "do not discover"
 
-to exclude container from discovery you can add the label `LABEL "steadybit.com.discovery-enabled"="false"` to the container Dockerfile.
+to exclude container from discovery you can add the label `LABEL "steadybit.com.discovery-disabled"="true"` to the container Dockerfile.

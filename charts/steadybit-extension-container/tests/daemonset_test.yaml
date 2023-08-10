@@ -93,6 +93,6 @@ tests:
   - it: manifest should match snapshot with discover all deployments
     set:
       discovery:
-        disableDefaultExcludes: true
+        disableExcludes: true
     asserts:
       - matchSnapshot: { }

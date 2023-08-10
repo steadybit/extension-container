@@ -28,7 +28,7 @@ RUN goreleaser build --snapshot="${BUILD_SNAPSHOT}" --single-target -o extension
 ##
 FROM debian:bookworm-slim
 
-LABEL "steadybit.com.discovery-enabled"="false"
+LABEL "steadybit.com.discovery-disabled"="true"
 
 ARG USERNAME=steadybit
 ARG USER_UID=10000
