@@ -50,7 +50,7 @@ func ListInterfaces(ctx context.Context, r runc.Runc, config TargetContainerConf
 		runc.WithAnnotations(map[string]string{
 			"com.steadybit.sidecar": "true",
 		}),
-		runc.WithSelectedNamespaces(config.Namespaces, specs.NetworkNamespace, specs.UTSNamespace),
+		runc.WithSelectedNamespaces(utils.ResolveNamespacesUsingInode(config.Namespaces), specs.NetworkNamespace, specs.UTSNamespace),
 		runc.WithCapabilities("CAP_NET_ADMIN"),
 		runc.WithProcessArgs("ip", "-json", "link", "show"),
 	); err != nil {

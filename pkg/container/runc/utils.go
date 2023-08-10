@@ -123,13 +123,23 @@ func WithNamespaces(ns []specs.LinuxNamespace) SpecEditor {
 	return func(spec *specs.Spec) {
 		spec.Linux.Namespaces = ns
 
-		for _, n := range ns {
-			if n.Type == specs.MountNamespace {
-				return
-			}
+		if !hasNamespace(ns, specs.MountNamespace) {
+			spec.Linux.Namespaces = append(spec.Linux.Namespaces, specs.LinuxNamespace{Type: specs.MountNamespace})
 		}
-		spec.Linux.Namespaces = append(spec.Linux.Namespaces, specs.LinuxNamespace{Type: specs.MountNamespace})
+
+		if len(spec.Hostname) > 0 && !hasNamespace(ns, specs.UTSNamespace) {
+			spec.Linux.Namespaces = append(spec.Linux.Namespaces, specs.LinuxNamespace{Type: specs.UTSNamespace})
+		}
 	}
+}
+
+func hasNamespace(ns []specs.LinuxNamespace, t specs.LinuxNamespaceType) bool {
+	for _, n := range ns {
+		if n.Type == t {
+			return true
+		}
+	}
+	return false
 }
 
 func WithSelectedNamespaces(ns []specs.LinuxNamespace, filter ...specs.LinuxNamespaceType) SpecEditor {

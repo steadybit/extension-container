@@ -14,16 +14,15 @@ import (
 	"github.com/steadybit/extension-container/pkg/container/runc"
 	"github.com/steadybit/extension-container/pkg/utils"
 	"github.com/steadybit/extension-kit/extutil"
-	"os"
 	"sync/atomic"
 )
 
 var counter = atomic.Int32{}
 
 type TargetContainerConfig struct {
-	ContainerID string                 `json:"id"`
-	Pid         int                    `json:"pid"`
-	Namespaces  []specs.LinuxNamespace `json:"namespaces"`
+	ContainerID string                          `json:"id"`
+	Pid         int                             `json:"pid"`
+	Namespaces  []utils.LinuxNamespaceWithInode `json:"namespaces"`
 }
 
 func GetConfigForContainer(ctx context.Context, r runc.Runc, targetId string) (TargetContainerConfig, error) {
@@ -51,7 +50,7 @@ func Apply(ctx context.Context, r runc.Runc, config TargetContainerConfig, opts 
 		Str("config", config.ContainerID).
 		Msg("applying network config")
 
-	if err := checkNamespacesExists(config.Namespaces, specs.NetworkNamespace, specs.UTSNamespace); err != nil {
+	if err := utils.CheckNamespacesExists(config.Namespaces, specs.NetworkNamespace, specs.UTSNamespace); err != nil {
 		return fmt.Errorf("container exited? %w", err)
 	}
 
@@ -60,7 +59,7 @@ func Apply(ctx context.Context, r runc.Runc, config TargetContainerConfig, opts 
 
 func Revert(ctx context.Context, r runc.Runc, config TargetContainerConfig, opts networkutils.Opts) (action_kit_api.Messages, error) {
 
-	if err := checkNamespacesExists(config.Namespaces, specs.NetworkNamespace, specs.UTSNamespace); err != nil {
+	if err := utils.CheckNamespacesExists(config.Namespaces, specs.NetworkNamespace, specs.UTSNamespace); err != nil {
 		log.Info().
 			Str("config", config.ContainerID).
 			AnErr("reason", err).
@@ -79,32 +78,6 @@ func Revert(ctx context.Context, r runc.Runc, config TargetContainerConfig, opts
 		Msg("reverting network config")
 
 	return nil, generateAndRunCommands(ctx, r, config, opts, networkutils.ModeDelete)
-}
-
-func checkNamespacesExists(namespaces []specs.LinuxNamespace, wantedTypes ...specs.LinuxNamespaceType) error {
-	for _, ns := range namespaces {
-		wanted := false
-		if len(wantedTypes) == 0 {
-			wanted = true
-		} else {
-			for _, wantedType := range wantedTypes {
-				if ns.Type == wantedType {
-					wanted = true
-					break
-				}
-			}
-		}
-
-		if !wanted || ns.Path == "" {
-			continue
-		}
-
-		if _, err := os.Stat(ns.Path); err != nil && os.IsNotExist(err) {
-			return fmt.Errorf("namespace %s doesn't exist", ns.Path)
-		}
-	}
-
-	return nil
 }
 
 func generateAndRunCommands(ctx context.Context, r runc.Runc, config TargetContainerConfig, opts networkutils.Opts, mode networkutils.Mode) error {
@@ -169,7 +142,7 @@ func executeIpCommands(ctx context.Context, r runc.Runc, config TargetContainerC
 		runc.WithAnnotations(map[string]string{
 			"com.steadybit.sidecar": "true",
 		}),
-		runc.WithSelectedNamespaces(config.Namespaces, specs.NetworkNamespace, specs.UTSNamespace),
+		runc.WithSelectedNamespaces(utils.ResolveNamespacesUsingInode(config.Namespaces), specs.NetworkNamespace, specs.UTSNamespace),
 		runc.WithCapabilities("CAP_NET_ADMIN"),
 		runc.WithProcessArgs("ip", "-family", string(family), "-force", "-batch", "-"),
 	); err != nil {
@@ -208,7 +181,7 @@ func executeTcCommands(ctx context.Context, r runc.Runc, config TargetContainerC
 		runc.WithAnnotations(map[string]string{
 			"com.steadybit.sidecar": "true",
 		}),
-		runc.WithSelectedNamespaces(config.Namespaces, specs.NetworkNamespace, specs.UTSNamespace),
+		runc.WithSelectedNamespaces(utils.ResolveNamespacesUsingInode(config.Namespaces), specs.NetworkNamespace, specs.UTSNamespace),
 		runc.WithCapabilities("CAP_NET_ADMIN"),
 		runc.WithProcessArgs("tc", "-force", "-batch", "-"),
 	); err != nil {

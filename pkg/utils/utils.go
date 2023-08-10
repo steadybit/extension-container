@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/opencontainers/runtime-spec/specs-go"
+	"github.com/rs/zerolog/log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -18,6 +19,11 @@ import (
 )
 
 var SidecarImagePath = getSidecarImagePath()
+
+type LinuxNamespaceWithInode struct {
+	specs.LinuxNamespace
+	Inode uint64
+}
 
 func getSidecarImagePath() string {
 	if _, err := os.Stat("./sidecar.tar"); err == nil {
@@ -66,9 +72,9 @@ func ReadCgroupPath(pid int) (string, error) {
 	return cgroup, nil
 }
 
-func ReadNamespaces(pid int) ([]specs.LinuxNamespace, error) {
+func ReadNamespaces(pid int) ([]LinuxNamespaceWithInode, error) {
 	var out bytes.Buffer
-	cmd := RootCommandContext(context.Background(), "nsenter", "-t", "1", "-C", "--", "lsns", "--task", strconv.Itoa(pid), "--output=type,path", "--noheadings")
+	cmd := RootCommandContext(context.Background(), "nsenter", "-t", "1", "-C", "--", "lsns", "--task", strconv.Itoa(pid), "--output=ns,type,path", "--noheadings")
 	cmd.Stdout = &out
 	cmd.Stderr = &out
 
@@ -76,19 +82,105 @@ func ReadNamespaces(pid int) ([]specs.LinuxNamespace, error) {
 		return nil, fmt.Errorf("lsns %s: %s", err, out.String())
 	}
 
-	var namespaces []specs.LinuxNamespace
+	var namespaces []LinuxNamespaceWithInode
 	for _, line := range strings.Split(strings.TrimSpace(out.String()), "\n") {
 		fields := strings.Fields(line)
-		if len(fields) != 2 {
+		if len(fields) != 3 {
 			continue
 		}
-		ns := specs.LinuxNamespace{
-			Type: toRuncNamespaceType(fields[0]),
-			Path: fields[1],
+		inode, err := strconv.ParseUint(fields[0], 10, 64)
+		if err != nil {
+			log.Warn().Err(err).Msgf("could not parse inode %s. omitting inode namespace information", fields[0])
+		}
+		ns := LinuxNamespaceWithInode{
+			Inode: inode,
+			LinuxNamespace: specs.LinuxNamespace{
+				Type: toRuncNamespaceType(fields[1]),
+				Path: fields[2],
+			},
 		}
 		namespaces = append(namespaces, ns)
 	}
 	return namespaces, nil
+}
+
+func toRuncNamespaceType(t string) specs.LinuxNamespaceType {
+	switch t {
+	case "net":
+		return specs.NetworkNamespace
+	case "mnt":
+		return specs.MountNamespace
+	default:
+		return specs.LinuxNamespaceType(t)
+	}
+}
+
+func ResolveNamespacesUsingInode(namespaces []LinuxNamespaceWithInode) []specs.LinuxNamespace {
+	var runcNamespaces []specs.LinuxNamespace
+	for _, ns := range namespaces {
+		r := resolveNamespaceUsingInode(ns)
+		runcNamespaces = append(runcNamespaces, r)
+	}
+	fmt.Printf("resolved %v to %v\n", namespaces, runcNamespaces)
+	return runcNamespaces
+}
+
+func resolveNamespaceUsingInode(ns LinuxNamespaceWithInode) specs.LinuxNamespace {
+	if ns.Inode == 0 {
+		return ns.LinuxNamespace
+	}
+
+	var out bytes.Buffer
+	cmd := RootCommandContext(context.Background(), "nsenter", "-t", "1", "-C", "--", "lsns", strconv.FormatUint(ns.Inode, 10), "--output=path", "--noheadings")
+	cmd.Stdout = &out
+	cmd.Stderr = &out
+
+	if err := cmd.Run(); err != nil {
+		log.Warn().Err(err).Msgf("could not resolve namespace using inode %d to path. Falling back to possibly outdated path", ns.Inode)
+		return ns.LinuxNamespace
+	}
+
+	for _, line := range strings.Split(strings.TrimSpace(out.String()), "\n") {
+		fields := strings.Fields(line)
+		if len(fields) != 1 {
+			continue
+		}
+
+		return specs.LinuxNamespace{
+			Type: ns.Type,
+			Path: fields[0],
+		}
+	}
+
+	return ns.LinuxNamespace
+}
+
+func CheckNamespacesExists(namespaces []LinuxNamespaceWithInode, wantedTypes ...specs.LinuxNamespaceType) error {
+	for _, ns := range namespaces {
+		wanted := false
+		if len(wantedTypes) == 0 {
+			wanted = true
+		} else {
+			for _, wantedType := range wantedTypes {
+				if ns.Type == wantedType {
+					wanted = true
+					break
+				}
+			}
+		}
+
+		if !wanted || ns.Path == "" {
+			continue
+		}
+
+		resolved := resolveNamespaceUsingInode(ns)
+
+		if _, err := os.Stat(resolved.Path); err != nil && os.IsNotExist(err) {
+			return fmt.Errorf("namespace %s doesn't exist", resolved.Path)
+		}
+	}
+
+	return nil
 }
 
 // IsUsingHostNetwork determines weather the given process has the same network as the init process.
@@ -103,17 +195,6 @@ func IsUsingHostNetwork(pid int) (bool, error) {
 		}
 	}
 	return true, nil
-}
-
-func toRuncNamespaceType(t string) specs.LinuxNamespaceType {
-	switch t {
-	case "net":
-		return specs.NetworkNamespace
-	case "mnt":
-		return specs.MountNamespace
-	default:
-		return specs.LinuxNamespaceType(t)
-	}
 }
 
 func CopyFileFromProcessToBundle(bundle string, pid int, path string) error {

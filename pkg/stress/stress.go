@@ -93,7 +93,7 @@ func New(r runc.Runc, targetId string, opts StressOpts) (*Stress, error) {
 		runc.WithProcessArgs(append([]string{"stress-ng"}, opts.Args()...)...),
 		runc.WithProcessCwd("/tmp"),
 		runc.WithCgroupPath(cgroupPath, "stress"),
-		runc.WithSelectedNamespaces(namespaces, specs.PIDNamespace, specs.UTSNamespace),
+		runc.WithSelectedNamespaces(utils.ResolveNamespacesUsingInode(namespaces), specs.PIDNamespace, specs.UTSNamespace),
 		runc.WithCapabilities("CAP_SYS_RESOURCE"),
 		runc.WithMountIfNotPresent(specs.Mount{
 			Destination: "/tmp",
