@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.1.9
+
+- ignore container with label `steadybit.com.discovery-disabled"="true"` during discovery
+
 ## v1.1.8
 
 - update dependencies
