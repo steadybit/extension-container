@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.1.10
+
+- fix: reverting network attacks was mistakenly skipped after pid rollover happened
+
 ## v1.1.9
 
 - ignore container with label `steadybit.com.discovery-disabled"="true"` during discovery

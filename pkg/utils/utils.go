@@ -121,7 +121,6 @@ func ResolveNamespacesUsingInode(namespaces []LinuxNamespaceWithInode) []specs.L
 		r := resolveNamespaceUsingInode(ns)
 		runcNamespaces = append(runcNamespaces, r)
 	}
-	fmt.Printf("resolved %v to %v\n", namespaces, runcNamespaces)
 	return runcNamespaces
 }
 
@@ -136,7 +135,7 @@ func resolveNamespaceUsingInode(ns LinuxNamespaceWithInode) specs.LinuxNamespace
 	cmd.Stderr = &out
 
 	if err := cmd.Run(); err != nil {
-		log.Warn().Err(err).Msgf("could not resolve namespace using inode %d to path. Falling back to possibly outdated path", ns.Inode)
+		log.Debug().Err(err).Str("stderr", out.String()).Msgf("could not resolve %s namespace using inode %d to path. Falling back to possibly outdated path %s", ns.Type, ns.Inode, ns.Path)
 		return ns.LinuxNamespace
 	}
 
