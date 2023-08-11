@@ -38,11 +38,11 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           resources:
             requests:
-              memory: { { .Values.resources.requests.memory } }
-              cpu: { { .Values.resources.requests.cpu } }
+              memory: {{ .Values.resources.requests.memory }}
+              cpu: {{ .Values.resources.requests.cpu }}
             limits:
-              memory: { { .Values.resources.limits.memory } }
-              cpu: { { .Values.resources.limits.cpu } }
+              memory: {{ .Values.resources.limits.memory }}
+              cpu: {{ .Values.resources.limits.cpu }}
           name: {{ include "extensionlib.names.name" . }}
           ports:
             - name: http

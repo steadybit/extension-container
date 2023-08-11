@@ -7,10 +7,17 @@ tests:
         runtime: docker
     asserts:
       - matchSnapshot: { }
-  - it: manifest should match snapshot using containerd
+  - it: manifest should match snapshot using containerd and using resource limits
     set:
       container:
         runtime: containerd
+      resources:
+        limits:
+          cpu: 100m
+          memory: 128Mi
+        requests:
+          cpu: 200m
+          memory: 256Mi
     asserts:
       - matchSnapshot: { }
   - it: manifest should match snapshot using crio using podAnnotations and Labels
