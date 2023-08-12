@@ -87,6 +87,7 @@ manifest should match snapshot using containerd and using resource limits:
           dnsPolicy: ClusterFirstWithHostNet
           hostNetwork: true
           hostPID: true
+          serviceAccountName: steadybit-extension-container
           volumes:
             - emptyDir: {}
               name: tmp-dir
@@ -193,6 +194,7 @@ manifest should match snapshot using crio using podAnnotations and Labels:
           dnsPolicy: ClusterFirstWithHostNet
           hostNetwork: true
           hostPID: true
+          serviceAccountName: steadybit-extension-container
           volumes:
             - emptyDir: {}
               name: tmp-dir
@@ -297,6 +299,7 @@ manifest should match snapshot using docker:
           dnsPolicy: ClusterFirstWithHostNet
           hostNetwork: true
           hostPID: true
+          serviceAccountName: steadybit-extension-container
           volumes:
             - emptyDir: {}
               name: tmp-dir
@@ -408,6 +411,7 @@ manifest should match snapshot with TLS:
           dnsPolicy: ClusterFirstWithHostNet
           hostNetwork: true
           hostPID: true
+          serviceAccountName: steadybit-extension-container
           volumes:
             - emptyDir: {}
               name: tmp-dir
@@ -516,6 +520,7 @@ manifest should match snapshot with different containerPorts:
           dnsPolicy: ClusterFirstWithHostNet
           hostNetwork: true
           hostPID: true
+          serviceAccountName: steadybit-extension-container
           volumes:
             - emptyDir: {}
               name: tmp-dir
@@ -622,6 +627,7 @@ manifest should match snapshot with discover all deployments:
           dnsPolicy: ClusterFirstWithHostNet
           hostNetwork: true
           hostPID: true
+          serviceAccountName: steadybit-extension-container
           volumes:
             - emptyDir: {}
               name: tmp-dir
@@ -733,6 +739,7 @@ manifest should match snapshot with extra env vars:
           dnsPolicy: ClusterFirstWithHostNet
           hostNetwork: true
           hostPID: true
+          serviceAccountName: steadybit-extension-container
           volumes:
             - emptyDir: {}
               name: tmp-dir
@@ -774,6 +781,7 @@ manifest should match snapshot with extra labels:
             app.kubernetes.io/name: steadybit-extension-container
             steadybit.com/discovery-disabled: "true"
             steadybit.com/extension: "true"
+            tags.datadoghq.com/service: steadybit-extension
         spec:
           containers:
             - env:
@@ -838,6 +846,7 @@ manifest should match snapshot with extra labels:
           dnsPolicy: ClusterFirstWithHostNet
           hostNetwork: true
           hostPID: true
+          serviceAccountName: steadybit-extension-container
           volumes:
             - emptyDir: {}
               name: tmp-dir
@@ -954,6 +963,7 @@ manifest should match snapshot with mutual TLS:
           dnsPolicy: ClusterFirstWithHostNet
           hostNetwork: true
           hostPID: true
+          serviceAccountName: steadybit-extension-container
           volumes:
             - emptyDir: {}
               name: tmp-dir
@@ -1072,6 +1082,7 @@ manifest should match snapshot with mutual TLS using containerPaths:
           dnsPolicy: ClusterFirstWithHostNet
           hostNetwork: true
           hostPID: true
+          serviceAccountName: steadybit-extension-container
           volumes:
             - emptyDir: {}
               name: tmp-dir
