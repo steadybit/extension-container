@@ -13,6 +13,12 @@ spec:
     matchLabels:
       app.kubernetes.io/name: {{ include "extensionlib.names.name" . }}
       app: {{ include "extensionlib.names.name" . }}
+  updateStrategy:
+    type: {{ .Values.updateStrategy.type }}
+    {{- if eq .Values.updateStrategy.type "RollingUpdate" }}
+    rollingUpdate:
+      maxUnavailable: {{ .Values.updateStrategy.rollingUpdate.maxUnavailable }}
+    {{- end }}
   template:
     metadata:
       labels:

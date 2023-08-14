@@ -108,3 +108,11 @@ tests:
         tags.datadoghq.com/service: steadybit-extension
     asserts:
       - matchSnapshot: {}
+  - it: manifest should match snapshot with update strategy
+    set:
+      updateStrategy:
+        type: RollingUpdate
+        rollingUpdate:
+          maxUnavailable: 5
+    asserts:
+      - matchSnapshot: {}
