@@ -14,7 +14,7 @@ require (
 	github.com/steadybit/action-kit/go/action_kit_api/v2 v2.6.3
 	github.com/steadybit/action-kit/go/action_kit_commons v1.0.4
 	github.com/steadybit/action-kit/go/action_kit_sdk v1.1.4
-	github.com/steadybit/action-kit/go/action_kit_test v1.0.7
+	github.com/steadybit/action-kit/go/action_kit_test v1.0.8
 	github.com/steadybit/discovery-kit/go/discovery_kit_api v1.3.0
 	github.com/steadybit/extension-kit v1.8.4
 	github.com/stretchr/testify v1.8.4
