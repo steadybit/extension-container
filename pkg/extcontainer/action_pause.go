@@ -49,7 +49,7 @@ func (a *pauseAction) Describe() action_kit_api.ActionDescription {
 		},
 		Category:    extutil.Ptr("state"),
 		Kind:        action_kit_api.Attack,
-		TimeControl: action_kit_api.External,
+		TimeControl: action_kit_api.TimeControlExternal,
 		Parameters: []action_kit_api.ActionParameter{
 			{
 				Name:         "duration",
