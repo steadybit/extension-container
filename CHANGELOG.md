@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.1.12
+
+- update dependencies
+
 ## v1.1.10
 
 - fix: reverting network attacks was mistakenly skipped after pid rollover happened
