@@ -17,6 +17,7 @@ type Specification struct {
 	RuncSystemdCgroup        bool   `json:"runcSystemdCgroup" split_words:"true" required:"false"`
 	RuncDebug                bool   `json:"runcDebug" split_words:"true" required:"false"`
 	DisableDiscoveryExcludes bool   `required:"false" split_words:"true" default:"false"`
+	DiscoveryCallInterval    string `json:"discoveryCallInterval" split_words:"true" required:"false" default:"1m"`
 }
 
 var (
