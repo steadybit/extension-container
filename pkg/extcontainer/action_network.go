@@ -12,6 +12,7 @@ import (
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
 	"github.com/steadybit/action-kit/go/action_kit_commons/networkutils"
 	"github.com/steadybit/action-kit/go/action_kit_sdk"
+	"github.com/steadybit/extension-container/config"
 	"github.com/steadybit/extension-container/pkg/container/runc"
 	"github.com/steadybit/extension-container/pkg/network"
 	"github.com/steadybit/extension-container/pkg/utils"
@@ -208,10 +209,10 @@ func parsePortRanges(raw []string) ([]networkutils.PortRange, error) {
 	return ranges, nil
 }
 
-func mapToNetworkFilter(ctx context.Context, r runc.Runc, cfg network.TargetContainerConfig, config map[string]interface{}, restrictedEndpoints []action_kit_api.RestrictedEndpoint) (networkutils.Filter, error) {
+func mapToNetworkFilter(ctx context.Context, r runc.Runc, cfg network.TargetContainerConfig, actionConfig map[string]interface{}, restrictedEndpoints []action_kit_api.RestrictedEndpoint) (networkutils.Filter, error) {
 	toResolve := append(
-		extutil.ToStringArray(config["ip"]),
-		extutil.ToStringArray(config["hostname"])...,
+		extutil.ToStringArray(actionConfig["ip"]),
+		extutil.ToStringArray(actionConfig["hostname"])...,
 	)
 
 	dig := networkutils.HostnameResolver{Dig: &network.RuncDigRunner{Runc: r, Cfg: cfg}}
@@ -226,7 +227,7 @@ func mapToNetworkFilter(ctx context.Context, r runc.Runc, cfg network.TargetCont
 		includeCidrs = networkutils.IpToNet(includeIps)
 	}
 
-	portRanges, err := parsePortRanges(extutil.ToStringArray(config["port"]))
+	portRanges, err := parsePortRanges(extutil.ToStringArray(actionConfig["port"]))
 	if err != nil {
 		return networkutils.Filter{}, err
 	}
@@ -248,8 +249,8 @@ func mapToNetworkFilter(ctx context.Context, r runc.Runc, cfg network.TargetCont
 	}
 
 	ownIps := networkutils.GetOwnIPs()
-	ownPort := utils.GetOwnPort()
-	ownHealthPort := utils.GetOwnHealthPort()
+	ownPort := config.Config.Port
+	ownHealthPort := config.Config.HealthPort
 	nets := networkutils.IpToNet(ownIps)
 
 	log.Debug().Msgf("Adding own ip %s to exclude list (Ports %d and %d)", ownIps, ownPort, ownHealthPort)
