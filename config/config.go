@@ -18,8 +18,8 @@ type Specification struct {
 	RuncDebug                bool   `json:"runcDebug" split_words:"true" required:"false"`
 	DisableDiscoveryExcludes bool   `required:"false" split_words:"true" default:"false"`
 	DiscoveryCallInterval    string `json:"discoveryCallInterval" split_words:"true" required:"false" default:"1m"`
-	Port                     uint16 `json:"port" split_words:"true" required:"false" default:"8085"`
-	HealthPort               uint16 `json:"healthPort" split_words:"true" required:"false" default:"8081"`
+	Port                     uint16 `json:"port" split_words:"true" required:"false" default:"8086"`
+	HealthPort               uint16 `json:"healthPort" split_words:"true" required:"false" default:"8082"`
 }
 
 var (
