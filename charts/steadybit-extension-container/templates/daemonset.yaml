@@ -94,11 +94,14 @@ spec:
             seccompProfile:
               type: Unconfined
             capabilities:
+              drop:
+                - ALL
               add: {{ toJson .Values.securityContext.capabilities.add }}
             readOnlyRootFilesystem: true
             runAsNonRoot: true
             runAsUser: 10000
             runAsGroup: 10000
+            allowPrivilegeEscalation: false
       volumes:
         - name: tmp-dir
           emptyDir: {}
