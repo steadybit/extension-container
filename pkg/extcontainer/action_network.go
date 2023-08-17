@@ -155,7 +155,7 @@ func (a *networkAction) Start(ctx context.Context, state *NetworkActionState) (*
 
 	err = network.Apply(ctx, a.runc, state.ContainerConfig, opts)
 	if err != nil {
-		return nil, extension_kit.ToError("Failed to apply network settings.", err)
+		return nil, extension_kit.ToError(fmt.Sprintf("Failed to apply network settings for container %s", state.ContainerConfig.ContainerID), err)
 	}
 
 	return &action_kit_api.StartResult{
