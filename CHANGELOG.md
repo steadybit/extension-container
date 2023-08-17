@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.1.13
+
+- avoid duplicate tc/ip rules
+
 ## v1.1.12
 
 - update dependencies

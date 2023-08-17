@@ -12,7 +12,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/rs/zerolog v1.30.0
 	github.com/steadybit/action-kit/go/action_kit_api/v2 v2.7.1
-	github.com/steadybit/action-kit/go/action_kit_commons v1.0.4
+	github.com/steadybit/action-kit/go/action_kit_commons v1.0.5
 	github.com/steadybit/action-kit/go/action_kit_sdk v1.1.5
 	github.com/steadybit/action-kit/go/action_kit_test v1.0.9
 	github.com/steadybit/discovery-kit/go/discovery_kit_api v1.3.0
@@ -23,7 +23,7 @@ require (
 	k8s.io/api v0.29.0-alpha.0
 	k8s.io/apimachinery v0.29.0-alpha.0
 	k8s.io/client-go v0.29.0-alpha.0
-	k8s.io/cri-api v0.27.4
+	k8s.io/cri-api v0.28.0
 )
 
 require (
@@ -57,7 +57,7 @@ require (
 	github.com/go-openapi/swag v0.22.4 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
-	github.com/go-playground/validator/v10 v10.15.0 // indirect
+	github.com/go-playground/validator/v10 v10.15.1 // indirect
 	github.com/go-resty/resty/v2 v2.7.0 // indirect
 	github.com/goccy/go-json v0.10.2 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
@@ -115,8 +115,8 @@ require (
 	golang.org/x/time v0.3.0 // indirect
 	golang.org/x/tools v0.12.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
-	google.golang.org/genproto v0.0.0-20230814215434-ca7cfce7776a // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20230814215434-ca7cfce7776a // indirect
+	google.golang.org/genproto v0.0.0-20230815205213-6bfd019c3878 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20230815205213-6bfd019c3878 // indirect
 	google.golang.org/protobuf v1.31.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
