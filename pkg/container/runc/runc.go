@@ -85,6 +85,7 @@ func InheritStdIo() IoOpts {
 		Stderr: os.Stderr,
 	}
 }
+
 func (o IoOpts) WithStdin(reader io.Reader) IoOpts {
 	return IoOpts{
 		Stdin:  reader,
