@@ -11,6 +11,7 @@ tests:
     set:
       container:
         runtime: containerd
+        runcDebug: true
       resources:
         limits:
           cpu: 100m

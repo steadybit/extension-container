@@ -5,6 +5,7 @@
 container:
   # container.runtime -- The container runtime to use. Valid values are: docker, containerd, crio
   runtime: containerd
+  runcDebug: false
 
 image:
   # image.name -- The container image to use for the Steadybit container extension.

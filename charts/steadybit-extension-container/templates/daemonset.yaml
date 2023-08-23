@@ -67,6 +67,10 @@ spec:
             - name: STEADYBIT_EXTENSION_DISABLE_DISCOVERY_EXCLUDES
               value: "true"
             {{- end }}
+            {{- if .Values.container.runcDebug }}
+            - name: STEADYBIT_EXTENSION_RUNC_DEBUG
+              value: "true"
+            {{- end }}
             {{- include "extensionlib.deployment.env" (list .) | nindent 12 }}
             {{- with .Values.extraEnv }}
               {{- toYaml . | nindent 12 }}
