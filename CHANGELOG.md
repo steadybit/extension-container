@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.1.15
+
+- Add more trace logs for debugging purposes
+
 ## v1.1.14
 
 - Only generate exclude ip/tc rules for network interfaces that are up

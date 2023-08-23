@@ -30,6 +30,8 @@ manifest should match snapshot using containerd and using resource limits:
                   value: "8086"
                 - name: STEADYBIT_EXTENSION_HEALTH_PORT
                   value: "8082"
+                - name: STEADYBIT_EXTENSION_RUNC_DEBUG
+                  value: "true"
                 - name: STEADYBIT_LOG_LEVEL
                   value: INFO
                 - name: STEADYBIT_LOG_FORMAT
