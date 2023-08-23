@@ -55,7 +55,7 @@ func (r *Runc) State(ctx context.Context, id string) (*Container, error) {
 		return nil, fmt.Errorf("%s: %s", err, output)
 	}
 
-	log.Trace().Str("output", string(output)).Msg("runc state")
+	log.Trace().Str("output", string(output)).Msg("get container state")
 
 	var c Container
 	if err := json.Unmarshal(output, &c); err != nil {
@@ -65,6 +65,7 @@ func (r *Runc) State(ctx context.Context, id string) (*Container, error) {
 }
 
 func (r *Runc) Spec(ctx context.Context, bundle string) error {
+	log.Trace().Str("bundle", bundle).Msg("creating container spec")
 	output, err := r.command(ctx, "spec", "--bundle", bundle).CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("%s: %s", err, output)
@@ -95,13 +96,16 @@ func (o IoOpts) WithStdin(reader io.Reader) IoOpts {
 }
 
 func (r *Runc) Run(ctx context.Context, id, bundle string, ioOpts IoOpts) error {
-	log.Trace().Str("bundle", bundle).Msg("running container")
+	log.Trace().Str("id", id).Msg("running container")
 
 	cmd := r.command(ctx, "run", "--bundle", bundle, id)
 	cmd.Stdin = ioOpts.Stdin
 	cmd.Stdout = ioOpts.Stdout
 	cmd.Stderr = ioOpts.Stderr
-	return cmd.Run()
+	err := cmd.Run()
+
+	log.Trace().Str("id", id).Int("exitCode", cmd.ProcessState.ExitCode()).Msg("container exited")
+	return err
 }
 
 func (r *Runc) command(ctx context.Context, args ...string) *exec.Cmd {
@@ -126,6 +130,7 @@ func (r *Runc) args() []string {
 }
 
 func (r *Runc) Delete(ctx context.Context, id string, force bool) error {
+	log.Trace().Str("id", id).Msg("deleting container")
 	output, err := r.command(ctx, "delete", fmt.Sprintf("--force=%t", force), id).CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("%s: %s", err, output)
@@ -140,14 +145,17 @@ func (r *Runc) PrepareBundle(ctx context.Context, image string, id string) (stri
 
 	_ = os.RemoveAll(bundle)
 
+	log.Trace().Str("bundle", bundle).Msg("creating container bundle")
 	if err := os.MkdirAll(rootfs, 0775); err != nil {
 		return "", nil, fmt.Errorf("failed to create bundle dir: %w", err)
 	}
 
 	cleanup := func() error {
+		log.Trace().Str("bundle", bundle).Msg("cleaning up container bundle")
 		return os.RemoveAll(bundle)
 	}
 
+	log.Trace().Str("image", image).Str("rootfs", rootfs).Msg("extracting image")
 	cmd := exec.Command("tar", "-xf", image, "-C", rootfs)
 	if out, err := cmd.CombinedOutput(); err != nil {
 		return "", cleanup, fmt.Errorf("failed to prepare rootfs dir: %s %w", out, err)
