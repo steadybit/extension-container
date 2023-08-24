@@ -14,10 +14,14 @@ import (
 	"github.com/steadybit/extension-container/pkg/container/runc"
 	"github.com/steadybit/extension-container/pkg/utils"
 	"github.com/steadybit/extension-kit/extutil"
+	"strconv"
 	"sync/atomic"
 )
 
-var counter = atomic.Int32{}
+var (
+	counter = atomic.Int32{}
+	runLock = utils.NewHashedKeyMutex(10)
+)
 
 type TargetContainerConfig struct {
 	ContainerID string                          `json:"id"`
@@ -47,7 +51,7 @@ func GetConfigForContainer(ctx context.Context, r runc.Runc, targetId string) (T
 
 func Apply(ctx context.Context, r runc.Runc, config TargetContainerConfig, opts networkutils.Opts) error {
 	log.Info().
-		Str("config", config.ContainerID).
+		Str("containerId", config.ContainerID).
 		Msg("applying network config")
 
 	if err := utils.CheckNamespacesExists(config.Namespaces, specs.NetworkNamespace, specs.UTSNamespace); err != nil {
@@ -61,7 +65,7 @@ func Revert(ctx context.Context, r runc.Runc, config TargetContainerConfig, opts
 
 	if err := utils.CheckNamespacesExists(config.Namespaces, specs.NetworkNamespace, specs.UTSNamespace); err != nil {
 		log.Info().
-			Str("config", config.ContainerID).
+			Str("containerId", config.ContainerID).
 			AnErr("reason", err).
 			Msg("skipping revert network config")
 
@@ -74,7 +78,7 @@ func Revert(ctx context.Context, r runc.Runc, config TargetContainerConfig, opts
 	}
 
 	log.Info().
-		Str("config", config.ContainerID).
+		Str("containerd", config.ContainerID).
 		Msg("reverting network config")
 
 	return nil, generateAndRunCommands(ctx, r, config, opts, networkutils.ModeDelete)
@@ -95,6 +99,10 @@ func generateAndRunCommands(ctx context.Context, r runc.Runc, config TargetConta
 	if err != nil {
 		return err
 	}
+
+	netNsID := getNetworkNs(config.Namespaces)
+	runLock.LockKey(netNsID)
+	defer func() { _ = runLock.UnlockKey(netNsID) }()
 
 	if ipCommandsV4 != nil {
 		err = executeIpCommands(ctx, r, config, networkutils.FamilyV4, ipCommandsV4)
@@ -120,8 +128,25 @@ func generateAndRunCommands(ctx context.Context, r runc.Runc, config TargetConta
 	return nil
 }
 
+func getNetworkNs(namespaces []utils.LinuxNamespaceWithInode) string {
+	for _, ns := range namespaces {
+		if ns.Type == specs.NetworkNamespace {
+			if ns.Inode != 0 {
+				return strconv.FormatUint(ns.Inode, 10)
+			} else {
+				return ns.Path
+			}
+		}
+	}
+	return ""
+}
+
 func getNextContainerId(targedId string) string {
-	return fmt.Sprintf("sb-network-%d-%s", counter.Add(1), targedId[:8])
+	l := 8
+	if len(targedId) < l {
+		l = len(targedId)
+	}
+	return fmt.Sprintf("sb-network-%d-%s", counter.Add(1), targedId[:l])
 }
 
 func executeIpCommands(ctx context.Context, r runc.Runc, config TargetContainerConfig, family networkutils.Family, cmds []string) error {
@@ -136,7 +161,7 @@ func executeIpCommands(ctx context.Context, r runc.Runc, config TargetContainerC
 		return err
 	}
 
-	if err = runc.EditSpec(
+	if err = r.EditSpec(
 		bundle,
 		runc.WithHostname(fmt.Sprintf("ip-%s", id)),
 		runc.WithAnnotations(map[string]string{
@@ -158,7 +183,7 @@ func executeIpCommands(ctx context.Context, r runc.Runc, config TargetContainerC
 	})
 	defer func() { _ = r.Delete(context.Background(), id, true) }()
 	if err != nil {
-		return fmt.Errorf("ip failed: %w, output: %s", err, outb.String())
+		return fmt.Errorf("%s ip failed: %w, output: %s", id, err, outb.String())
 	}
 	return nil
 }
@@ -175,7 +200,7 @@ func executeTcCommands(ctx context.Context, r runc.Runc, config TargetContainerC
 		return err
 	}
 
-	if err = runc.EditSpec(
+	if err = r.EditSpec(
 		bundle,
 		runc.WithHostname(fmt.Sprintf("tc-%s", id)),
 		runc.WithAnnotations(map[string]string{
@@ -200,7 +225,7 @@ func executeTcCommands(ctx context.Context, r runc.Runc, config TargetContainerC
 		if parsed := networkutils.ParseTcBatchError(bytes.NewReader(outb.Bytes())); parsed != nil {
 			return parsed
 		}
-		return fmt.Errorf("tc failed: %w, output: %s", err, outb.String())
+		return fmt.Errorf("%s tc failed: %w, output: %s", id, err, outb.String())
 	}
 	return nil
 }

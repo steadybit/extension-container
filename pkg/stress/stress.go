@@ -85,7 +85,7 @@ func New(r runc.Runc, targetId string, opts StressOpts) (*Stress, error) {
 		return nil, fmt.Errorf("could not prepare bundle: %w", err)
 	}
 
-	if err := runc.EditSpec(bundle,
+	if err := r.EditSpec(bundle,
 		runc.WithHostname(id),
 		runc.WithAnnotations(map[string]string{
 			"com.steadybit.sidecar": "true",

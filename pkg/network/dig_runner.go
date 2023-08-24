@@ -36,7 +36,7 @@ func (d RuncDigRunner) Run(ctx context.Context, arg []string, stdin io.Reader) (
 		log.Warn().Err(err).Msg("could not copy /etc/hosts")
 	}
 
-	if err = runc.EditSpec(
+	if err = d.Runc.EditSpec(
 		bundle,
 		runc.WithHostname(fmt.Sprintf("dig-%s", id)),
 		runc.WithAnnotations(map[string]string{

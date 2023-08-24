@@ -53,7 +53,7 @@ func main() {
 		Str("socket", client.Socket()).
 		Msg("Container runtime client initialized.")
 
-	r := *runc.NewRunc(client.Runtime())
+	r := runc.NewRunc(client.Runtime())
 
 	extcontainer.RegisterDiscoveryHandlers(client)
 	action_kit_sdk.RegisterAction(extcontainer.NewPauseContainerAction(client))

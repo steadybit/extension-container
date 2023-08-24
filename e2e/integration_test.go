@@ -20,6 +20,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
@@ -69,6 +70,9 @@ func TestWithMinikube(t *testing.T) {
 		}, {
 			Name: "network blackhole",
 			Test: testNetworkBlackhole,
+		}, {
+			Name: "network blackhole (3 containers in one pod)",
+			Test: testNetworkBlackhole3Containers,
 		}, {
 			Name: "network delay",
 			Test: testNetworkDelay,
@@ -498,6 +502,132 @@ func testNetworkBlackhole(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	}
 }
 
+func testNetworkBlackhole3Containers(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
+	if m.Runtime == "cri-o" && m.Driver == "docker" {
+		t.Skip("Due to https://github.com/kubernetes/minikube/issues/16371 this test is skipped for cri-o")
+	}
+
+	additionalContainers := 5
+
+	nginx := e2e.Nginx{Minikube: m}
+	err := nginx.Deploy("nginx-network-blackhole", func(pod *acorev1.PodApplyConfiguration) {
+		for i := 0; i < additionalContainers; i++ {
+			pod.Spec.Containers = append(pod.Spec.Containers, acorev1.ContainerApplyConfiguration{
+				Name:    extutil.Ptr(fmt.Sprintf("bb-%d", i)),
+				Image:   extutil.Ptr("busybox"),
+				Command: []string{"sleep", "300"},
+			})
+		}
+	})
+
+	require.NoError(t, err, "failed to create pod")
+	defer func() { _ = nginx.Delete() }()
+
+	targetNginx, err := nginx.Target()
+	require.NoError(t, err)
+	targets := []*action_kit_api.Target{targetNginx}
+
+	for i := 0; i < additionalContainers; i++ {
+		targetbb, err := e2e.NewContainerTarget(m, nginx.Pod, fmt.Sprintf("bb-%d", i))
+		require.NoError(t, err)
+		targets = append(targets, targetbb)
+	}
+
+	config := struct {
+		Duration int      `json:"duration"`
+		Ip       []string `json:"ip"`
+		Hostname []string `json:"hostname"`
+		Port     []string `json:"port"`
+	}{Duration: 10000}
+
+	nginx.AssertIsReachable(t, true)
+	nginx.AssertCanReach(t, "https://steadybit.com", true)
+
+	executionContext := &action_kit_api.ExecutionContext{
+		AgentAwsAccountId: nil,
+		RestrictedEndpoints: extutil.Ptr([]action_kit_api.RestrictedEndpoint{
+			{Cidr: "192.168.2.1/32", PortMin: 8086, PortMax: 8088},
+			{Cidr: "192.168.2.2/32", PortMin: 8086, PortMax: 8088},
+			{Cidr: "192.168.2.3/32", PortMin: 8086, PortMax: 8088},
+			{Cidr: "192.168.2.4/32", PortMin: 8086, PortMax: 8088},
+			{Cidr: "192.168.2.5/32", PortMin: 8086, PortMax: 8088},
+			{Cidr: "192.168.2.6/32", PortMin: 8086, PortMax: 8088},
+			{Cidr: "192.168.2.7/32", PortMin: 8086, PortMax: 8088},
+			{Cidr: "192.168.2.8/32", PortMin: 8086, PortMax: 8088},
+			{Cidr: "192.168.2.9/32", PortMin: 8086, PortMax: 8088},
+			{Cidr: "192.168.2.10/32", PortMin: 8086, PortMax: 8088},
+			{Cidr: "192.168.2.11/32", PortMin: 8086, PortMax: 8088},
+			{Cidr: "192.168.2.12/32", PortMin: 8086, PortMax: 8088},
+			{Cidr: "192.168.2.13/32", PortMin: 8086, PortMax: 8088},
+			{Cidr: "192.168.2.14/32", PortMin: 8086, PortMax: 8088},
+			{Cidr: "192.168.2.15/32", PortMin: 8086, PortMax: 8088},
+			{Cidr: "192.168.2.16/32", PortMin: 8086, PortMax: 8088},
+			{Cidr: "fe80::70c4:51ff:fe20:3a7e/128", PortMin: 8086, PortMax: 8088},
+			{Cidr: "fe80::70c4:51ff:fe20:3a7f/128", PortMin: 8086, PortMax: 8088},
+			{Cidr: "fe80::70c4:51ff:fe20:3a80/128", PortMin: 8086, PortMax: 8088},
+			{Cidr: "fe80::70c4:51ff:fe20:3a81/128", PortMin: 8086, PortMax: 8088},
+			{Cidr: "fe80::70c4:51ff:fe20:3a82/128", PortMin: 8086, PortMax: 8088},
+			{Cidr: "fe80::70c4:51ff:fe20:3a83/128", PortMin: 8086, PortMax: 8088},
+			{Cidr: "fe80::70c4:51ff:fe20:3a84/128", PortMin: 8086, PortMax: 8088},
+			{Cidr: "fe80::70c4:51ff:fe20:3a85/128", PortMin: 8086, PortMax: 8088},
+			{Cidr: "fe80::70c4:51ff:fe20:3a86/128", PortMin: 8086, PortMax: 8088},
+			{Cidr: "fe80::70c4:51ff:fe20:3a87/128", PortMin: 8086, PortMax: 8088},
+			{Cidr: "fe80::70c4:51ff:fe20:3a88/128", PortMin: 8086, PortMax: 8088},
+			{Cidr: "fe80::70c4:51ff:fe20:3a89/128", PortMin: 8086, PortMax: 8088},
+			{Cidr: "fe80::70c4:51ff:fe20:3a8a/128", PortMin: 8086, PortMax: 8088},
+			{Cidr: "fe80::70c4:51ff:fe20:3a8b/128", PortMin: 8086, PortMax: 8088},
+			{Cidr: "fe80::70c4:51ff:fe20:3a8c/128", PortMin: 8086, PortMax: 8088},
+			{Cidr: "fe80::70c4:51ff:fe20:3a8e/128", PortMin: 8086, PortMax: 8088},
+		}),
+	}
+
+	chActions := make(chan e2e.ActionExecution, len(targets))
+	chErrors := make(chan error, len(targets))
+	var wg sync.WaitGroup
+	for _, t := range targets {
+		wg.Add(1)
+		go func(target *action_kit_api.Target) {
+			defer wg.Done()
+			action, err := e.RunAction(fmt.Sprintf("%s.network_blackhole", extcontainer.BaseActionID), target, config, executionContext)
+			chActions <- action
+			if err != nil {
+				chErrors <- err
+			}
+		}(t)
+	}
+	wg.Wait()
+	close(chActions)
+
+	var actions []e2e.ActionExecution
+	for a := range chActions {
+		actions = append(actions, a)
+	}
+	for _, a := range actions {
+		defer func(action e2e.ActionExecution) { _ = action.Cancel() }(a)
+	}
+	require.Emptyf(t, chErrors, "errors: %v", chErrors)
+
+	nginx.AssertIsReachable(t, false)
+	nginx.AssertCanReach(t, "https://steadybit.com", false)
+
+	wg = sync.WaitGroup{}
+	for _, a := range actions {
+		wg.Add(1)
+		go func(action e2e.ActionExecution) {
+			defer wg.Done()
+			if err := action.Cancel(); err != nil {
+				chErrors <- err
+			}
+		}(a)
+	}
+
+	wg.Wait()
+	require.Emptyf(t, chErrors, "errors: %v", chErrors)
+
+	nginx.AssertIsReachable(t, true)
+	nginx.AssertCanReach(t, "https://steadybit.com", true)
+}
+
 func testNetworkBlockDns(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	if m.Runtime == "cri-o" && m.Driver == "docker" {
 		t.Skip("Due to https://github.com/kubernetes/minikube/issues/16371 this test is skipped for cri-o")
@@ -639,7 +769,7 @@ func testStressMemory(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			e2e.AssertProcessRunningInContainer(t, m, nginx.Pod, "nginx", "stress-ng", false)
 
 			if tt.performKill {
-				fmt.Println("performing kill")
+				println("performing kill")
 				require.NoError(t, m.SshExec("sudo pkill -9 stress-ng").Run())
 			}
 
@@ -766,12 +896,10 @@ func testDiscovery(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	require.NoError(t, err)
 	assert.Equal(t, target.TargetType, "com.steadybit.extension_container.container")
 
-	targets, err := e.DiscoverTargets("com.steadybit.extension_container.container")
+	data, err := e.DiscoverTargets("com.steadybit.extension_container.container")
 	require.NoError(t, err)
-	for _, target := range targets {
+	for _, target := range *data.Targets {
 		for _, img := range target.Attributes["container.image"] {
-			println(img)
-
 			assert.NotContains(t, img, "pause", "pause container should not be discovered")
 		}
 	}
@@ -811,10 +939,12 @@ func testHostNetwork(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 
 	for _, tt := range tests {
 		config := struct {
-			Duration          int  `json:"duration"`
-			FailOnHostNetwork bool `json:"failOnHostNetwork"`
+			Duration          int      `json:"duration"`
+			FailOnHostNetwork bool     `json:"failOnHostNetwork"`
+			Port              []string `json:"port"`
 		}{
 			Duration:          10000,
+			Port:              []string{"80"},
 			FailOnHostNetwork: tt.failOnHostNetwork,
 		}
 
