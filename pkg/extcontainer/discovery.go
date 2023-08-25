@@ -165,7 +165,7 @@ func (d *containerDiscovery) getDiscoveredTargets(w http.ResponseWriter, r *http
 		targets = append(targets, d.mapTarget(container, hostname, version))
 	}
 
-	exthttp.WriteBody(w, discovery_kit_api.DiscoveredTargets{Targets: targets})
+	exthttp.WriteBody(w, discovery_kit_api.DiscoveryData{Targets: &targets})
 }
 
 func ignoreContainer(container types.Container) bool {

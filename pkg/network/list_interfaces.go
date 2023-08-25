@@ -44,7 +44,7 @@ func ListInterfaces(ctx context.Context, r runc.Runc, config TargetContainerConf
 		return nil, err
 	}
 
-	if err = runc.EditSpec(
+	if err = r.EditSpec(
 		bundle,
 		runc.WithHostname(fmt.Sprintf("ip-link-show-%s", id)),
 		runc.WithAnnotations(map[string]string{

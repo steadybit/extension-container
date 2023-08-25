@@ -4,53 +4,9 @@
 package runc
 
 import (
-	"encoding/json"
 	"github.com/opencontainers/runtime-spec/specs-go"
-	"github.com/rs/zerolog/log"
-	"os"
 	"path/filepath"
 )
-
-type SpecEditor func(spec *specs.Spec)
-
-func EditSpec(bundle string, editors ...SpecEditor) error {
-	spec, err := readSpec(filepath.Join(bundle, "config.json"))
-	if err != nil {
-		return err
-	}
-
-	withDefaults(spec)
-
-	for _, fn := range editors {
-		fn(spec)
-	}
-	err = writeSpec(filepath.Join(bundle, "config.json"), spec)
-	log.Trace().Str("bundle", bundle).Interface("spec", spec).Msg("written runc spec")
-	return err
-}
-
-func readSpec(file string) (*specs.Spec, error) {
-	content, err := os.ReadFile(file)
-	if err != nil {
-		return nil, err
-	}
-
-	var spec specs.Spec
-
-	if err := json.Unmarshal(content, &spec); err != nil {
-		return nil, err
-	}
-
-	return &spec, nil
-}
-
-func writeSpec(file string, spec *specs.Spec) error {
-	content, err := json.MarshalIndent(spec, "", "\t")
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(file, content, 0644)
-}
 
 func withDefaults(spec *specs.Spec) {
 	spec.Root.Path = "rootfs"
