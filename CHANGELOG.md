@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.1.16
+
+- Prevent ip/tc commands being executed for the same net ns concurrently
+
 ## v1.1.15
 
 - Add more trace logs for debugging purposes
