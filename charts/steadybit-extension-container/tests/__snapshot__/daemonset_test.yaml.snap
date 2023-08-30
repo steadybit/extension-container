@@ -165,7 +165,7 @@ manifest should match snapshot using crio using podAnnotations and Labels:
                   port: 8082
               resources:
                 limits:
-                  cpu: 200m
+                  cpu: 500m
                   memory: 128Mi
                 requests:
                   cpu: 50m
@@ -274,7 +274,7 @@ manifest should match snapshot using docker:
                   port: 8082
               resources:
                 limits:
-                  cpu: 200m
+                  cpu: 500m
                   memory: 128Mi
                 requests:
                   cpu: 50m
@@ -387,7 +387,7 @@ manifest should match snapshot with TLS:
                   port: 8082
               resources:
                 limits:
-                  cpu: 200m
+                  cpu: 500m
                   memory: 128Mi
                 requests:
                   cpu: 50m
@@ -503,7 +503,7 @@ manifest should match snapshot with different containerPorts:
                   port: 9091
               resources:
                 limits:
-                  cpu: 200m
+                  cpu: 500m
                   memory: 128Mi
                 requests:
                   cpu: 50m
@@ -614,7 +614,7 @@ manifest should match snapshot with discover all deployments:
                   port: 8082
               resources:
                 limits:
-                  cpu: 200m
+                  cpu: 500m
                   memory: 128Mi
                 requests:
                   cpu: 50m
@@ -730,7 +730,7 @@ manifest should match snapshot with extra env vars:
                   port: 8082
               resources:
                 limits:
-                  cpu: 200m
+                  cpu: 500m
                   memory: 128Mi
                 requests:
                   cpu: 50m
@@ -841,7 +841,7 @@ manifest should match snapshot with extra labels:
                   port: 8082
               resources:
                 limits:
-                  cpu: 200m
+                  cpu: 500m
                   memory: 128Mi
                 requests:
                   cpu: 50m
@@ -956,7 +956,7 @@ manifest should match snapshot with mutual TLS:
                   port: 8082
               resources:
                 limits:
-                  cpu: 200m
+                  cpu: 500m
                   memory: 128Mi
                 requests:
                   cpu: 50m
@@ -1085,7 +1085,7 @@ manifest should match snapshot with mutual TLS using containerPaths:
                   port: 8082
               resources:
                 limits:
-                  cpu: 200m
+                  cpu: 500m
                   memory: 128Mi
                 requests:
                   cpu: 50m
@@ -1194,7 +1194,7 @@ manifest should match snapshot with update strategy:
                   port: 8082
               resources:
                 limits:
-                  cpu: 200m
+                  cpu: 500m
                   memory: 128Mi
                 requests:
                   cpu: 50m
