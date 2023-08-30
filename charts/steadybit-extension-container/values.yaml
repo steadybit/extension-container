@@ -56,7 +56,7 @@ resources:
     # resources.limits.memory -- The limit of memory to be used
     memory: "128Mi"
     # resources.limits.cpu -- The limit of cpu share to be used during its interval
-    cpu: "200m"
+    cpu: "500m"
 
 serviceAccount:
   # serviceAccount.create -- Specifies whether a ServiceAccount should be created.
