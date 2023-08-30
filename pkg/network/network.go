@@ -6,6 +6,7 @@ package network
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/rs/zerolog/log"
@@ -105,27 +106,24 @@ func generateAndRunCommands(ctx context.Context, r runc.Runc, config TargetConta
 	defer func() { _ = runLock.UnlockKey(netNsID) }()
 
 	if ipCommandsV4 != nil {
-		err = executeIpCommands(ctx, r, config, networkutils.FamilyV4, ipCommandsV4)
-		if err != nil {
-			return err
+		if ipErr := executeIpCommands(ctx, r, config, networkutils.FamilyV4, ipCommandsV4); ipErr != nil {
+			err = errors.Join(err, networkutils.FilterBatchErrors(ipErr, mode, ipCommandsV4))
 		}
 	}
 
 	if ipCommandsV6 != nil {
-		err = executeIpCommands(ctx, r, config, networkutils.FamilyV6, ipCommandsV6)
-		if err != nil {
-			return err
+		if ipErr := executeIpCommands(ctx, r, config, networkutils.FamilyV6, ipCommandsV6); ipErr != nil {
+			err = errors.Join(err, networkutils.FilterBatchErrors(ipErr, mode, ipCommandsV6))
 		}
 	}
 
 	if tcCommands != nil {
-		err = executeTcCommands(ctx, r, config, tcCommands)
-		if err != nil {
-			return networkutils.FilterTcBatchErrors(err, mode, tcCommands)
+		if tcErr := executeTcCommands(ctx, r, config, tcCommands); tcErr != nil {
+			err = errors.Join(err, networkutils.FilterBatchErrors(tcErr, mode, tcCommands))
 		}
 	}
 
-	return nil
+	return err
 }
 
 func getNetworkNs(namespaces []utils.LinuxNamespaceWithInode) string {
@@ -161,15 +159,15 @@ func executeIpCommands(ctx context.Context, r runc.Runc, config TargetContainerC
 		return err
 	}
 
+	cmd := []string{"ip", "-family", string(family), "-force", "-batch", "-"}
+
 	if err = r.EditSpec(
 		bundle,
 		runc.WithHostname(fmt.Sprintf("ip-%s", id)),
-		runc.WithAnnotations(map[string]string{
-			"com.steadybit.sidecar": "true",
-		}),
+		runc.WithAnnotations(map[string]string{"com.steadybit.sidecar": "true"}),
 		runc.WithSelectedNamespaces(utils.ResolveNamespacesUsingInode(config.Namespaces), specs.NetworkNamespace, specs.UTSNamespace),
 		runc.WithCapabilities("CAP_NET_ADMIN"),
-		runc.WithProcessArgs("ip", "-family", string(family), "-force", "-batch", "-"),
+		runc.WithProcessArgs(cmd...),
 	); err != nil {
 		return err
 	}
@@ -183,6 +181,9 @@ func executeIpCommands(ctx context.Context, r runc.Runc, config TargetContainerC
 	})
 	defer func() { _ = r.Delete(context.Background(), id, true) }()
 	if err != nil {
+		if parsed := networkutils.ParseBatchError(cmd, bytes.NewReader(outb.Bytes())); parsed != nil {
+			return parsed
+		}
 		return fmt.Errorf("%s ip failed: %w, output: %s", id, err, outb.String())
 	}
 	return nil
@@ -200,15 +201,14 @@ func executeTcCommands(ctx context.Context, r runc.Runc, config TargetContainerC
 		return err
 	}
 
+	cmd := []string{"tc", "-force", "-batch", "-"}
 	if err = r.EditSpec(
 		bundle,
 		runc.WithHostname(fmt.Sprintf("tc-%s", id)),
-		runc.WithAnnotations(map[string]string{
-			"com.steadybit.sidecar": "true",
-		}),
+		runc.WithAnnotations(map[string]string{"com.steadybit.sidecar": "true"}),
 		runc.WithSelectedNamespaces(utils.ResolveNamespacesUsingInode(config.Namespaces), specs.NetworkNamespace, specs.UTSNamespace),
 		runc.WithCapabilities("CAP_NET_ADMIN"),
-		runc.WithProcessArgs("tc", "-force", "-batch", "-"),
+		runc.WithProcessArgs(cmd...),
 	); err != nil {
 		return err
 	}
@@ -222,7 +222,7 @@ func executeTcCommands(ctx context.Context, r runc.Runc, config TargetContainerC
 	})
 	defer func() { _ = r.Delete(context.Background(), id, true) }()
 	if err != nil {
-		if parsed := networkutils.ParseTcBatchError(bytes.NewReader(outb.Bytes())); parsed != nil {
+		if parsed := networkutils.ParseBatchError(cmd, bytes.NewReader(outb.Bytes())); parsed != nil {
 			return parsed
 		}
 		return fmt.Errorf("%s tc failed: %w, output: %s", id, err, outb.String())

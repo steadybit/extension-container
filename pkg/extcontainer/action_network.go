@@ -162,7 +162,7 @@ func (a *networkAction) Start(ctx context.Context, state *NetworkActionState) (*
 		Messages: extutil.Ptr([]action_kit_api.Message{
 			{
 				Level:   extutil.Ptr(action_kit_api.Info),
-				Message: opts.String(),
+				Message: fmt.Sprintf("ContainerId: %s %s", state.ContainerConfig.ContainerID, opts.String()),
 			},
 		}),
 	}, nil
