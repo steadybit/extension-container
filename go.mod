@@ -14,7 +14,7 @@ require (
 	github.com/steadybit/action-kit/go/action_kit_api/v2 v2.7.1
 	github.com/steadybit/action-kit/go/action_kit_commons v1.0.8
 	github.com/steadybit/action-kit/go/action_kit_sdk v1.1.5
-	github.com/steadybit/action-kit/go/action_kit_test v1.0.15
+	github.com/steadybit/action-kit/go/action_kit_test v1.1.0
 	github.com/steadybit/discovery-kit/go/discovery_kit_api v1.4.1
 	github.com/steadybit/extension-kit v1.8.8
 	github.com/stretchr/testify v1.8.4
@@ -96,6 +96,7 @@ require (
 	github.com/rs/xid v1.5.0 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
+	github.com/steadybit/discovery-kit/go/discovery_kit_test v1.0.0 // indirect
 	github.com/stretchr/objx v0.5.0 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/ugorji/go/codec v1.2.11 // indirect
