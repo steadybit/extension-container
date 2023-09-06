@@ -89,7 +89,7 @@ func getTargetDescription() discovery_kit_api.TargetDescription {
 				{Attribute: "k8s.container.name", FallbackAttributes: &[]string{"container.name"}},
 				{Attribute: "k8s.pod.name"},
 				{Attribute: "k8s.namespace"},
-				{Attribute: "container.host"},
+				{Attribute: "host.hostname"},
 				{Attribute: "aws.zone", FallbackAttributes: &[]string{"google.zone", "azure.region", "azure.zone"}},
 			},
 			OrderBy: []discovery_kit_api.OrderBy{
@@ -207,6 +207,7 @@ func (d *containerDiscovery) mapTarget(container types.Container, hostname strin
 	attributes["container.name"] = containerNames
 	if hostname != "" {
 		attributes["container.host"] = []string{hostname}
+		attributes["host.hostname"] = []string{hostname}
 		for _, name := range containerNames {
 			attributes["container.host/name"] = append(attributes["container.name"], fmt.Sprintf("%s/%s", hostname, name))
 		}
