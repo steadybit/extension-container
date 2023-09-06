@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.1.17
+
+- Fix regression: use separate UTS namespace when setting hostname on sidecars
+
 ## v1.1.16
 
 - Prevent ip/tc commands being executed for the same net ns concurrently
