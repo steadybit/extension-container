@@ -54,8 +54,7 @@ func TestWithMinikube(t *testing.T) {
 		{
 			Name: "validate discovery",
 			Test: validateDiscovery,
-		},
-		{
+		}, {
 			Name: "target discovery",
 			Test: testDiscovery,
 		}, {
@@ -491,6 +490,9 @@ func testNetworkBlackhole(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			Port:     tt.port,
 		}
 
+		hostnameBefore, err := m.PodExec(nginx.Pod, "nginx", "hostname")
+		require.NoError(t, err)
+
 		t.Run(tt.name, func(t *testing.T) {
 			nginx.AssertIsReachable(t, true)
 			nginx.AssertCanReach(t, "https://steadybit.com", true)
@@ -506,6 +508,11 @@ func testNetworkBlackhole(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			nginx.AssertIsReachable(t, true)
 			nginx.AssertCanReach(t, "https://steadybit.com", true)
 		})
+
+		hostnameAfter, err := m.PodExec(nginx.Pod, "nginx", "hostname")
+		require.NoError(t, err)
+
+		require.Equal(t, hostnameBefore, hostnameAfter, "must not alter the hostname")
 	}
 }
 
@@ -715,11 +722,19 @@ func testStressCpu(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 		Workers  int `json:"workers"`
 	}{Duration: 5000, Workers: 0, CpuLoad: 50}
 
+	hostnameBefore, err := m.PodExec(nginx.Pod, "nginx", "hostname")
+	require.NoError(t, err)
+
 	action, err := e.RunAction(fmt.Sprintf("%s.stress_cpu", extcontainer.BaseActionID), target, config, executionContext)
 	defer func() { _ = action.Cancel() }()
 	require.NoError(t, err)
 	e2e.AssertProcessRunningInContainer(t, m, nginx.Pod, "nginx", "stress-ng", false)
 	require.NoError(t, action.Cancel())
+
+	hostnameAfter, err := m.PodExec(nginx.Pod, "nginx", "hostname")
+	require.NoError(t, err)
+
+	require.Equal(t, hostnameBefore, hostnameAfter, "must not alter the hostname")
 }
 
 func testStressMemory(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {

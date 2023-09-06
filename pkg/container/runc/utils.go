@@ -12,6 +12,7 @@ func withDefaults(spec *specs.Spec) {
 	spec.Root.Path = "rootfs"
 	spec.Root.Readonly = true
 	spec.Process.Terminal = false
+	WithNamespace(specs.LinuxNamespace{Type: specs.MountNamespace})(spec)
 }
 
 func WithMountIfNotPresent(mount specs.Mount) SpecEditor {
@@ -27,6 +28,7 @@ func WithMountIfNotPresent(mount specs.Mount) SpecEditor {
 
 func WithHostname(hostname string) SpecEditor {
 	return func(spec *specs.Spec) {
+		WithNamespace(specs.LinuxNamespace{Type: specs.UTSNamespace})(spec)
 		spec.Hostname = hostname
 	}
 }
@@ -77,25 +79,22 @@ func WithCgroupPath(cgroupPath, child string) SpecEditor {
 
 func WithNamespaces(ns []specs.LinuxNamespace) SpecEditor {
 	return func(spec *specs.Spec) {
-		spec.Linux.Namespaces = ns
-
-		if !hasNamespace(ns, specs.MountNamespace) {
-			spec.Linux.Namespaces = append(spec.Linux.Namespaces, specs.LinuxNamespace{Type: specs.MountNamespace})
-		}
-
-		if len(spec.Hostname) > 0 && !hasNamespace(ns, specs.UTSNamespace) {
-			spec.Linux.Namespaces = append(spec.Linux.Namespaces, specs.LinuxNamespace{Type: specs.UTSNamespace})
+		for _, namespace := range ns {
+			WithNamespace(namespace)(spec)
 		}
 	}
 }
 
-func hasNamespace(ns []specs.LinuxNamespace, t specs.LinuxNamespaceType) bool {
-	for _, n := range ns {
-		if n.Type == t {
-			return true
+func WithNamespace(ns specs.LinuxNamespace) SpecEditor {
+	return func(spec *specs.Spec) {
+		for i, namespace := range spec.Linux.Namespaces {
+			if namespace.Type == ns.Type {
+				spec.Linux.Namespaces[i] = ns
+				return
+			}
 		}
+		spec.Linux.Namespaces = append(spec.Linux.Namespaces, ns)
 	}
-	return false
 }
 
 func WithSelectedNamespaces(ns []specs.LinuxNamespace, filter ...specs.LinuxNamespaceType) SpecEditor {

@@ -42,7 +42,7 @@ func (d RuncDigRunner) Run(ctx context.Context, arg []string, stdin io.Reader) (
 		runc.WithAnnotations(map[string]string{
 			"com.steadybit.sidecar": "true",
 		}),
-		runc.WithSelectedNamespaces(utils.ResolveNamespacesUsingInode(d.Cfg.Namespaces), specs.NetworkNamespace, specs.UTSNamespace),
+		runc.WithSelectedNamespaces(utils.ResolveNamespacesUsingInode(d.Cfg.Namespaces), specs.NetworkNamespace),
 		runc.WithCapabilities("CAP_NET_ADMIN"),
 		runc.WithProcessArgs(append([]string{"dig"}, arg...)...),
 	); err != nil {

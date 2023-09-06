@@ -165,7 +165,7 @@ func executeIpCommands(ctx context.Context, r runc.Runc, config TargetContainerC
 		bundle,
 		runc.WithHostname(fmt.Sprintf("ip-%s", id)),
 		runc.WithAnnotations(map[string]string{"com.steadybit.sidecar": "true"}),
-		runc.WithSelectedNamespaces(utils.ResolveNamespacesUsingInode(config.Namespaces), specs.NetworkNamespace, specs.UTSNamespace),
+		runc.WithSelectedNamespaces(utils.ResolveNamespacesUsingInode(config.Namespaces), specs.NetworkNamespace),
 		runc.WithCapabilities("CAP_NET_ADMIN"),
 		runc.WithProcessArgs(cmd...),
 	); err != nil {
@@ -206,7 +206,7 @@ func executeTcCommands(ctx context.Context, r runc.Runc, config TargetContainerC
 		bundle,
 		runc.WithHostname(fmt.Sprintf("tc-%s", id)),
 		runc.WithAnnotations(map[string]string{"com.steadybit.sidecar": "true"}),
-		runc.WithSelectedNamespaces(utils.ResolveNamespacesUsingInode(config.Namespaces), specs.NetworkNamespace, specs.UTSNamespace),
+		runc.WithSelectedNamespaces(utils.ResolveNamespacesUsingInode(config.Namespaces), specs.NetworkNamespace),
 		runc.WithCapabilities("CAP_NET_ADMIN"),
 		runc.WithProcessArgs(cmd...),
 	); err != nil {
