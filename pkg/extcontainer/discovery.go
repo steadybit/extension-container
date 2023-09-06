@@ -55,6 +55,7 @@ func GetDiscoveryList() discovery_kit_api.DiscoveryList {
 				Path:   discoveryBasePath + "/attribute-descriptions",
 			},
 		},
+		TargetEnrichmentRules: []discovery_kit_api.DescribingEndpointReference{},
 	}
 }
 
@@ -265,7 +266,7 @@ func addLabelOrK8sAttribute(attributes map[string][]string, key, value string) {
 	case "io.kubernetes.pod.name":
 		key = "k8s.pod.name"
 	case "io.kubernetes.pod.namespace":
-		key = "k8s.pod.namespace"
+		key = "k8s.namespace"
 	case "io.kubernetes.container.name":
 		key = "k8s.container.name"
 	default:

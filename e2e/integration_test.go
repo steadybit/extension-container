@@ -8,8 +8,10 @@ import (
 	"fmt"
 	"github.com/rs/zerolog/log"
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
+	"github.com/steadybit/action-kit/go/action_kit_test/client"
 	"github.com/steadybit/action-kit/go/action_kit_test/e2e"
 	"github.com/steadybit/discovery-kit/go/discovery_kit_api"
+	"github.com/steadybit/discovery-kit/go/discovery_kit_test/validate"
 	"github.com/steadybit/extension-container/pkg/extcontainer"
 	"github.com/steadybit/extension-kit/extutil"
 	"github.com/stretchr/testify/assert"
@@ -49,6 +51,10 @@ func TestWithMinikube(t *testing.T) {
 	}
 
 	e2e.WithMinikube(t, getMinikubeOptions(), &extFactory, []e2e.WithMinikubeTestCase{
+		{
+			Name: "validate discovery",
+			Test: validateDiscovery,
+		},
 		{
 			Name: "target discovery",
 			Test: testDiscovery,
@@ -99,31 +105,32 @@ func TestWithMinikube(t *testing.T) {
 }
 
 func getMinikubeOptions() e2e.MinikubeOpts {
-	mOpts := e2e.DefaultMiniKubeOpts
-
+	var runtimes []e2e.Runtime
 	if rawRuntimes, _ := os.LookupEnv("E2E_RUNTIMES"); rawRuntimes != "" {
-		mOpts.Runtimes = []e2e.Runtime{}
+		runtimes = []e2e.Runtime{}
 	OUTER:
 		for _, rawRuntime := range strings.Split(rawRuntimes, ",") {
 			lower := strings.ToLower(strings.TrimSpace(rawRuntime))
 			for _, runtime := range e2e.AllRuntimes {
 				if lower == string(runtime) {
-					mOpts.Runtimes = append(mOpts.Runtimes, runtime)
+					runtimes = append(runtimes, runtime)
 					continue OUTER
 				}
 			}
 			log.Info().Msgf("Ignoring unknown runtime %s", rawRuntime)
 		}
 	} else {
-		mOpts.Runtimes = e2e.AllRuntimes
+		runtimes = e2e.AllRuntimes
 	}
+
+	mOpts := e2e.DefaultMinikubeOpts().WithRuntimes(runtimes...)
 
 	if exec.Command("kvm-ok").Run() != nil {
 		log.Info().Msg("KVM is not available, using docker driver")
-		mOpts.Driver = "docker"
+		mOpts.WithDriver("docker")
 	} else {
 		log.Info().Msg("KVM is available, using kvm2 driver")
-		mOpts.Driver = "kvm2"
+		mOpts.WithDriver("kvm2")
 	}
 
 	return mOpts
@@ -581,7 +588,7 @@ func testNetworkBlackhole3Containers(t *testing.T, m *e2e.Minikube, e *e2e.Exten
 		}),
 	}
 
-	chActions := make(chan e2e.ActionExecution, len(targets))
+	chActions := make(chan client.ActionExecution, len(targets))
 	chErrors := make(chan error, len(targets))
 	var wg sync.WaitGroup
 	for _, t := range targets {
@@ -598,12 +605,12 @@ func testNetworkBlackhole3Containers(t *testing.T, m *e2e.Minikube, e *e2e.Exten
 	wg.Wait()
 	close(chActions)
 
-	var actions []e2e.ActionExecution
+	var actions []client.ActionExecution
 	for a := range chActions {
 		actions = append(actions, a)
 	}
 	for _, a := range actions {
-		defer func(action e2e.ActionExecution) { _ = action.Cancel() }(a)
+		defer func(action client.ActionExecution) { _ = action.Cancel() }(a)
 	}
 	require.Emptyf(t, chErrors, "errors: %v", chErrors)
 
@@ -613,7 +620,7 @@ func testNetworkBlackhole3Containers(t *testing.T, m *e2e.Minikube, e *e2e.Exten
 	wg = sync.WaitGroup{}
 	for _, a := range actions {
 		wg.Add(1)
-		go func(action e2e.ActionExecution) {
+		go func(action client.ActionExecution) {
 			defer wg.Done()
 			if err := action.Cancel(); err != nil {
 				chErrors <- err
@@ -881,6 +888,10 @@ func testStopContainer(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	assert.NotNil(t, status.State.Terminated, "container should be terminated")
 }
 
+func validateDiscovery(t *testing.T, _ *e2e.Minikube, e *e2e.Extension) {
+	assert.NoError(t, validate.ValidateEndpointReferences("/", e.Client))
+}
+
 func testDiscovery(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	nginx := e2e.Nginx{Minikube: m}
 	err := nginx.Deploy("nginx-discovery")
@@ -896,9 +907,9 @@ func testDiscovery(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	require.NoError(t, err)
 	assert.Equal(t, target.TargetType, "com.steadybit.extension_container.container")
 
-	data, err := e.DiscoverTargets("com.steadybit.extension_container.container")
+	targets, err := e.DiscoverTargets("com.steadybit.extension_container.container")
 	require.NoError(t, err)
-	for _, target := range *data.Targets {
+	for _, target := range targets {
 		for _, img := range target.Attributes["container.image"] {
 			assert.NotContains(t, img, "pause", "pause container should not be discovered")
 		}

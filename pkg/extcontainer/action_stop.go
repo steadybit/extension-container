@@ -130,7 +130,7 @@ func (a *stopAction) Status(_ context.Context, state *StopActionState) (*action_
 }
 
 func (a *stopAction) Stop(_ context.Context, state *StopActionState) (*action_kit_api.StopResult, error) {
-	var messages []action_kit_api.Message
+	messages := make([]action_kit_api.Message, 0)
 
 	stopped := a.cancelStopContainer(state.ExecutionId)
 	if stopped {
