@@ -38,7 +38,7 @@ type ExtraMount struct {
 func ListInterfaces(ctx context.Context, r runc.Runc, config TargetContainerConfig) ([]Interface, error) {
 	id := getNextContainerId(config.ContainerID)
 
-	bundle, cleanup, err := r.PrepareBundle(ctx, utils.SidecarImagePath, id)
+	bundle, cleanup, err := r.PrepareBundle(ctx, utils.SidecarImagePath(), id)
 	defer func() { _ = cleanup() }()
 	if err != nil {
 		return nil, err

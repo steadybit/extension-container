@@ -22,7 +22,7 @@ type RuncDigRunner struct {
 func (d RuncDigRunner) Run(ctx context.Context, arg []string, stdin io.Reader) ([]byte, error) {
 	id := getNextContainerId(d.Cfg.ContainerID)
 
-	bundle, cleanup, err := d.Runc.PrepareBundle(ctx, utils.SidecarImagePath, id)
+	bundle, cleanup, err := d.Runc.PrepareBundle(ctx, utils.SidecarImagePath(), id)
 	defer func() { _ = cleanup() }()
 	if err != nil {
 		return nil, err

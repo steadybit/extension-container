@@ -15,30 +15,51 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 )
 
-var SidecarImagePath = getSidecarImagePath()
+var (
+	sidecarImage     string
+	sidecarImageOnce sync.Once
+)
 
 type LinuxNamespaceWithInode struct {
 	specs.LinuxNamespace
 	Inode uint64
 }
 
-func getSidecarImagePath() string {
-	if _, err := os.Stat("./sidecar.tar"); err == nil {
-		return "./sidecar.tar"
-	}
-
-	if executable, err := os.Executable(); err == nil {
-		executableDir := filepath.Dir(filepath.Clean(executable))
-		candidate := filepath.Join(executableDir, "sidecar.tar")
-		if _, err := os.Stat(candidate); err == nil {
-			return candidate
+func SidecarImagePath() string {
+	sidecarImageOnce.Do(func() {
+		if _, err := os.Stat("sidecar"); err == nil {
+			sidecarImage = "sidecar"
+			return
 		}
-	}
 
-	return "sidecar.tar"
+		if _, err := os.Stat("sidecar.tar"); err == nil {
+			sidecarImage = "sidecar.tar"
+			return
+		}
+
+		if executable, err := os.Executable(); err == nil {
+			executableDir := filepath.Dir(filepath.Clean(executable))
+
+			candidate := filepath.Join(executableDir, "sidecar")
+			if _, err := os.Stat(candidate); err == nil {
+				sidecarImage = candidate
+				return
+			}
+
+			candidate = filepath.Join(executableDir, "sidecar.tar")
+			if _, err := os.Stat(candidate); err == nil {
+				sidecarImage = candidate
+				return
+			}
+
+			log.Fatal().Msg("Could not find sidecar image")
+		}
+	})
+	return sidecarImage
 }
 
 func ReadCgroupPath(pid int) (string, error) {

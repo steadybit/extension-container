@@ -153,7 +153,7 @@ func (a *stressAction) Status(_ context.Context, state *StressActionState) (*act
 }
 
 func (a *stressAction) Stop(_ context.Context, state *StressActionState) (*action_kit_api.StopResult, error) {
-	var messages []action_kit_api.Message
+	messages := make([]action_kit_api.Message, 0)
 
 	stopped := a.cancelStressContainer(state.ExecutionId)
 	if stopped {
