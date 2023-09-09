@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.1.19
+
+- Use overlayfs for the sidecar containers reducing cpu consumptions drastically by avoiding to extract the sidecar container over and over again
+
 ## v1.1.18
 
 - Add canonical host.hostname attributes
