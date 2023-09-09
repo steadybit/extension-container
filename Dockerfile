@@ -42,13 +42,13 @@ RUN apt-get -qq update \
     && apt-get -qq install -y --no-install-recommends runc libcap2-bin\
     && apt-get -y autoremove \
     && rm -rf /var/lib/apt/lists/* \
-    && mkdir -p /run/systemd/system
+    && mkdir -p /run/systemd/system /sidecar
 
 USER $USERNAME
 
 WORKDIR /
 
-COPY  ./sidecar_linux_$TARGETARCH.tar /sidecar.tar
+ADD  ./sidecar_linux_$TARGETARCH.tar /sidecar
 COPY --from=build /app/extension /extension
 
 EXPOSE 8086 8082

@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.1.18
+
+- Add canonical host.hostname attributes
+
 ## v1.1.17
 
 - Fix regression: use separate UTS namespace when setting hostname on sidecars

@@ -41,11 +41,7 @@ func TestWithMinikube(t *testing.T) {
 		ExtraArgs: func(m *e2e.Minikube) []string {
 			return []string{
 				"--set", fmt.Sprintf("container.runtime=%s", m.Runtime),
-				"--set", "logging.level=DEBUG",
-				"--set", "extraEnv[0].name=STEADYBIT_EXTENSION_RUNC_ROOTLESS",
-				"--set-string", "extraEnv[0].value=false",
-				"--set", "extraEnv[1].name=STEADYBIT_EXTENSION_SYSTEMD_CGROUP",
-				"--set-string", "extraEnv[1].value=false",
+				"--set", "logging.level=trace",
 			}
 		},
 	}

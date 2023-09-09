@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/steadybit/action-kit/go/action_kit_commons/networkutils"
 	"github.com/steadybit/extension-container/pkg/container/runc"
+	"github.com/steadybit/extension-container/pkg/utils"
 	"github.com/stretchr/testify/mock"
 	"sync"
 	"sync/atomic"
@@ -27,8 +28,10 @@ var (
 )
 
 func Test_generateAndRunCommands_should_serialize(t *testing.T) {
-	var concurrent int64
+	sidecarImagePath = func() string { return "__mocked__" }
+	defer func() { sidecarImagePath = utils.SidecarImagePath }()
 
+	var concurrent int64
 	runcMock := &MockedRunc{}
 	runcMock.On("PrepareBundle", mock.Anything, mock.Anything, mock.Anything).Return("", func() error { return nil }, nil)
 	runcMock.On("EditSpec", mock.Anything, mock.Anything).Return(nil)

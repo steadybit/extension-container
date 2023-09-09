@@ -22,6 +22,8 @@ import (
 var (
 	counter = atomic.Int32{}
 	runLock = utils.NewHashedKeyMutex(10)
+
+	sidecarImagePath = utils.SidecarImagePath
 )
 
 type TargetContainerConfig struct {
@@ -153,7 +155,7 @@ func executeIpCommands(ctx context.Context, r runc.Runc, config TargetContainerC
 	}
 
 	id := getNextContainerId(config.ContainerID)
-	bundle, cleanup, err := r.PrepareBundle(ctx, utils.SidecarImagePath, id)
+	bundle, cleanup, err := r.PrepareBundle(ctx, sidecarImagePath(), id)
 	defer func() { _ = cleanup() }()
 	if err != nil {
 		return err
@@ -195,7 +197,7 @@ func executeTcCommands(ctx context.Context, r runc.Runc, config TargetContainerC
 	}
 
 	id := getNextContainerId(config.ContainerID)
-	bundle, cleanup, err := r.PrepareBundle(ctx, utils.SidecarImagePath, id)
+	bundle, cleanup, err := r.PrepareBundle(ctx, sidecarImagePath(), id)
 	defer func() { _ = cleanup() }()
 	if err != nil {
 		return err

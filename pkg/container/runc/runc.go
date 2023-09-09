@@ -6,6 +6,7 @@ package runc
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/rs/zerolog/log"
@@ -16,6 +17,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"time"
 )
 
@@ -164,7 +166,7 @@ func (r *defaultRunc) command(ctx context.Context, args ...string) *exec.Cmd {
 }
 
 func (r *defaultRunc) args() []string {
-	out := []string{}
+	var out []string
 	if r.Root != "" {
 		out = append(out, "--root", r.Root)
 	}
@@ -192,24 +194,43 @@ func (r *defaultRunc) Delete(ctx context.Context, id string, force bool) error {
 
 func (r *defaultRunc) PrepareBundle(ctx context.Context, image string, id string) (string, func() error, error) {
 	bundle := filepath.Join("/tmp/steadybit/containers", id)
-	rootfs := filepath.Join(bundle, "rootfs")
 
 	_ = os.RemoveAll(bundle)
 
 	log.Trace().Str("bundle", bundle).Msg("creating container bundle")
-	if err := os.MkdirAll(rootfs, 0775); err != nil {
-		return "", nil, fmt.Errorf("failed to create bundle dir: %w", err)
+	if err := os.MkdirAll(bundle, 0775); err != nil {
+		return "", nil, fmt.Errorf("failed to create directory '%s': %w", bundle, err)
 	}
 
-	cleanup := func() error {
+	removeBundle := func() error {
 		log.Trace().Str("bundle", bundle).Msg("cleaning up container bundle")
 		return os.RemoveAll(bundle)
 	}
 
-	log.Trace().Str("image", image).Str("rootfs", rootfs).Msg("extracting image")
-	cmd := exec.Command("tar", "-xf", image, "-C", rootfs)
-	if out, err := cmd.CombinedOutput(); err != nil {
-		return "", cleanup, fmt.Errorf("failed to prepare rootfs dir: %s %w", out, err)
+	var imagePath string
+	if imageStat, err := os.Stat(image); err != nil {
+		return bundle, removeBundle, fmt.Errorf("failed to read image: %w", err)
+	} else if imageStat.IsDir() {
+		if abs, err := filepath.Abs(image); err == nil {
+			imagePath = abs
+		} else {
+			log.Debug().Err(err).Str("image", image).Msg("failed to get absolute path for image")
+			imagePath = image
+		}
+	} else {
+		extractPath := filepath.Join("/tmp/", image, strconv.FormatInt(imageStat.ModTime().Unix(), 10))
+		if err := extractSidecarImage(image, extractPath); err != nil {
+			return bundle, removeBundle, fmt.Errorf("failed to extract image: %w", err)
+		}
+		imagePath = extractPath
+	}
+
+	if err := mountOverlay(bundle, imagePath); err != nil {
+		return bundle, removeBundle, fmt.Errorf("failed to mount image: %w", err)
+	}
+
+	cleanup := func() error {
+		return errors.Join(unmountOverlay(bundle), removeBundle())
 	}
 
 	if err := r.Spec(ctx, bundle); err != nil {
@@ -218,4 +239,67 @@ func (r *defaultRunc) PrepareBundle(ctx context.Context, image string, id string
 
 	log.Trace().Str("bundle", bundle).Str("id", id).Msg("prepared container bundle")
 	return bundle, cleanup, nil
+}
+
+func mountOverlay(bundle string, image string) error {
+	upper := filepath.Join(bundle, "upper")
+	err := os.MkdirAll(upper, 0775)
+	if err != nil {
+		return fmt.Errorf("failed to create directory '%s': %w", upper, err)
+	}
+
+	work := filepath.Join(bundle, "work")
+	err = os.MkdirAll(work, 0775)
+	if err != nil {
+		return fmt.Errorf("failed to create directory '%s': %w", work, err)
+	}
+
+	rootfs := filepath.Join(bundle, "rootfs")
+	err = os.MkdirAll(rootfs, 0775)
+	if err != nil {
+		return fmt.Errorf("failed to create directory '%s': %w", rootfs, err)
+	}
+
+	log.Trace().Str("lowerdir", image).Str("upper", upper).Str("work", work).Str("rootfs", rootfs).Msg("mounting overlay")
+	out, err := utils.RootCommandContext(context.Background(),
+		"mount",
+		"-t",
+		"overlay",
+		"-o",
+		fmt.Sprintf("rw,relatime,lowerdir=%s,upperdir=%s,workdir=%s", image, upper, work),
+		"overlay",
+		rootfs).CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("%s: %s", err, out)
+	}
+	return nil
+}
+
+func extractSidecarImage(src, dst string) error {
+	if _, err := os.Stat(dst); err == nil {
+		//image was already extracted.
+		return nil
+	}
+
+	err := os.MkdirAll(dst, 0775)
+	if err != nil {
+		return fmt.Errorf("failed to create directory '%s': %w", dst, err)
+	}
+
+	log.Trace().Str("src", src).Str("dst", dst).Msg("extracting sidecar image")
+	out, err := exec.Command("tar", "-C", dst, "-xf", src).CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("%s: %s", err, out)
+	}
+	return nil
+}
+
+func unmountOverlay(bundle string) error {
+	rootfs := filepath.Join(bundle, "rootfs")
+	log.Trace().Str("rootfs", rootfs).Msg("unmounting overlay")
+	out, err := utils.RootCommandContext(context.Background(), "unmount", rootfs).CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("%s: %s", err, out)
+	}
+	return nil
 }
