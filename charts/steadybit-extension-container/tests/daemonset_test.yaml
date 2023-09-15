@@ -37,7 +37,7 @@ tests:
         runtime: null
     asserts:
       - failedTemplate:
-          errorMessage: "<nil> (must be one of containerd, cri-o, docker)"
+          errorMessage: "unknown container runtime: <nil> (must be one of containerd, cri-o, docker)"
   - it: manifest should match snapshot with TLS
     set:
       container:
