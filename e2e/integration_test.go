@@ -876,27 +876,46 @@ func testPauseContainer(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 }
 func testStopContainer(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	nginx := e2e.Nginx{Minikube: m}
+	nginx2 := e2e.Nginx{Minikube: m}
 	err := nginx.Deploy("nginx-stop")
 	require.NoError(t, err, "failed to create pod")
+	err = nginx2.Deploy("nginx-stop-2")
+	require.NoError(t, err, "failed to create pod 2")
 	defer func() { _ = nginx.Delete() }()
+	defer func() { _ = nginx2.Delete() }()
 
 	target, err := nginx.Target()
+	require.NoError(t, err)
+	target2, err := nginx2.Target()
 	require.NoError(t, err)
 
 	config := struct {
 		Graceful bool `json:"graceful"`
 	}{Graceful: true}
-	action, err := e.RunAction(fmt.Sprintf("%s.stop", extcontainer.BaseActionID), target, config, executionContext)
-	defer func() { _ = action.Cancel() }()
-	require.NoError(t, err)
-	require.NoError(t, action.Wait())
+      go func() {
+	  action, err := e.RunAction(fmt.Sprintf("%s.stop", extcontainer.BaseActionID), target, config, executionContext)
+        defer func() { _ = action.Cancel() }()
+        require.NoError(t, err)
+	  require.NoError(t, action.Wait())
+      }()
+	action2, err2 := e.RunAction(fmt.Sprintf("%s.stop", extcontainer.BaseActionID), target2, config, executionContext)
+
+	defer func() { _ = action2.Cancel() }()
+	require.NoError(t, err2)
+	require.NoError(t, action2.Wait())
 
 	require.NoError(t, m.WaitForPodPhase(nginx.Pod, corev1.PodSucceeded, 30*time.Second))
+	require.NoError(t, m.WaitForPodPhase(nginx2.Pod, corev1.PodSucceeded, 30*time.Second))
 
 	status, err := nginx.ContainerStatus()
 	require.NoError(t, err)
 	require.NotNil(t, status)
 	assert.NotNil(t, status.State.Terminated, "container should be terminated")
+
+  status2, err := nginx2.ContainerStatus()
+	require.NoError(t, err)
+	require.NotNil(t, status2)
+	assert.NotNil(t, status2.State.Terminated, "container should be terminated")
 }
 
 func validateDiscovery(t *testing.T, _ *e2e.Minikube, e *e2e.Extension) {

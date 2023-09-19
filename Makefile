@@ -58,6 +58,7 @@ run: tidy build
 ## container: build the container image
 .PHONY: container
 container:
+	git tag -d $$(git tag -l | grep -v "^v[0-9]*.[0-9]*.[0-9]*") # delete all tags locally that are not semver
 	docker buildx build --platform="linux/amd64" -f Dockerfile.sidecar --output type=tar,dest=sidecar_linux_amd64.tar .
 	docker buildx build --platform="linux/arm64" -f Dockerfile.sidecar --output type=tar,dest=sidecar_linux_arm64.tar .
 	docker buildx build --build-arg BUILD_WITH_COVERAGE="true" -t extension-container:latest --output=type=docker .
