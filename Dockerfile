@@ -50,6 +50,7 @@ WORKDIR /
 
 ADD  ./sidecar_linux_$TARGETARCH.tar /sidecar
 COPY --from=build /app/extension /extension
+COPY --from=build /app/licenses /licenses
 
 EXPOSE 8086 8082
 

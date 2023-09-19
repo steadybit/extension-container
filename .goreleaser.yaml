@@ -2,6 +2,8 @@ project_name: steadybit-extension-container
 before:
   hooks:
     - go mod download
+    - make licenses-report
+
 release:
   prerelease: "false"
 builds:
@@ -63,7 +65,8 @@ nfpms:
         type: config
       - src: ./sidecar_{{ .Os }}_{{ .Arch }}.tar
         dst: /opt/steadybit/extension-container/sidecar.tar
-
+      - src: ./licenses
+        dst: /opt/steadybit/extension-aws/licenses
 
     scripts:
       preinstall: ./linuxpkg/scripts/preinstall.sh
