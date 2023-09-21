@@ -74,7 +74,7 @@ func (r *defaultRunc) State(ctx context.Context, id string) (*Container, error) 
 		return nil, fmt.Errorf("%s (%s): %s", err, stderr, output)
 	}
 
-	log.Info().Str("output", string(output)).Str("stderr", string(stderr)).Msg("get container state")
+	log.Trace().Str("output", string(output)).Str("stderr", string(stderr)).Msg("get container state")
 
 	var c Container
 	if err := json.Unmarshal(output, &c); err != nil {
