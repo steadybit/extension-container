@@ -4,7 +4,8 @@
 package runc
 
 import (
-	"context"
+  "bytes"
+  "context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -62,12 +63,18 @@ func NewRunc(runtime types.Runtime) Runc {
 }
 
 func (r *defaultRunc) State(ctx context.Context, id string) (*Container, error) {
-	output, err := r.command(ctx, "state", id).CombinedOutput()
+	cmd := r.command(ctx, "state", id)
+  var outputBuffer, errorBuffer bytes.Buffer
+  cmd.Stdout = &outputBuffer
+  cmd.Stderr = &errorBuffer
+  err := cmd.Run()
+  output := outputBuffer.Bytes()
+  stderr := errorBuffer.Bytes()
 	if err != nil {
-		return nil, fmt.Errorf("%s: %s", err, output)
+		return nil, fmt.Errorf("%s (%s): %s", err, stderr, output)
 	}
 
-	log.Trace().Str("output", string(output)).Msg("get container state")
+	log.Info().Str("output", string(output)).Str("stderr", string(stderr)).Msg("get container state")
 
 	var c Container
 	if err := json.Unmarshal(output, &c); err != nil {

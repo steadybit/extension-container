@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.1.21
+
+- fix invalid character 'i' in literal in runc State func. Do not combine stdout and stderr for json parsing
+
 ## v1.1.20
 
 - fix concurrent map writes in action stop
