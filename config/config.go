@@ -9,17 +9,18 @@ import (
 )
 
 type Specification struct {
-	ContainerSocket          string `json:"containerSocket" split_words:"true" required:"false"`
-	ContainerRuntime         string `json:"containerRuntime" split_words:"true" required:"false"`
-	ContainerdNamespace      string `json:"containerdNamespace" split_words:"true" required:"true" default:"k8s.io"`
-	RuncRoot                 string `json:"runcRoot" split_words:"true" required:"false"`
-	RuncRootless             string `json:"runcRootless" split_words:"true" required:"false"`
-	RuncSystemdCgroup        bool   `json:"runcSystemdCgroup" split_words:"true" required:"false"`
-	RuncDebug                bool   `json:"runcDebug" split_words:"true" required:"false"`
-	DisableDiscoveryExcludes bool   `required:"false" split_words:"true" default:"false"`
-	DiscoveryCallInterval    string `json:"discoveryCallInterval" split_words:"true" required:"false" default:"1m"`
-	Port                     uint16 `json:"port" split_words:"true" required:"false" default:"8086"`
-	HealthPort               uint16 `json:"healthPort" split_words:"true" required:"false" default:"8082"`
+	ContainerSocket            string   `json:"containerSocket" split_words:"true" required:"false"`
+	ContainerRuntime           string   `json:"containerRuntime" split_words:"true" required:"false"`
+	ContainerdNamespace        string   `json:"containerdNamespace" split_words:"true" required:"true" default:"k8s.io"`
+	RuncRoot                   string   `json:"runcRoot" split_words:"true" required:"false"`
+	RuncRootless               string   `json:"runcRootless" split_words:"true" required:"false"`
+	RuncSystemdCgroup          bool     `json:"runcSystemdCgroup" split_words:"true" required:"false"`
+	RuncDebug                  bool     `json:"runcDebug" split_words:"true" required:"false"`
+	DisableDiscoveryExcludes   bool     `required:"false" split_words:"true" default:"false"`
+	DiscoveryCallInterval      string   `json:"discoveryCallInterval" split_words:"true" required:"false" default:"1m"`
+	Port                       uint16   `json:"port" split_words:"true" required:"false" default:"8086"`
+	HealthPort                 uint16   `json:"healthPort" split_words:"true" required:"false" default:"8082"`
+	DiscoveryAttributeExcludes []string `json:"discoveryAttributeExcludes" split_words:"true" required:"false"`
 }
 
 var (

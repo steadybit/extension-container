@@ -42,6 +42,7 @@ func TestWithMinikube(t *testing.T) {
 			return []string{
 				"--set", fmt.Sprintf("container.runtime=%s", m.Runtime),
 				"--set", "logging.level=trace",
+				"--set", "discovery.attributes.excludes={container.label.*}",
 			}
 		},
 	}
@@ -892,12 +893,12 @@ func testStopContainer(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	config := struct {
 		Graceful bool `json:"graceful"`
 	}{Graceful: true}
-      go func() {
-	  action, err := e.RunAction(fmt.Sprintf("%s.stop", extcontainer.BaseActionID), target, config, executionContext)
-        defer func() { _ = action.Cancel() }()
-        require.NoError(t, err)
-	  require.NoError(t, action.Wait())
-      }()
+	go func() {
+		action, err := e.RunAction(fmt.Sprintf("%s.stop", extcontainer.BaseActionID), target, config, executionContext)
+		defer func() { _ = action.Cancel() }()
+		require.NoError(t, err)
+		require.NoError(t, action.Wait())
+	}()
 	action2, err2 := e.RunAction(fmt.Sprintf("%s.stop", extcontainer.BaseActionID), target2, config, executionContext)
 
 	defer func() { _ = action2.Cancel() }()
@@ -912,7 +913,7 @@ func testStopContainer(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	require.NotNil(t, status)
 	assert.NotNil(t, status.State.Terminated, "container should be terminated")
 
-  status2, err := nginx2.ContainerStatus()
+	status2, err := nginx2.ContainerStatus()
 	require.NoError(t, err)
 	require.NotNil(t, status2)
 	assert.NotNil(t, status2.State.Terminated, "container should be terminated")
@@ -936,7 +937,7 @@ func testDiscovery(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	})
 	require.NoError(t, err)
 	assert.Equal(t, target.TargetType, "com.steadybit.extension_container.container")
-
+	assert.NotContains(t, target.Attributes, "container.label.maintainer")
 	targets, err := e.DiscoverTargets("com.steadybit.extension_container.container")
 	require.NoError(t, err)
 	for _, target := range targets {

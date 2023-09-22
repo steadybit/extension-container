@@ -67,6 +67,8 @@ spec:
               value: {{ .Values.containerPorts.http | quote }}
             - name: STEADYBIT_EXTENSION_HEALTH_PORT
               value: {{ .Values.containerPorts.health | quote }}
+            - name: STEADYBIT_EXTENSION_DISCOVERY_ATTRIBUTE_EXCLUDES
+              value: {{ join "," .Values.discovery.attributes.excludes | quote }}
             {{- if .Values.discovery.disableExcludes }}
             - name: STEADYBIT_EXTENSION_DISABLE_DISCOVERY_EXCLUDES
               value: "true"
