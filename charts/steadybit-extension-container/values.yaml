@@ -140,5 +140,5 @@ discovery:
   # discovery.disableExcludes -- Ignore discovery excludes specified by `steadybit.com/discovery-disabled` (mainly for internal use)
   disableExcludes: false
   attributes:
-    # container.discovery.attributes.excludes -- List of attributes to exclude from container discovery.
+    # discovery.attributes.excludes -- List of attributes to exclude from container discovery.
     excludes: [ ]
