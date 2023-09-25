@@ -20,7 +20,7 @@ our [Reliability Hub](https://hub.steadybit.com/extension/com.steadybit.extensio
 | `STEADYBIT_EXTENSION_RUNC_ROOTLESS`                |                                                        | Set value for runc --rootless parameter                                                                                    | yes      | k8s.io  |
 | `STEADYBIT_EXTENSION_RUNC_SYSTEMD_CGROUP`          |                                                        | Set value for runc --systemd-cgroup parameter                                                                              | yes      | k8s.io  |
 | `STEADYBIT_EXTENSION_DISABLE_DISCOVERY_EXCLUDES`   | `discovery.disableExcludes`                            | Ignore discovery excludes specified by `steadybit.com/discovery-disabled`                                                  | false    | `false` |
-| `STEADYBIT_EXTENSION_DISCOVERY_ATTRIBUTE_EXCLUDES` | `discovery.attributes.excludes`                        | List of Target Attributes which will be excluded during discovery. Checked by key equality and supporting trailing "*"     | false    |         |
+| `STEADYBIT_EXTENSION_DISCOVERY_ATTRIBUTES_EXCLUDES` | `discovery.attributes.excludes`                        | List of Target Attributes which will be excluded during discovery. Checked by key equality and supporting trailing "*"     | false    |         |
 
 The extension supports all environment variables provided
 by [steadybit/extension-kit](https://github.com/steadybit/extension-kit#environment-variables).

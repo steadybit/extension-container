@@ -19,8 +19,8 @@ type Specification struct {
 	DisableDiscoveryExcludes   bool     `required:"false" split_words:"true" default:"false"`
 	DiscoveryCallInterval      string   `json:"discoveryCallInterval" split_words:"true" required:"false" default:"1m"`
 	Port                       uint16   `json:"port" split_words:"true" required:"false" default:"8086"`
-	HealthPort                 uint16   `json:"healthPort" split_words:"true" required:"false" default:"8082"`
-	DiscoveryAttributeExcludes []string `json:"discoveryAttributeExcludes" split_words:"true" required:"false"`
+	HealthPort                  uint16   `json:"healthPort" split_words:"true" required:"false" default:"8082"`
+	DiscoveryAttributesExcludes []string `json:"discoveryAttributesExcludes" split_words:"true" required:"false"`
 }
 
 var (
