@@ -7,7 +7,8 @@ import (
 	"fmt"
 	dockerparser "github.com/novln/docker-parser"
 	"github.com/steadybit/discovery-kit/go/discovery_kit_api"
-	"github.com/steadybit/extension-container/config"
+  "github.com/steadybit/discovery-kit/go/discovery_kit_commons"
+  "github.com/steadybit/extension-container/config"
 	"github.com/steadybit/extension-container/pkg/container/types"
 	extension_kit "github.com/steadybit/extension-kit"
 	"github.com/steadybit/extension-kit/extbuild"
@@ -166,7 +167,7 @@ func (d *containerDiscovery) getDiscoveredTargets(w http.ResponseWriter, r *http
 		targets = append(targets, d.mapTarget(container, hostname, version))
 	}
 
-	exthttp.WriteBody(w, discovery_kit_api.DiscoveryData{Targets: extutil.Ptr(discovery_kit_api.ApplyAttributeExcludes(targets, config.Config.DiscoveryAttributesExcludes))})
+	exthttp.WriteBody(w, discovery_kit_api.DiscoveryData{Targets: extutil.Ptr(discovery_kit_commons.ApplyAttributeExcludes(targets, config.Config.DiscoveryAttributesExcludes))})
 }
 
 func ignoreContainer(container types.Container) bool {
