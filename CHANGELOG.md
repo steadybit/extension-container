@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.1.23
+
+- add pprof-endpoints
+
+## v1.1.22
+
+- added `DiscoveryAttributeExcludes`
+
 ## v1.1.21
 
 - fix invalid character 'i' in literal in runc State func. Do not combine stdout and stderr for json parsing
