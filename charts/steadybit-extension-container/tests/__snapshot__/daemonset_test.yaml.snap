@@ -1140,6 +1140,117 @@ manifest should match snapshot with mutual TLS using containerPaths:
         rollingUpdate:
           maxUnavailable: 1
         type: RollingUpdate
+manifest should match snapshot with podSecurityContext:
+  1: |
+    apiVersion: apps/v1
+    kind: DaemonSet
+    metadata:
+      labels:
+        steadybit.com/discovery-disabled: "true"
+      name: RELEASE-NAME-steadybit-extension-container
+      namespace: NAMESPACE
+    spec:
+      selector:
+        matchLabels:
+          app: steadybit-extension-container
+          app.kubernetes.io/name: steadybit-extension-container
+      template:
+        metadata:
+          annotations:
+            container.apparmor.security.beta.kubernetes.io/steadybit-extension-container: unconfined
+            steadybit.com/extension-auto-discovery: |
+              {"extensions":[{"port":8086,"protocol":"http","types":["ACTION","DISCOVERY"]}]}
+          labels:
+            app: steadybit-extension-container
+            app.kubernetes.io/name: steadybit-extension-container
+            steadybit.com/discovery-disabled: "true"
+            steadybit.com/extension: "true"
+        spec:
+          containers:
+            - env:
+                - name: STEADYBIT_EXTENSION_PORT
+                  value: "8086"
+                - name: STEADYBIT_EXTENSION_HEALTH_PORT
+                  value: "8082"
+                - name: STEADYBIT_LOG_LEVEL
+                  value: INFO
+                - name: STEADYBIT_LOG_FORMAT
+                  value: text
+              image: ghcr.io/steadybit/extension-container:latest
+              imagePullPolicy: Always
+              livenessProbe:
+                httpGet:
+                  path: /health/liveness
+                  port: 8082
+              name: steadybit-extension-container
+              ports:
+                - containerPort: 8086
+                  name: http
+                - containerPort: 8082
+                  name: health
+              readinessProbe:
+                httpGet:
+                  path: /health/readiness
+                  port: 8082
+              resources:
+                limits:
+                  cpu: 500m
+                  memory: 128Mi
+                requests:
+                  cpu: 50m
+                  memory: 32Mi
+              securityContext:
+                capabilities:
+                  add:
+                    - SYS_ADMIN
+                    - SYS_RESOURCE
+                    - SYS_PTRACE
+                    - KILL
+                    - NET_ADMIN
+                    - DAC_OVERRIDE
+                    - SETUID
+                    - SETGID
+                    - AUDIT_WRITE
+                readOnlyRootFilesystem: true
+                runAsGroup: 10000
+                runAsNonRoot: true
+                runAsUser: 10000
+                seccompProfile:
+                  type: Unconfined
+              volumeMounts:
+                - mountPath: /tmp
+                  name: tmp-dir
+                - mountPath: /sys/fs/cgroup
+                  name: cgroup-root
+                - mountPath: /run/containerd/containerd.sock
+                  name: runtime-socket
+                - mountPath: /run/containerd/runc/k8s.io
+                  name: runtime-runc-root
+          dnsPolicy: ClusterFirstWithHostNet
+          hostNetwork: true
+          hostPID: true
+          securityContext:
+            runAsUser: 2222
+          serviceAccountName: steadybit-extension-container
+          volumes:
+            - emptyDir: {}
+              name: tmp-dir
+            - hostPath:
+                path: /sys/fs/cgroup
+                type: Directory
+              name: cgroup-root
+            - hostPath:
+                path: /run/containerd/containerd.sock
+                type: Socket
+              name: runtime-socket
+            - hostPath:
+                path: /run/containerd/runc/k8s.io
+                type: Directory
+              name: runtime-runc-root
+      updateStrategy:
+        rollingUpdate:
+          maxUnavailable: 1
+        type: RollingUpdate
 manifest should match snapshot with priority class:
   1: |
     apiVersion: apps/v1
