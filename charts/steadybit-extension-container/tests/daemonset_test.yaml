@@ -117,3 +117,8 @@ tests:
           maxUnavailable: 5
     asserts:
       - matchSnapshot: {}
+  - it: manifest should match snapshot with priority class
+    set:
+      priorityClassName: my-priority-class
+    asserts:
+      - matchSnapshot: {}
