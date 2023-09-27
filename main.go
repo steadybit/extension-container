@@ -20,6 +20,7 @@ import (
 	"github.com/steadybit/extension-kit/exthttp"
 	"github.com/steadybit/extension-kit/extlogging"
 	"github.com/steadybit/extension-kit/extruntime"
+	_ "net/http/pprof" //allow pprof
 )
 
 func main() {
