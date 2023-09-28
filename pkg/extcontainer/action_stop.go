@@ -13,8 +13,8 @@ import (
 	extension_kit "github.com/steadybit/extension-kit"
 	"github.com/steadybit/extension-kit/extbuild"
 	"github.com/steadybit/extension-kit/extutil"
-  "golang.org/x/sync/syncmap"
-  "time"
+	"golang.org/x/sync/syncmap"
+	"time"
 )
 
 type stopAction struct {
@@ -153,10 +153,10 @@ func (a *stopAction) stopContainer(executionId uuid.UUID, containerId string, gr
 	errorChannel := make(chan error)
 	stopCtx, stopCancel := context.WithCancel(context.Background())
 
-  a.completers.Store(executionId, &completer{
-    err:    errorChannel,
-    cancel: stopCancel,
-  })
+	a.completers.Store(executionId, &completer{
+		err:    errorChannel,
+		cancel: stopCancel,
+	})
 	go func() {
 		errorChannel <- a.client.Stop(stopCtx, containerId, graceful)
 		close(errorChannel)
@@ -174,14 +174,14 @@ func (a *stopAction) stopContainer(executionId uuid.UUID, containerId string, gr
 }
 
 func (a *stopAction) isStopContainerCompleted(executionId uuid.UUID) (bool, error) {
-  running, ok := a.completers.Load(executionId)
-  if !ok {
-    return true, nil
-  }
+	running, ok := a.completers.Load(executionId)
+	if !ok {
+		return true, nil
+	}
 
 	select {
 	case err := <-running.(*completer).err:
-    a.completers.Delete(executionId)
+		a.completers.Delete(executionId)
 		return true, err
 	default:
 		return false, nil
@@ -189,12 +189,12 @@ func (a *stopAction) isStopContainerCompleted(executionId uuid.UUID) (bool, erro
 }
 
 func (a *stopAction) cancelStopContainer(executionId uuid.UUID) bool {
-  running, ok := a.completers.Load(executionId)
+	running, ok := a.completers.Load(executionId)
 	if !ok {
 		return false
 	}
 
-  running.(*completer).cancel()
+	running.(*completer).cancel()
 	<-running.(*completer).err
 	return true
 }
