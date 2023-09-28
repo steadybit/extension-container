@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.1.24
+
+- update dependencies
+- added tracing for stress and network attacks
+
 ## v1.1.23
 
 - add pprof-endpoints
