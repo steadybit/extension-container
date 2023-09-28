@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime/trace"
 	"strconv"
 	"strings"
 	"sync"
@@ -62,9 +63,10 @@ func SidecarImagePath() string {
 	return sidecarImage
 }
 
-func ReadCgroupPath(pid int) (string, error) {
+func ReadCgroupPath(ctx context.Context, pid int) (string, error) {
+	defer trace.StartRegion(ctx, "utils.ReadCgroupPath").End()
 	var out bytes.Buffer
-	cmd := RootCommandContext(context.Background(), "nsenter", "-t", "1", "-C", "--", "cat", filepath.Join("/proc", strconv.Itoa(pid), "cgroup"))
+	cmd := RootCommandContext(ctx, "nsenter", "-t", "1", "-C", "--", "cat", filepath.Join("/proc", strconv.Itoa(pid), "cgroup"))
 	cmd.Stdout = &out
 	cmd.Stderr = &out
 	if err := cmd.Run(); err != nil {
@@ -93,9 +95,10 @@ func ReadCgroupPath(pid int) (string, error) {
 	return cgroup, nil
 }
 
-func ReadNamespaces(pid int) ([]LinuxNamespaceWithInode, error) {
+func ReadNamespaces(ctx context.Context, pid int) ([]LinuxNamespaceWithInode, error) {
+	defer trace.StartRegion(ctx, "utils.ReadNamespaces").End()
 	var out bytes.Buffer
-	cmd := RootCommandContext(context.Background(), "nsenter", "-t", "1", "-C", "--", "lsns", "--task", strconv.Itoa(pid), "--output=ns,type,path", "--noheadings")
+	cmd := RootCommandContext(ctx, "nsenter", "-t", "1", "-C", "--", "lsns", "--task", strconv.Itoa(pid), "--output=ns,type,path", "--noheadings")
 	cmd.Stdout = &out
 	cmd.Stderr = &out
 
@@ -136,22 +139,23 @@ func toRuncNamespaceType(t string) specs.LinuxNamespaceType {
 	}
 }
 
-func ResolveNamespacesUsingInode(namespaces []LinuxNamespaceWithInode) []specs.LinuxNamespace {
+func ResolveNamespacesUsingInode(ctx context.Context, namespaces []LinuxNamespaceWithInode) []specs.LinuxNamespace {
+	defer trace.StartRegion(ctx, "utils.ResolveNamespacesUsingInode").End()
 	var runcNamespaces []specs.LinuxNamespace
 	for _, ns := range namespaces {
-		r := resolveNamespaceUsingInode(ns)
+		r := resolveNamespaceUsingInode(ctx, ns)
 		runcNamespaces = append(runcNamespaces, r)
 	}
 	return runcNamespaces
 }
 
-func resolveNamespaceUsingInode(ns LinuxNamespaceWithInode) specs.LinuxNamespace {
+func resolveNamespaceUsingInode(ctx context.Context, ns LinuxNamespaceWithInode) specs.LinuxNamespace {
 	if ns.Inode == 0 {
 		return ns.LinuxNamespace
 	}
 
 	var out bytes.Buffer
-	cmd := RootCommandContext(context.Background(), "nsenter", "-t", "1", "-C", "--", "lsns", strconv.FormatUint(ns.Inode, 10), "--output=path", "--noheadings")
+	cmd := RootCommandContext(ctx, "nsenter", "-t", "1", "-C", "--", "lsns", strconv.FormatUint(ns.Inode, 10), "--output=path", "--noheadings")
 	cmd.Stdout = &out
 	cmd.Stderr = &out
 
@@ -175,7 +179,8 @@ func resolveNamespaceUsingInode(ns LinuxNamespaceWithInode) specs.LinuxNamespace
 	return ns.LinuxNamespace
 }
 
-func CheckNamespacesExists(namespaces []LinuxNamespaceWithInode, wantedTypes ...specs.LinuxNamespaceType) error {
+func CheckNamespacesExists(ctx context.Context, namespaces []LinuxNamespaceWithInode, wantedTypes ...specs.LinuxNamespaceType) error {
+	defer trace.StartRegion(ctx, "utils.CheckNamespacesExists").End()
 	for _, ns := range namespaces {
 		wanted := false
 		if len(wantedTypes) == 0 {
@@ -193,7 +198,7 @@ func CheckNamespacesExists(namespaces []LinuxNamespaceWithInode, wantedTypes ...
 			continue
 		}
 
-		resolved := resolveNamespaceUsingInode(ns)
+		resolved := resolveNamespaceUsingInode(ctx, ns)
 
 		if _, err := os.Stat(resolved.Path); err != nil && os.IsNotExist(err) {
 			return fmt.Errorf("namespace %s doesn't exist", resolved.Path)
@@ -204,8 +209,9 @@ func CheckNamespacesExists(namespaces []LinuxNamespaceWithInode, wantedTypes ...
 }
 
 // IsUsingHostNetwork determines weather the given process has the same network as the init process.
-func IsUsingHostNetwork(pid int) (bool, error) {
-	ns, err := ReadNamespaces(pid)
+func IsUsingHostNetwork(ctx context.Context, pid int) (bool, error) {
+	defer trace.StartRegion(ctx, "utils.IsUsingHostNetwork").End()
+	ns, err := ReadNamespaces(ctx, pid)
 	if err != nil {
 		return false, err
 	}
@@ -217,10 +223,11 @@ func IsUsingHostNetwork(pid int) (bool, error) {
 	return true, nil
 }
 
-func CopyFileFromProcessToBundle(bundle string, pid int, path string) error {
+func CopyFileFromProcessToBundle(ctx context.Context, bundle string, pid int, path string) error {
+	defer trace.StartRegion(ctx, "utils.CopyFileFromProcessToBundle").End()
 	//TODO nsenter realy needed? replace with copy command
 	var out bytes.Buffer
-	cmd := RootCommandContext(context.Background(), "nsenter", "-t", "1", "-C", "--", "cat", filepath.Join("/proc", strconv.Itoa(pid), "root", path))
+	cmd := RootCommandContext(ctx, "nsenter", "-t", "1", "-C", "--", "cat", filepath.Join("/proc", strconv.Itoa(pid), "root", path))
 	cmd.Stdout = &out
 	cmd.Stderr = &out
 	if err := cmd.Run(); err != nil {

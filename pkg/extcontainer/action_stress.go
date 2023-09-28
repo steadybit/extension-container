@@ -15,6 +15,7 @@ import (
 	"github.com/steadybit/extension-kit/extutil"
 	"golang.org/x/sync/syncmap"
 	"os/exec"
+	"runtime/trace"
 	"strings"
 )
 
@@ -60,7 +61,12 @@ func (a *stressAction) Describe() action_kit_api.ActionDescription {
 	return a.description
 }
 
-func (a *stressAction) Prepare(_ context.Context, state *StressActionState, request action_kit_api.PrepareActionRequestBody) (*action_kit_api.PrepareResult, error) {
+func (a *stressAction) Prepare(ctx context.Context, state *StressActionState, request action_kit_api.PrepareActionRequestBody) (*action_kit_api.PrepareResult, error) {
+	ctx, task := trace.NewTask(ctx, "action_stress.Prepare")
+	defer task.End()
+	trace.Log(ctx, "actionId", a.description.Id)
+	trace.Log(ctx, "executionId", state.ExecutionId.String())
+
 	containerId := request.Target.Attributes["container.id"]
 	if len(containerId) == 0 {
 		return nil, extension_kit.ToError("Target is missing the 'container.id' attribute.", nil)
@@ -80,8 +86,13 @@ func (a *stressAction) Prepare(_ context.Context, state *StressActionState, requ
 	return nil, nil
 }
 
-func (a *stressAction) Start(_ context.Context, state *StressActionState) (*action_kit_api.StartResult, error) {
-	s, err := stress.New(a.runc, RemovePrefix(state.ContainerId), state.StressOpts)
+func (a *stressAction) Start(ctx context.Context, state *StressActionState) (*action_kit_api.StartResult, error) {
+	ctx, task := trace.NewTask(ctx, "action_stress.Start")
+	defer task.End()
+	trace.Log(ctx, "actionId", a.description.Id)
+	trace.Log(ctx, "executionId", state.ExecutionId.String())
+
+	s, err := stress.New(ctx, a.runc, RemovePrefix(state.ContainerId), state.StressOpts)
 	if err != nil {
 		return nil, extension_kit.ToError("Failed to stress container", err)
 	}
@@ -102,7 +113,12 @@ func (a *stressAction) Start(_ context.Context, state *StressActionState) (*acti
 	}, nil
 }
 
-func (a *stressAction) Status(_ context.Context, state *StressActionState) (*action_kit_api.StatusResult, error) {
+func (a *stressAction) Status(ctx context.Context, state *StressActionState) (*action_kit_api.StatusResult, error) {
+	ctx, task := trace.NewTask(ctx, "action_stress.Status")
+	defer task.End()
+	trace.Log(ctx, "actionId", a.description.Id)
+	trace.Log(ctx, "executionId", state.ExecutionId.String())
+
 	completed, err := a.isStressCompleted(state.ExecutionId)
 	if err != nil {
 		errMessage := err.Error()
@@ -152,7 +168,12 @@ func (a *stressAction) Status(_ context.Context, state *StressActionState) (*act
 	return &action_kit_api.StatusResult{Completed: false}, nil
 }
 
-func (a *stressAction) Stop(_ context.Context, state *StressActionState) (*action_kit_api.StopResult, error) {
+func (a *stressAction) Stop(ctx context.Context, state *StressActionState) (*action_kit_api.StopResult, error) {
+	ctx, task := trace.NewTask(ctx, "action_stress.Stop")
+	defer task.End()
+	trace.Log(ctx, "actionId", a.description.Id)
+	trace.Log(ctx, "executionId", state.ExecutionId.String())
+
 	messages := make([]action_kit_api.Message, 0)
 
 	stopped := a.cancelStressContainer(state.ExecutionId)

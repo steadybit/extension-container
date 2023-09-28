@@ -19,6 +19,7 @@ import (
 	extension_kit "github.com/steadybit/extension-kit"
 	"github.com/steadybit/extension-kit/extutil"
 	"net"
+	"runtime/trace"
 )
 
 type networkOptsProvider func(ctx context.Context, sidecarConfig network.TargetContainerConfig, request action_kit_api.PrepareActionRequestBody) (networkutils.Opts, error)
@@ -99,6 +100,11 @@ func (a *networkAction) Describe() action_kit_api.ActionDescription {
 }
 
 func (a *networkAction) Prepare(ctx context.Context, state *NetworkActionState, request action_kit_api.PrepareActionRequestBody) (*action_kit_api.PrepareResult, error) {
+	ctx, task := trace.NewTask(ctx, "action_network.Prepare")
+	defer task.End()
+	trace.Log(ctx, "actionId", a.description.Id)
+	trace.Log(ctx, "executionId", request.ExecutionId.String())
+
 	containerId := request.Target.Attributes["container.id"]
 	if len(containerId) == 0 {
 		return nil, extension_kit.ToError("Target is missing the 'container.id' attribute.", nil)
@@ -144,10 +150,15 @@ func (a *networkAction) isUsingHostNetwork(ctx context.Context, containerId stri
 	if err != nil {
 		return false, err
 	}
-	return utils.IsUsingHostNetwork(containerState.Pid)
+	return utils.IsUsingHostNetwork(ctx, containerState.Pid)
 }
 
 func (a *networkAction) Start(ctx context.Context, state *NetworkActionState) (*action_kit_api.StartResult, error) {
+	ctx, task := trace.NewTask(ctx, "action_network.Start")
+	defer task.End()
+	trace.Log(ctx, "actionId", a.description.Id)
+	trace.Log(ctx, "executionId", state.ExecutionId.String())
+
 	opts, err := a.optsDecoder(state.NetworkOpts)
 	if err != nil {
 		return nil, extension_kit.ToError("Failed to deserialize network settings.", err)
@@ -170,6 +181,11 @@ func (a *networkAction) Start(ctx context.Context, state *NetworkActionState) (*
 }
 
 func (a *networkAction) Stop(ctx context.Context, state *NetworkActionState) (*action_kit_api.StopResult, error) {
+	ctx, task := trace.NewTask(ctx, "action_network.Stop")
+	defer task.End()
+	trace.Log(ctx, "actionId", a.description.Id)
+	trace.Log(ctx, "executionId", state.ExecutionId.String())
+
 	opts, err := a.optsDecoder(state.NetworkOpts)
 	if err != nil {
 		return nil, extension_kit.ToError("Failed to deserialize network settings.", err)

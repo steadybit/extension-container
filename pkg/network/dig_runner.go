@@ -12,6 +12,7 @@ import (
 	"github.com/steadybit/extension-container/pkg/container/runc"
 	"github.com/steadybit/extension-container/pkg/utils"
 	"io"
+	"runtime/trace"
 )
 
 type RuncDigRunner struct {
@@ -20,6 +21,7 @@ type RuncDigRunner struct {
 }
 
 func (d RuncDigRunner) Run(ctx context.Context, arg []string, stdin io.Reader) ([]byte, error) {
+	defer trace.StartRegion(ctx, "RuncDigRunner.Run").End()
 	id := getNextContainerId(d.Cfg.ContainerID)
 
 	bundle, cleanup, err := d.Runc.PrepareBundle(ctx, utils.SidecarImagePath(), id)
@@ -28,21 +30,22 @@ func (d RuncDigRunner) Run(ctx context.Context, arg []string, stdin io.Reader) (
 		return nil, err
 	}
 
-	if err := utils.CopyFileFromProcessToBundle(bundle, d.Cfg.Pid, "/etc/resolv.conf"); err != nil {
+	if err := utils.CopyFileFromProcessToBundle(ctx, bundle, d.Cfg.Pid, "/etc/resolv.conf"); err != nil {
 		log.Warn().Err(err).Msg("could not copy /etc/resolv.conf")
 	}
 
-	if err := utils.CopyFileFromProcessToBundle(bundle, d.Cfg.Pid, "/etc/hosts"); err != nil {
+	if err := utils.CopyFileFromProcessToBundle(ctx, bundle, d.Cfg.Pid, "/etc/hosts"); err != nil {
 		log.Warn().Err(err).Msg("could not copy /etc/hosts")
 	}
 
 	if err = d.Runc.EditSpec(
+		ctx,
 		bundle,
 		runc.WithHostname(fmt.Sprintf("dig-%s", id)),
 		runc.WithAnnotations(map[string]string{
 			"com.steadybit.sidecar": "true",
 		}),
-		runc.WithSelectedNamespaces(utils.ResolveNamespacesUsingInode(d.Cfg.Namespaces), specs.NetworkNamespace),
+		runc.WithSelectedNamespaces(utils.ResolveNamespacesUsingInode(ctx, d.Cfg.Namespaces), specs.NetworkNamespace),
 		runc.WithCapabilities("CAP_NET_ADMIN"),
 		runc.WithProcessArgs(append([]string{"dig"}, arg...)...),
 	); err != nil {

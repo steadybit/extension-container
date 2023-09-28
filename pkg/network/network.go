@@ -15,6 +15,7 @@ import (
 	"github.com/steadybit/extension-container/pkg/container/runc"
 	"github.com/steadybit/extension-container/pkg/utils"
 	"github.com/steadybit/extension-kit/extutil"
+	"runtime/trace"
 	"strconv"
 	"sync/atomic"
 )
@@ -33,6 +34,7 @@ type TargetContainerConfig struct {
 }
 
 func GetConfigForContainer(ctx context.Context, r runc.Runc, targetId string) (TargetContainerConfig, error) {
+	defer trace.StartRegion(ctx, "network.GetConfigForContainer").End()
 	config := TargetContainerConfig{
 		ContainerID: targetId,
 	}
@@ -43,7 +45,7 @@ func GetConfigForContainer(ctx context.Context, r runc.Runc, targetId string) (T
 	}
 	config.Pid = state.Pid
 
-	namespaces, err := utils.ReadNamespaces(state.Pid)
+	namespaces, err := utils.ReadNamespaces(ctx, state.Pid)
 	if err != nil {
 		return config, fmt.Errorf("could not read namespaces of target container: %w", err)
 	}
@@ -53,11 +55,12 @@ func GetConfigForContainer(ctx context.Context, r runc.Runc, targetId string) (T
 }
 
 func Apply(ctx context.Context, r runc.Runc, config TargetContainerConfig, opts networkutils.Opts) error {
+	defer trace.StartRegion(ctx, "network.Apply").End()
 	log.Info().
 		Str("containerId", config.ContainerID).
 		Msg("applying network config")
 
-	if err := utils.CheckNamespacesExists(config.Namespaces, specs.NetworkNamespace, specs.UTSNamespace); err != nil {
+	if err := utils.CheckNamespacesExists(ctx, config.Namespaces, specs.NetworkNamespace, specs.UTSNamespace); err != nil {
 		return fmt.Errorf("container exited? %w", err)
 	}
 
@@ -65,8 +68,8 @@ func Apply(ctx context.Context, r runc.Runc, config TargetContainerConfig, opts 
 }
 
 func Revert(ctx context.Context, r runc.Runc, config TargetContainerConfig, opts networkutils.Opts) (action_kit_api.Messages, error) {
-
-	if err := utils.CheckNamespacesExists(config.Namespaces, specs.NetworkNamespace, specs.UTSNamespace); err != nil {
+	defer trace.StartRegion(ctx, "network.Revert").End()
+	if err := utils.CheckNamespacesExists(ctx, config.Namespaces, specs.NetworkNamespace, specs.UTSNamespace); err != nil {
 		log.Info().
 			Str("containerId", config.ContainerID).
 			AnErr("reason", err).
@@ -88,6 +91,7 @@ func Revert(ctx context.Context, r runc.Runc, config TargetContainerConfig, opts
 }
 
 func generateAndRunCommands(ctx context.Context, r runc.Runc, config TargetContainerConfig, opts networkutils.Opts, mode networkutils.Mode) error {
+	defer trace.StartRegion(ctx, "network.generateAndRunCommands").End()
 	ipCommandsV4, err := opts.IpCommands(networkutils.FamilyV4, mode)
 	if err != nil {
 		return err
@@ -150,6 +154,7 @@ func getNextContainerId(targedId string) string {
 }
 
 func executeIpCommands(ctx context.Context, r runc.Runc, config TargetContainerConfig, family networkutils.Family, cmds []string) error {
+	defer trace.StartRegion(ctx, "network.executeIpCommands").End()
 	if len(cmds) == 0 {
 		return nil
 	}
@@ -164,10 +169,11 @@ func executeIpCommands(ctx context.Context, r runc.Runc, config TargetContainerC
 	cmd := []string{"ip", "-family", string(family), "-force", "-batch", "-"}
 
 	if err = r.EditSpec(
+		ctx,
 		bundle,
 		runc.WithHostname(fmt.Sprintf("ip-%s", id)),
 		runc.WithAnnotations(map[string]string{"com.steadybit.sidecar": "true"}),
-		runc.WithSelectedNamespaces(utils.ResolveNamespacesUsingInode(config.Namespaces), specs.NetworkNamespace),
+		runc.WithSelectedNamespaces(utils.ResolveNamespacesUsingInode(ctx, config.Namespaces), specs.NetworkNamespace),
 		runc.WithCapabilities("CAP_NET_ADMIN"),
 		runc.WithProcessArgs(cmd...),
 	); err != nil {
@@ -192,6 +198,7 @@ func executeIpCommands(ctx context.Context, r runc.Runc, config TargetContainerC
 }
 
 func executeTcCommands(ctx context.Context, r runc.Runc, config TargetContainerConfig, cmds []string) error {
+	defer trace.StartRegion(ctx, "network.executeTcCommands").End()
 	if len(cmds) == 0 {
 		return nil
 	}
@@ -205,10 +212,11 @@ func executeTcCommands(ctx context.Context, r runc.Runc, config TargetContainerC
 
 	cmd := []string{"tc", "-force", "-batch", "-"}
 	if err = r.EditSpec(
+		ctx,
 		bundle,
 		runc.WithHostname(fmt.Sprintf("tc-%s", id)),
 		runc.WithAnnotations(map[string]string{"com.steadybit.sidecar": "true"}),
-		runc.WithSelectedNamespaces(utils.ResolveNamespacesUsingInode(config.Namespaces), specs.NetworkNamespace),
+		runc.WithSelectedNamespaces(utils.ResolveNamespacesUsingInode(ctx, config.Namespaces), specs.NetworkNamespace),
 		runc.WithCapabilities("CAP_NET_ADMIN"),
 		runc.WithProcessArgs(cmd...),
 	); err != nil {

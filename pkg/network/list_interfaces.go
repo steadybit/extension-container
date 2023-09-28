@@ -12,6 +12,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/steadybit/extension-container/pkg/container/runc"
 	"github.com/steadybit/extension-container/pkg/utils"
+	"runtime/trace"
 )
 
 type Interface struct {
@@ -36,6 +37,8 @@ type ExtraMount struct {
 }
 
 func ListInterfaces(ctx context.Context, r runc.Runc, config TargetContainerConfig) ([]Interface, error) {
+	defer trace.StartRegion(ctx, "network.ListInterfaces").End()
+
 	id := getNextContainerId(config.ContainerID)
 
 	bundle, cleanup, err := r.PrepareBundle(ctx, utils.SidecarImagePath(), id)
@@ -45,12 +48,13 @@ func ListInterfaces(ctx context.Context, r runc.Runc, config TargetContainerConf
 	}
 
 	if err = r.EditSpec(
+		ctx,
 		bundle,
 		runc.WithHostname(fmt.Sprintf("ip-link-show-%s", id)),
 		runc.WithAnnotations(map[string]string{
 			"com.steadybit.sidecar": "true",
 		}),
-		runc.WithSelectedNamespaces(utils.ResolveNamespacesUsingInode(config.Namespaces), specs.NetworkNamespace),
+		runc.WithSelectedNamespaces(utils.ResolveNamespacesUsingInode(ctx, config.Namespaces), specs.NetworkNamespace),
 		runc.WithCapabilities("CAP_NET_ADMIN"),
 		runc.WithProcessArgs("ip", "-json", "link", "show"),
 	); err != nil {

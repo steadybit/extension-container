@@ -61,20 +61,18 @@ func (o *StressOpts) Args() []string {
 	return args
 }
 
-func New(r runc.Runc, targetId string, opts StressOpts) (*Stress, error) {
-	ctx := context.Background()
-
+func New(ctx context.Context, r runc.Runc, targetId string, opts StressOpts) (*Stress, error) {
 	state, err := r.State(ctx, targetId)
 	if err != nil {
 		return nil, fmt.Errorf("could not load state of target container: %w", err)
 	}
 
-	cgroupPath, err := utils.ReadCgroupPath(state.Pid)
+	cgroupPath, err := utils.ReadCgroupPath(ctx, state.Pid)
 	if err != nil {
 		return nil, fmt.Errorf("could not read cgroup of target container: %w", err)
 	}
 
-	namespaces, err := utils.ReadNamespaces(state.Pid)
+	namespaces, err := utils.ReadNamespaces(ctx, state.Pid)
 	if err != nil {
 		return nil, fmt.Errorf("could not read namespaces of target container: %w", err)
 	}
@@ -85,7 +83,7 @@ func New(r runc.Runc, targetId string, opts StressOpts) (*Stress, error) {
 		return nil, fmt.Errorf("could not prepare bundle: %w", err)
 	}
 
-	if err := r.EditSpec(bundle,
+	if err := r.EditSpec(ctx, bundle,
 		runc.WithHostname(id),
 		runc.WithAnnotations(map[string]string{
 			"com.steadybit.sidecar": "true",
@@ -93,7 +91,7 @@ func New(r runc.Runc, targetId string, opts StressOpts) (*Stress, error) {
 		runc.WithProcessArgs(append([]string{"stress-ng"}, opts.Args()...)...),
 		runc.WithProcessCwd("/tmp"),
 		runc.WithCgroupPath(cgroupPath, "stress"),
-		runc.WithSelectedNamespaces(utils.ResolveNamespacesUsingInode(namespaces), specs.PIDNamespace),
+		runc.WithSelectedNamespaces(utils.ResolveNamespacesUsingInode(ctx, namespaces), specs.PIDNamespace),
 		runc.WithCapabilities("CAP_SYS_RESOURCE"),
 		runc.WithMountIfNotPresent(specs.Mount{
 			Destination: "/tmp",

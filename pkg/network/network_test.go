@@ -70,7 +70,7 @@ func (m *MockedRunc) Spec(ctx context.Context, bundle string) error {
 	return args.Error(0)
 }
 
-func (m *MockedRunc) EditSpec(bundle string, editors ...runc.SpecEditor) error {
+func (m *MockedRunc) EditSpec(ctx context.Context, bundle string, editors ...runc.SpecEditor) error {
 	args := m.Called(bundle, editors)
 	return args.Error(0)
 }

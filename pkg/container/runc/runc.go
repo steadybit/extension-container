@@ -18,6 +18,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime/trace"
 	"strconv"
 	"time"
 )
@@ -25,7 +26,7 @@ import (
 type Runc interface {
 	State(ctx context.Context, id string) (*Container, error)
 	Spec(ctx context.Context, bundle string) error
-	EditSpec(bundle string, editors ...SpecEditor) error
+	EditSpec(ctx context.Context, bundle string, editors ...SpecEditor) error
 	Run(ctx context.Context, id, bundle string, ioOpts IoOpts) error
 	Delete(ctx context.Context, id string, force bool) error
 	PrepareBundle(ctx context.Context, image string, id string) (string, func() error, error)
@@ -63,6 +64,7 @@ func NewRunc(runtime types.Runtime) Runc {
 }
 
 func (r *defaultRunc) State(ctx context.Context, id string) (*Container, error) {
+	defer trace.StartRegion(ctx, "runc.State").End()
 	cmd := r.command(ctx, "state", id)
 	var outputBuffer, errorBuffer bytes.Buffer
 	cmd.Stdout = &outputBuffer
@@ -95,6 +97,7 @@ func parseRunCStateToContainer(output []byte) (*Container, error) {
 }
 
 func (r *defaultRunc) Spec(ctx context.Context, bundle string) error {
+	defer trace.StartRegion(ctx, "runc.Spec").End()
 	log.Trace().Str("bundle", bundle).Msg("creating container spec")
 	output, err := r.command(ctx, "spec", "--bundle", bundle).CombinedOutput()
 	if err != nil {
@@ -105,7 +108,8 @@ func (r *defaultRunc) Spec(ctx context.Context, bundle string) error {
 
 type SpecEditor func(spec *specs.Spec)
 
-func (r *defaultRunc) EditSpec(bundle string, editors ...SpecEditor) error {
+func (r *defaultRunc) EditSpec(ctx context.Context, bundle string, editors ...SpecEditor) error {
+	defer trace.StartRegion(ctx, "runc.EditSpec").End()
 	spec, err := readSpec(filepath.Join(bundle, "config.json"))
 	if err != nil {
 		return err
@@ -167,6 +171,7 @@ func (o IoOpts) WithStdin(reader io.Reader) IoOpts {
 }
 
 func (r *defaultRunc) Run(ctx context.Context, id, bundle string, ioOpts IoOpts) error {
+	defer trace.StartRegion(ctx, "runc.Run").End()
 	log.Trace().Str("id", id).Msg("running container")
 
 	cmd := r.command(ctx, "run", "--bundle", bundle, id)
@@ -201,6 +206,7 @@ func (r *defaultRunc) args() []string {
 }
 
 func (r *defaultRunc) Delete(ctx context.Context, id string, force bool) error {
+	defer trace.StartRegion(ctx, "runc.Delete").End()
 	log.Trace().Str("id", id).Msg("deleting container")
 	output, err := r.command(ctx, "delete", fmt.Sprintf("--force=%t", force), id).CombinedOutput()
 	if err != nil {
@@ -211,6 +217,7 @@ func (r *defaultRunc) Delete(ctx context.Context, id string, force bool) error {
 }
 
 func (r *defaultRunc) PrepareBundle(ctx context.Context, image string, id string) (string, func() error, error) {
+	defer trace.StartRegion(ctx, "runc.PrepareBundle").End()
 	bundle := filepath.Join("/tmp/steadybit/containers", id)
 
 	_ = os.RemoveAll(bundle)
@@ -243,12 +250,12 @@ func (r *defaultRunc) PrepareBundle(ctx context.Context, image string, id string
 		imagePath = extractPath
 	}
 
-	if err := mountOverlay(bundle, imagePath); err != nil {
+	if err := mountOverlay(ctx, bundle, imagePath); err != nil {
 		return bundle, removeBundle, fmt.Errorf("failed to mount image: %w", err)
 	}
 
 	cleanup := func() error {
-		return errors.Join(unmountOverlay(bundle), removeBundle())
+		return errors.Join(unmountOverlay(ctx, bundle), removeBundle())
 	}
 
 	if err := r.Spec(ctx, bundle); err != nil {
@@ -259,7 +266,7 @@ func (r *defaultRunc) PrepareBundle(ctx context.Context, image string, id string
 	return bundle, cleanup, nil
 }
 
-func mountOverlay(bundle string, image string) error {
+func mountOverlay(ctx context.Context, bundle string, image string) error {
 	upper := filepath.Join(bundle, "upper")
 	err := os.MkdirAll(upper, 0775)
 	if err != nil {
@@ -279,7 +286,7 @@ func mountOverlay(bundle string, image string) error {
 	}
 
 	log.Trace().Str("lowerdir", image).Str("upper", upper).Str("work", work).Str("rootfs", rootfs).Msg("mounting overlay")
-	out, err := utils.RootCommandContext(context.Background(),
+	out, err := utils.RootCommandContext(ctx,
 		"mount",
 		"-t",
 		"overlay",
@@ -312,10 +319,10 @@ func extractSidecarImage(src, dst string) error {
 	return nil
 }
 
-func unmountOverlay(bundle string) error {
+func unmountOverlay(ctx context.Context, bundle string) error {
 	rootfs := filepath.Join(bundle, "rootfs")
 	log.Trace().Str("rootfs", rootfs).Msg("unmounting overlay")
-	out, err := utils.RootCommandContext(context.Background(), "unmount", rootfs).CombinedOutput()
+	out, err := utils.RootCommandContext(ctx, "unmount", rootfs).CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("%s: %s", err, out)
 	}
