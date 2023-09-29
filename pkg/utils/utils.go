@@ -86,7 +86,7 @@ func SidecarImagePath() string {
 func ReadCgroupPath(ctx context.Context, pid int) (string, error) {
 	defer trace.StartRegion(ctx, "utils.ReadCgroupPath").End()
 	var out bytes.Buffer
-	cmd := RootCommandContext(ctx, "nsenter", "-t", "1", "-C", "--", "cat", filepath.Join("/proc", strconv.Itoa(pid), "cgroup"))
+	cmd := RootCommandContext(ctx, "cat", filepath.Join("/proc", strconv.Itoa(pid), "cgroup"))
 	cmd.Stdout = &out
 	cmd.Stderr = &out
 	if err := cmd.Run(); err != nil {
@@ -125,13 +125,18 @@ type TargetContainerConfig struct {
 func ReadNamespaces(ctx context.Context, pid int) ([]LinuxNamespaceWithInode, error) {
 	defer trace.StartRegion(ctx, "utils.ReadNamespaces").End()
 
-	out, err := RootCommandContext(ctx, "nsenter", "-t", "1", "-C", "--", "lsns", "--task", strconv.Itoa(pid), "--output=ns,type,path", "--noheadings").CombinedOutput()
-	if err != nil {
-		return nil, fmt.Errorf("lsns %w: %s", err, string(out))
+	var sout bytes.Buffer
+	var serr bytes.Buffer
+	cmd := RootCommandContext(ctx, "lsns", "--task", strconv.Itoa(pid), "--output=ns,type,path", "--noheadings")
+	cmd.Stdout = &sout
+	cmd.Stderr = &serr
+
+	if err := cmd.Run(); err != nil {
+		return nil, fmt.Errorf("lsns --task %d %w: %s", pid, err, serr.String())
 	}
 
 	var namespaces []LinuxNamespaceWithInode
-	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+	for _, line := range strings.Split(strings.TrimSpace(sout.String()), "\n") {
 		fields := strings.Fields(line)
 		if len(fields) != 3 {
 			continue
@@ -183,17 +188,13 @@ func refreshNamespacesUsingInode(ctx context.Context, ns LinuxNamespaceWithInode
 
 	log.Trace().Str("path", ns.Path).Msgf("refreshing %s namespace using inode %d to path", ns.Type, ns.Inode)
 
-	var out bytes.Buffer
-	cmd := RootCommandContext(ctx, "nsenter", "-t", "1", "-C", "--", "lsns", strconv.FormatUint(ns.Inode, 10), "--output=path", "--noheadings")
-	cmd.Stdout = &out
-	cmd.Stderr = &out
+	var sout bytes.Buffer
+	var serr bytes.Buffer
+	cmd := RootCommandContext(ctx, "lsns", strconv.FormatUint(ns.Inode, 10), "--output=path", "--noheadings")
+	cmd.Stdout = &sout
+	cmd.Stderr = &serr
 
-	if err := cmd.Run(); err != nil {
-		log.Warn().Err(err).Str("stderr", out.String()).Msgf("could not refresh %s namespace using inode %d to path. %s doesn't exist anymore", ns.Type, ns.Inode, ns.Path)
-		return
-	}
-
-	for _, line := range strings.Split(strings.TrimSpace(out.String()), "\n") {
+	for _, line := range strings.Split(strings.TrimSpace(serr.String()), "\n") {
 		fields := strings.Fields(line)
 		if len(fields) != 1 {
 			continue
@@ -201,6 +202,10 @@ func refreshNamespacesUsingInode(ctx context.Context, ns LinuxNamespaceWithInode
 
 		ns.Path = fields[0]
 		return
+	}
+
+	if err := cmd.Run(); err != nil {
+		log.Warn().Err(err).Str("stderr", serr.String()).Msgf("could not refresh %s namespace path using inode %d", ns.Type, ns.Inode)
 	}
 }
 
@@ -229,9 +234,8 @@ func CheckNamespacesExists(ctx context.Context, namespaces []LinuxNamespaceWithI
 
 func CopyFileFromProcessToBundle(ctx context.Context, bundle string, pid int, path string) error {
 	defer trace.StartRegion(ctx, "utils.CopyFileFromProcessToBundle").End()
-	//TODO nsenter realy needed? replace with copy command
 	var out bytes.Buffer
-	cmd := RootCommandContext(ctx, "nsenter", "-t", "1", "-C", "--", "cat", filepath.Join("/proc", strconv.Itoa(pid), "root", path))
+	cmd := RootCommandContext(ctx, "cat", filepath.Join("/proc", strconv.Itoa(pid), "root", path))
 	cmd.Stdout = &out
 	cmd.Stderr = &out
 	if err := cmd.Run(); err != nil {
