@@ -10,7 +10,7 @@ import (
 	"github.com/steadybit/action-kit/go/action_kit_commons/networkutils"
 	"github.com/steadybit/action-kit/go/action_kit_sdk"
 	"github.com/steadybit/extension-container/pkg/container/runc"
-	"github.com/steadybit/extension-container/pkg/network"
+	"github.com/steadybit/extension-container/pkg/utils"
 	"github.com/steadybit/extension-kit/extbuild"
 	"github.com/steadybit/extension-kit/extutil"
 )
@@ -64,7 +64,7 @@ func getNetworkBlockDnsDescription() action_kit_api.ActionDescription {
 }
 
 func blockDns(_ runc.Runc) networkOptsProvider {
-	return func(ctx context.Context, cfg network.TargetContainerConfig, request action_kit_api.PrepareActionRequestBody) (networkutils.Opts, error) {
+	return func(ctx context.Context, cfg utils.TargetContainerConfig, request action_kit_api.PrepareActionRequestBody) (networkutils.Opts, error) {
 		dnsPort := uint16(extutil.ToUInt(request.Config["dnsPort"]))
 
 		return &networkutils.BlackholeOpts{

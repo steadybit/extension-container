@@ -36,7 +36,7 @@ type ExtraMount struct {
 	Path   string `json:"path"`
 }
 
-func ListInterfaces(ctx context.Context, r runc.Runc, config TargetContainerConfig) ([]Interface, error) {
+func ListInterfaces(ctx context.Context, r runc.Runc, config utils.TargetContainerConfig) ([]Interface, error) {
 	defer trace.StartRegion(ctx, "network.ListInterfaces").End()
 
 	id := getNextContainerId(config.ContainerID)

@@ -27,34 +27,7 @@ var (
 	sidecarImagePath = utils.SidecarImagePath
 )
 
-type TargetContainerConfig struct {
-	ContainerID string                          `json:"id"`
-	Pid         int                             `json:"pid"`
-	Namespaces  []utils.LinuxNamespaceWithInode `json:"namespaces"`
-}
-
-func GetConfigForContainer(ctx context.Context, r runc.Runc, targetId string) (TargetContainerConfig, error) {
-	defer trace.StartRegion(ctx, "network.GetConfigForContainer").End()
-	config := TargetContainerConfig{
-		ContainerID: targetId,
-	}
-
-	state, err := r.State(ctx, targetId)
-	if err != nil {
-		return config, fmt.Errorf("could not read state of target container: %w", err)
-	}
-	config.Pid = state.Pid
-
-	namespaces, err := utils.ReadNamespaces(ctx, state.Pid)
-	if err != nil {
-		return config, fmt.Errorf("could not read namespaces of target container: %w", err)
-	}
-	config.Namespaces = namespaces
-
-	return config, nil
-}
-
-func Apply(ctx context.Context, r runc.Runc, config TargetContainerConfig, opts networkutils.Opts) error {
+func Apply(ctx context.Context, r runc.Runc, config utils.TargetContainerConfig, opts networkutils.Opts) error {
 	defer trace.StartRegion(ctx, "network.Apply").End()
 	log.Info().
 		Str("containerId", config.ContainerID).
@@ -67,7 +40,7 @@ func Apply(ctx context.Context, r runc.Runc, config TargetContainerConfig, opts 
 	return generateAndRunCommands(ctx, r, config, opts, networkutils.ModeAdd)
 }
 
-func Revert(ctx context.Context, r runc.Runc, config TargetContainerConfig, opts networkutils.Opts) (action_kit_api.Messages, error) {
+func Revert(ctx context.Context, r runc.Runc, config utils.TargetContainerConfig, opts networkutils.Opts) (action_kit_api.Messages, error) {
 	defer trace.StartRegion(ctx, "network.Revert").End()
 	if err := utils.CheckNamespacesExists(ctx, config.Namespaces, specs.NetworkNamespace, specs.UTSNamespace); err != nil {
 		log.Info().
@@ -90,7 +63,7 @@ func Revert(ctx context.Context, r runc.Runc, config TargetContainerConfig, opts
 	return nil, generateAndRunCommands(ctx, r, config, opts, networkutils.ModeDelete)
 }
 
-func generateAndRunCommands(ctx context.Context, r runc.Runc, config TargetContainerConfig, opts networkutils.Opts, mode networkutils.Mode) error {
+func generateAndRunCommands(ctx context.Context, r runc.Runc, config utils.TargetContainerConfig, opts networkutils.Opts, mode networkutils.Mode) error {
 	defer trace.StartRegion(ctx, "network.generateAndRunCommands").End()
 	ipCommandsV4, err := opts.IpCommands(networkutils.FamilyV4, mode)
 	if err != nil {
@@ -153,7 +126,7 @@ func getNextContainerId(targedId string) string {
 	return fmt.Sprintf("sb-network-%d-%s", counter.Add(1), targedId[:l])
 }
 
-func executeIpCommands(ctx context.Context, r runc.Runc, config TargetContainerConfig, family networkutils.Family, cmds []string) error {
+func executeIpCommands(ctx context.Context, r runc.Runc, config utils.TargetContainerConfig, family networkutils.Family, cmds []string) error {
 	defer trace.StartRegion(ctx, "network.executeIpCommands").End()
 	if len(cmds) == 0 {
 		return nil
@@ -199,7 +172,7 @@ func executeIpCommands(ctx context.Context, r runc.Runc, config TargetContainerC
 	return nil
 }
 
-func executeTcCommands(ctx context.Context, r runc.Runc, config TargetContainerConfig, cmds []string) error {
+func executeTcCommands(ctx context.Context, r runc.Runc, config utils.TargetContainerConfig, cmds []string) error {
 	defer trace.StartRegion(ctx, "network.executeTcCommands").End()
 	if len(cmds) == 0 {
 		return nil

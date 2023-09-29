@@ -61,23 +61,8 @@ func (o *Opts) Args() []string {
 	return args
 }
 
-func New(ctx context.Context, r runc.Runc, targetId string, opts Opts) (*Stress, error) {
-	state, err := r.State(ctx, targetId)
-	if err != nil {
-		return nil, fmt.Errorf("could not load state of target container: %w", err)
-	}
-
-	cgroupPath, err := utils.ReadCgroupPath(ctx, state.Pid)
-	if err != nil {
-		return nil, fmt.Errorf("could not read cgroup of target container: %w", err)
-	}
-
-	namespaces, err := utils.ReadNamespaces(ctx, state.Pid)
-	if err != nil {
-		return nil, fmt.Errorf("could not read namespaces of target container: %w", err)
-	}
-
-	id := getNextContainerId(targetId)
+func New(ctx context.Context, r runc.Runc, config utils.TargetContainerConfig, opts Opts) (*Stress, error) {
+	id := getNextContainerId(config.ContainerID)
 	bundle, cleanupBundle, err := r.PrepareBundle(ctx, utils.SidecarImagePath(), id)
 	if err != nil {
 		return nil, fmt.Errorf("could not prepare bundle: %w", err)
@@ -90,8 +75,8 @@ func New(ctx context.Context, r runc.Runc, targetId string, opts Opts) (*Stress,
 		}),
 		runc.WithProcessArgs(append([]string{"stress-ng"}, opts.Args()...)...),
 		runc.WithProcessCwd("/tmp"),
-		runc.WithCgroupPath(cgroupPath, "stress"),
-		runc.WithNamespaces(utils.ToLinuxNamespaces(utils.FilterNamespaces(namespaces, specs.PIDNamespace))),
+		runc.WithCgroupPath(config.CGroupPath, "stress"),
+		runc.WithNamespaces(utils.ToLinuxNamespaces(utils.FilterNamespaces(config.Namespaces, specs.PIDNamespace))),
 		runc.WithCapabilities("CAP_SYS_RESOURCE"),
 		runc.WithMountIfNotPresent(specs.Mount{
 			Destination: "/tmp",
@@ -106,7 +91,7 @@ func New(ctx context.Context, r runc.Runc, targetId string, opts Opts) (*Stress,
 	ctx, cancel := context.WithCancel(context.Background())
 	start := func() error {
 		log.Info().
-			Str("targetContainer", targetId).
+			Str("targetContainer", config.ContainerID).
 			Strs("args", opts.Args()).
 			Msg("Starting stress-ng")
 		go func() {
@@ -129,7 +114,7 @@ func New(ctx context.Context, r runc.Runc, targetId string, opts Opts) (*Stress,
 
 	stop := func() {
 		log.Info().
-			Str("targetContainer", targetId).
+			Str("targetContainer", config.ContainerID).
 			Msg("Stopping stress-ng")
 		cancel()
 		_ = r.Delete(context.Background(), id, true)

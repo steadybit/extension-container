@@ -23,7 +23,7 @@ import (
 	"runtime/trace"
 )
 
-type networkOptsProvider func(ctx context.Context, sidecarConfig network.TargetContainerConfig, request action_kit_api.PrepareActionRequestBody) (networkutils.Opts, error)
+type networkOptsProvider func(ctx context.Context, sidecarConfig utils.TargetContainerConfig, request action_kit_api.PrepareActionRequestBody) (networkutils.Opts, error)
 
 type networkOptsDecoder func(data json.RawMessage) (networkutils.Opts, error)
 
@@ -37,7 +37,7 @@ type networkAction struct {
 type NetworkActionState struct {
 	ExecutionId     uuid.UUID
 	NetworkOpts     json.RawMessage
-	ContainerConfig network.TargetContainerConfig
+	ContainerConfig utils.TargetContainerConfig
 }
 
 // Make sure networkAction implements all required interfaces
@@ -111,7 +111,7 @@ func (a *networkAction) Prepare(ctx context.Context, state *NetworkActionState, 
 		return nil, extension_kit.ToError("Target is missing the 'container.id' attribute.", nil)
 	}
 
-	cfg, err := network.GetConfigForContainer(ctx, a.runc, RemovePrefix(containerId[0]))
+	cfg, err := GetConfigForContainer(ctx, a.runc, RemovePrefix(containerId[0]))
 	if err != nil {
 		return nil, extension_kit.ToError("Failed to prepare network settings.", err)
 	}
@@ -221,13 +221,13 @@ func parsePortRanges(raw []string) ([]networkutils.PortRange, error) {
 	return ranges, nil
 }
 
-func mapToNetworkFilter(ctx context.Context, r runc.Runc, cfg network.TargetContainerConfig, actionConfig map[string]interface{}, restrictedEndpoints []action_kit_api.RestrictedEndpoint) (networkutils.Filter, error) {
+func mapToNetworkFilter(ctx context.Context, r runc.Runc, cfg utils.TargetContainerConfig, actionConfig map[string]interface{}, restrictedEndpoints []action_kit_api.RestrictedEndpoint) (networkutils.Filter, error) {
 	toResolve := append(
 		extutil.ToStringArray(actionConfig["ip"]),
 		extutil.ToStringArray(actionConfig["hostname"])...,
 	)
 
-	dig := networkutils.HostnameResolver{Dig: &network.RuncDigRunner{Runc: r, Cfg: cfg}}
+	dig := networkutils.HostnameResolver{Dig: &network.RuncDigRunner{Runc: r, Config: cfg}}
 	includeIps, err := dig.Resolve(ctx, toResolve...)
 	if err != nil {
 		return networkutils.Filter{}, err
@@ -275,7 +275,7 @@ func mapToNetworkFilter(ctx context.Context, r runc.Runc, cfg network.TargetCont
 	}, nil
 }
 
-func readNetworkInterfaces(ctx context.Context, r runc.Runc, cfg network.TargetContainerConfig) ([]string, error) {
+func readNetworkInterfaces(ctx context.Context, r runc.Runc, cfg utils.TargetContainerConfig) ([]string, error) {
 	ifcs, err := network.ListInterfaces(ctx, r, cfg)
 	if err != nil {
 		return nil, err

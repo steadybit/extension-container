@@ -24,7 +24,7 @@ var (
 		},
 	}
 
-	targetContainerConfig = TargetContainerConfig{ContainerID: "fakeid"}
+	targetContainerConfig = utils.TargetContainerConfig{ContainerID: "fakeid"}
 )
 
 func Test_generateAndRunCommands_should_serialize(t *testing.T) {

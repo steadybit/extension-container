@@ -4,10 +4,14 @@
 package extcontainer
 
 import (
+	"context"
 	"fmt"
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
+	"github.com/steadybit/extension-container/pkg/container/runc"
 	"github.com/steadybit/extension-container/pkg/container/types"
+	"github.com/steadybit/extension-container/pkg/utils"
 	"github.com/steadybit/extension-kit/extutil"
+	"runtime/trace"
 	"strings"
 )
 
@@ -68,4 +72,31 @@ func getRestrictedEndpoints(request action_kit_api.PrepareActionRequestBody) []a
 		restrictedEndpoints = *request.ExecutionContext.RestrictedEndpoints
 	}
 	return restrictedEndpoints
+}
+
+func GetConfigForContainer(ctx context.Context, r runc.Runc, targetContainerID string) (utils.TargetContainerConfig, error) {
+	defer trace.StartRegion(ctx, "network.GetConfigForContainer").End()
+	config := utils.TargetContainerConfig{
+		ContainerID: targetContainerID,
+	}
+
+	state, err := r.State(ctx, targetContainerID)
+	if err != nil {
+		return config, fmt.Errorf("could not read state of target container %s: %w", targetContainerID, err)
+	}
+	config.Pid = state.Pid
+
+	namespaces, err := utils.ReadNamespaces(ctx, state.Pid)
+	if err != nil {
+		return config, fmt.Errorf("could not read namespaces of target container %s: %w", targetContainerID, err)
+	}
+	config.Namespaces = namespaces
+
+	cgroupPath, err := utils.ReadCgroupPath(ctx, state.Pid)
+	if err != nil {
+		return config, fmt.Errorf("could not read cgroup of target container: %w", err)
+	}
+	config.CGroupPath = cgroupPath
+
+	return config, nil
 }

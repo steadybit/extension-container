@@ -11,6 +11,7 @@ import (
 	"github.com/steadybit/action-kit/go/action_kit_sdk"
 	"github.com/steadybit/extension-container/pkg/container/runc"
 	"github.com/steadybit/extension-container/pkg/stress"
+	"github.com/steadybit/extension-container/pkg/utils"
 	extension_kit "github.com/steadybit/extension-kit"
 	"github.com/steadybit/extension-kit/extutil"
 	"golang.org/x/sync/syncmap"
@@ -29,7 +30,7 @@ type stressAction struct {
 }
 
 type StressActionState struct {
-	ContainerId     string
+	ContainerConfig utils.TargetContainerConfig
 	StressOpts      stress.Opts
 	ExecutionId     uuid.UUID
 	IgnoreExitCodes []int
@@ -77,7 +78,12 @@ func (a *stressAction) Prepare(ctx context.Context, state *StressActionState, re
 		return nil, err
 	}
 
-	state.ContainerId = containerId[0]
+	cfg, err := GetConfigForContainer(ctx, a.runc, RemovePrefix(containerId[0]))
+	if err != nil {
+		return nil, extension_kit.ToError("Failed to prepare stress settings.", err)
+	}
+
+	state.ContainerConfig = cfg
 	state.StressOpts = opts
 	state.ExecutionId = request.ExecutionId
 	if !extutil.ToBool(request.Config["failOnOomKill"]) {
@@ -92,7 +98,7 @@ func (a *stressAction) Start(ctx context.Context, state *StressActionState) (*ac
 	trace.Log(ctx, "actionId", a.description.Id)
 	trace.Log(ctx, "executionId", state.ExecutionId.String())
 
-	s, err := stress.New(ctx, a.runc, RemovePrefix(state.ContainerId), state.StressOpts)
+	s, err := stress.New(ctx, a.runc, state.ContainerConfig, state.StressOpts)
 	if err != nil {
 		return nil, extension_kit.ToError("Failed to stress container", err)
 	}
@@ -107,7 +113,7 @@ func (a *stressAction) Start(ctx context.Context, state *StressActionState) (*ac
 		Messages: extutil.Ptr([]action_kit_api.Message{
 			{
 				Level:   extutil.Ptr(action_kit_api.Info),
-				Message: fmt.Sprintf("Starting stress container %s with args %s", state.ContainerId, strings.Join(state.StressOpts.Args(), " ")),
+				Message: fmt.Sprintf("Starting stress container %s with args %s", state.ContainerConfig.ContainerID, strings.Join(state.StressOpts.Args(), " ")),
 			},
 		}),
 	}, nil
@@ -159,7 +165,7 @@ func (a *stressAction) Status(ctx context.Context, state *StressActionState) (*a
 			Messages: &[]action_kit_api.Message{
 				{
 					Level:   extutil.Ptr(action_kit_api.Info),
-					Message: fmt.Sprintf("Stessing container %s stopped", state.ContainerId),
+					Message: fmt.Sprintf("Stessing container %s stopped", state.ContainerConfig.ContainerID),
 				},
 			},
 		}, nil
@@ -180,7 +186,7 @@ func (a *stressAction) Stop(ctx context.Context, state *StressActionState) (*act
 	if stopped {
 		messages = append(messages, action_kit_api.Message{
 			Level:   extutil.Ptr(action_kit_api.Info),
-			Message: fmt.Sprintf("Canceled stress container %s", state.ContainerId),
+			Message: fmt.Sprintf("Canceled stress container %s", state.ContainerConfig.ContainerID),
 		})
 	}
 

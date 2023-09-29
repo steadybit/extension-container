@@ -115,19 +115,23 @@ func ReadCgroupPath(ctx context.Context, pid int) (string, error) {
 	return cgroup, nil
 }
 
+type TargetContainerConfig struct {
+	ContainerID string                    `json:"id"`
+	Pid         int                       `json:"pid"`
+	Namespaces  []LinuxNamespaceWithInode `json:"namespaces"`
+	CGroupPath  string                    `json:"cgroupPath"`
+}
+
 func ReadNamespaces(ctx context.Context, pid int) ([]LinuxNamespaceWithInode, error) {
 	defer trace.StartRegion(ctx, "utils.ReadNamespaces").End()
-	var out bytes.Buffer
-	cmd := RootCommandContext(ctx, "nsenter", "-t", "1", "-C", "--", "lsns", "--task", strconv.Itoa(pid), "--output=ns,type,path", "--noheadings")
-	cmd.Stdout = &out
-	cmd.Stderr = &out
 
-	if err := cmd.Run(); err != nil {
-		return nil, fmt.Errorf("lsns %s: %s", err, out.String())
+	out, err := RootCommandContext(ctx, "nsenter", "-t", "1", "-C", "--", "lsns", "--task", strconv.Itoa(pid), "--output=ns,type,path", "--noheadings").CombinedOutput()
+	if err != nil {
+		return nil, fmt.Errorf("lsns %w: %s", err, string(out))
 	}
 
 	var namespaces []LinuxNamespaceWithInode
-	for _, line := range strings.Split(strings.TrimSpace(out.String()), "\n") {
+	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
 		fields := strings.Fields(line)
 		if len(fields) != 3 {
 			continue
