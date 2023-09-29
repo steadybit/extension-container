@@ -38,6 +38,9 @@ func (d RuncDigRunner) Run(ctx context.Context, arg []string, stdin io.Reader) (
 		log.Warn().Err(err).Msg("could not copy /etc/hosts")
 	}
 
+	namespaces := utils.FilterNamespaces(d.Cfg.Namespaces, []specs.LinuxNamespaceType{specs.NetworkNamespace}...)
+	utils.RefreshNamespacesUsingInode(ctx, namespaces)
+
 	if err = d.Runc.EditSpec(
 		ctx,
 		bundle,
@@ -45,7 +48,7 @@ func (d RuncDigRunner) Run(ctx context.Context, arg []string, stdin io.Reader) (
 		runc.WithAnnotations(map[string]string{
 			"com.steadybit.sidecar": "true",
 		}),
-		runc.WithSelectedNamespaces(utils.ResolveNamespacesUsingInode(ctx, d.Cfg.Namespaces), specs.NetworkNamespace),
+		runc.WithNamespaces(utils.ToLinuxNamespaces(namespaces)),
 		runc.WithCapabilities("CAP_NET_ADMIN"),
 		runc.WithProcessArgs(append([]string{"dig"}, arg...)...),
 	); err != nil {

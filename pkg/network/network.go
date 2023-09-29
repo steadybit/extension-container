@@ -167,13 +167,15 @@ func executeIpCommands(ctx context.Context, r runc.Runc, config TargetContainerC
 	}
 
 	cmd := []string{"ip", "-family", string(family), "-force", "-batch", "-"}
+	namespaces := utils.FilterNamespaces(config.Namespaces, []specs.LinuxNamespaceType{specs.NetworkNamespace}...)
+	utils.RefreshNamespacesUsingInode(ctx, namespaces)
 
 	if err = r.EditSpec(
 		ctx,
 		bundle,
 		runc.WithHostname(fmt.Sprintf("ip-%s", id)),
 		runc.WithAnnotations(map[string]string{"com.steadybit.sidecar": "true"}),
-		runc.WithSelectedNamespaces(utils.ResolveNamespacesUsingInode(ctx, config.Namespaces), specs.NetworkNamespace),
+		runc.WithNamespaces(utils.ToLinuxNamespaces(namespaces)),
 		runc.WithCapabilities("CAP_NET_ADMIN"),
 		runc.WithProcessArgs(cmd...),
 	); err != nil {
@@ -210,13 +212,16 @@ func executeTcCommands(ctx context.Context, r runc.Runc, config TargetContainerC
 		return err
 	}
 
+	namespaces := utils.FilterNamespaces(config.Namespaces, []specs.LinuxNamespaceType{specs.NetworkNamespace}...)
+	utils.RefreshNamespacesUsingInode(ctx, namespaces)
+
 	cmd := []string{"tc", "-force", "-batch", "-"}
 	if err = r.EditSpec(
 		ctx,
 		bundle,
 		runc.WithHostname(fmt.Sprintf("tc-%s", id)),
 		runc.WithAnnotations(map[string]string{"com.steadybit.sidecar": "true"}),
-		runc.WithSelectedNamespaces(utils.ResolveNamespacesUsingInode(ctx, config.Namespaces), specs.NetworkNamespace),
+		runc.WithNamespaces(utils.ToLinuxNamespaces(namespaces)),
 		runc.WithCapabilities("CAP_NET_ADMIN"),
 		runc.WithProcessArgs(cmd...),
 	); err != nil {

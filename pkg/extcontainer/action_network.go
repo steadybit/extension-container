@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/google/uuid"
+	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/rs/zerolog/log"
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
 	"github.com/steadybit/action-kit/go/action_kit_commons/networkutils"
@@ -110,24 +111,18 @@ func (a *networkAction) Prepare(ctx context.Context, state *NetworkActionState, 
 		return nil, extension_kit.ToError("Target is missing the 'container.id' attribute.", nil)
 	}
 
-	if extutil.ToBool(request.Config["failOnHostNetwork"]) {
-		usingHostNetwork, err := a.isUsingHostNetwork(ctx, containerId[0])
-		if err != nil {
-			return nil, extension_kit.ToError("Failed to check if container is using host network.", err)
-		}
-		if usingHostNetwork {
-			return &action_kit_api.PrepareResult{
-				Error: &action_kit_api.ActionKitError{
-					Title:  "Container is using host network and failOnHostNetwork = true.",
-					Status: extutil.Ptr(action_kit_api.Failed),
-				},
-			}, nil
-		}
-	}
-
 	cfg, err := network.GetConfigForContainer(ctx, a.runc, RemovePrefix(containerId[0]))
 	if err != nil {
 		return nil, extension_kit.ToError("Failed to prepare network settings.", err)
+	}
+
+	if extutil.ToBool(request.Config["failOnHostNetwork"]) && isUsingHostNetwork(cfg.Namespaces) {
+		return &action_kit_api.PrepareResult{
+			Error: &action_kit_api.ActionKitError{
+				Title:  "Container is using host network and failOnHostNetwork = true.",
+				Status: extutil.Ptr(action_kit_api.Failed),
+			},
+		}, nil
 	}
 
 	opts, err := a.optsProvider(ctx, cfg, request)
@@ -145,12 +140,13 @@ func (a *networkAction) Prepare(ctx context.Context, state *NetworkActionState, 
 	return nil, nil
 }
 
-func (a *networkAction) isUsingHostNetwork(ctx context.Context, containerId string) (bool, error) {
-	containerState, err := a.runc.State(ctx, RemovePrefix(containerId))
-	if err != nil {
-		return false, err
+func isUsingHostNetwork(ns []utils.LinuxNamespaceWithInode) bool {
+	for _, n := range ns {
+		if n.Type == specs.NetworkNamespace {
+			return n.Path == "/proc/1/ns/net"
+		}
 	}
-	return utils.IsUsingHostNetwork(ctx, containerState.Pid)
+	return true
 }
 
 func (a *networkAction) Start(ctx context.Context, state *NetworkActionState) (*action_kit_api.StartResult, error) {

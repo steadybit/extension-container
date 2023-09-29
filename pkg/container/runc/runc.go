@@ -24,8 +24,7 @@ import (
 )
 
 type Runc interface {
-	State(ctx context.Context, id string) (*Container, error)
-	Spec(ctx context.Context, bundle string) error
+	State(ctx context.Context, id string) (*ContainerState, error)
 	EditSpec(ctx context.Context, bundle string, editors ...SpecEditor) error
 	Run(ctx context.Context, id, bundle string, ioOpts IoOpts) error
 	Delete(ctx context.Context, id string, force bool) error
@@ -39,7 +38,7 @@ type defaultRunc struct {
 	Rootless      string
 }
 
-type Container struct {
+type ContainerState struct {
 	ID          string            `json:"id"`
 	Pid         int               `json:"pid"`
 	Status      string            `json:"status"`
@@ -63,7 +62,7 @@ func NewRunc(runtime types.Runtime) Runc {
 	}
 }
 
-func (r *defaultRunc) State(ctx context.Context, id string) (*Container, error) {
+func (r *defaultRunc) State(ctx context.Context, id string) (*ContainerState, error) {
 	defer trace.StartRegion(ctx, "runc.State").End()
 	cmd := r.command(ctx, "state", id)
 	var outputBuffer, errorBuffer bytes.Buffer
@@ -78,25 +77,14 @@ func (r *defaultRunc) State(ctx context.Context, id string) (*Container, error) 
 
 	log.Trace().Str("output", string(output)).Str("stderr", string(stderr)).Msg("get container state")
 
-	return parseRunCStateToContainer(output)
-}
-
-func parseRunCStateToContainer(output []byte) (*Container, error) {
-	var c Container
-	if err := json.Unmarshal(output, &c); err != nil {
-		if output[0] != '{' && bytes.Contains(output, []byte("{")) && bytes.Contains(output, []byte("}")) {
-			outputTruncated := output[bytes.IndexByte(output, '{'):]
-			if err2 := json.Unmarshal(outputTruncated, &c); err2 != nil {
-				return nil, err2
-			}
-		} else {
-			return nil, err
-		}
+	var state ContainerState
+	if err := unmarshalGuarded(output, &state); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal container state: %w", err)
 	}
-	return &c, nil
+	return &state, nil
 }
 
-func (r *defaultRunc) Spec(ctx context.Context, bundle string) error {
+func (r *defaultRunc) spec(ctx context.Context, bundle string) error {
 	defer trace.StartRegion(ctx, "runc.Spec").End()
 	log.Trace().Str("bundle", bundle).Msg("creating container spec")
 	output, err := r.command(ctx, "spec", "--bundle", bundle).CombinedOutput()
@@ -258,7 +246,7 @@ func (r *defaultRunc) PrepareBundle(ctx context.Context, image string, id string
 		return errors.Join(unmountOverlay(ctx, bundle), removeBundle())
 	}
 
-	if err := r.Spec(ctx, bundle); err != nil {
+	if err := r.spec(ctx, bundle); err != nil {
 		return "", cleanup, err
 	}
 
@@ -327,4 +315,19 @@ func unmountOverlay(ctx context.Context, bundle string) error {
 		return fmt.Errorf("%s: %s", err, out)
 	}
 	return nil
+}
+
+func unmarshalGuarded(output []byte, v any) error {
+	err := json.Unmarshal(output, v)
+	if err == nil {
+		return nil
+	}
+
+	if output[0] != '{' && bytes.Contains(output, []byte("{")) && bytes.Contains(output, []byte("}")) {
+		if err := json.Unmarshal(output[bytes.IndexByte(output, '{'):], v); err == nil {
+			return nil
+		}
+	}
+
+	return err
 }

@@ -60,9 +60,9 @@ type MockedRunc struct {
 	mock.Mock
 }
 
-func (m *MockedRunc) State(ctx context.Context, id string) (*runc.Container, error) {
+func (m *MockedRunc) State(ctx context.Context, id string) (*runc.ContainerState, error) {
 	args := m.Called(ctx, id)
-	return args.Get(0).(*runc.Container), args.Error(1)
+	return args.Get(0).(*runc.ContainerState), args.Error(1)
 }
 
 func (m *MockedRunc) Spec(ctx context.Context, bundle string) error {

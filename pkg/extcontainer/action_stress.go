@@ -19,7 +19,7 @@ import (
 	"strings"
 )
 
-type stressOptsProvider func(request action_kit_api.PrepareActionRequestBody) (stress.StressOpts, error)
+type stressOptsProvider func(request action_kit_api.PrepareActionRequestBody) (stress.Opts, error)
 
 type stressAction struct {
 	runc         runc.Runc
@@ -30,7 +30,7 @@ type stressAction struct {
 
 type StressActionState struct {
 	ContainerId     string
-	StressOpts      stress.StressOpts
+	StressOpts      stress.Opts
 	ExecutionId     uuid.UUID
 	IgnoreExitCodes []int
 }

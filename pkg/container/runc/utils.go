@@ -96,19 +96,3 @@ func WithNamespace(ns specs.LinuxNamespace) SpecEditor {
 		spec.Linux.Namespaces = append(spec.Linux.Namespaces, ns)
 	}
 }
-
-func WithSelectedNamespaces(ns []specs.LinuxNamespace, filter ...specs.LinuxNamespaceType) SpecEditor {
-	return WithNamespaces(FilterNamespaces(ns, filter...))
-}
-
-func FilterNamespaces(ns []specs.LinuxNamespace, types ...specs.LinuxNamespaceType) []specs.LinuxNamespace {
-	var result []specs.LinuxNamespace
-	for _, n := range ns {
-		for _, t := range types {
-			if n.Type == t {
-				result = append(result, n)
-			}
-		}
-	}
-	return result
-}

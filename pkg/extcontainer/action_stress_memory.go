@@ -65,8 +65,8 @@ func getStressMemoryDescription() action_kit_api.ActionDescription {
 	}
 }
 
-func stressMemory(request action_kit_api.PrepareActionRequestBody) (stress.StressOpts, error) {
-	return stress.StressOpts{
+func stressMemory(request action_kit_api.PrepareActionRequestBody) (stress.Opts, error) {
+	return stress.Opts{
 		VmWorkers: extutil.Ptr(1),
 		VmBytes:   fmt.Sprintf("%d%%", int(request.Config["percentage"].(float64))),
 		VmHang:    0,

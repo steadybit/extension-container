@@ -47,6 +47,9 @@ func ListInterfaces(ctx context.Context, r runc.Runc, config TargetContainerConf
 		return nil, err
 	}
 
+	namespaces := utils.FilterNamespaces(config.Namespaces, []specs.LinuxNamespaceType{specs.NetworkNamespace}...)
+	utils.RefreshNamespacesUsingInode(ctx, namespaces)
+
 	if err = r.EditSpec(
 		ctx,
 		bundle,
@@ -54,7 +57,7 @@ func ListInterfaces(ctx context.Context, r runc.Runc, config TargetContainerConf
 		runc.WithAnnotations(map[string]string{
 			"com.steadybit.sidecar": "true",
 		}),
-		runc.WithSelectedNamespaces(utils.ResolveNamespacesUsingInode(ctx, config.Namespaces), specs.NetworkNamespace),
+		runc.WithNamespaces(utils.ToLinuxNamespaces(namespaces)),
 		runc.WithCapabilities("CAP_NET_ADMIN"),
 		runc.WithProcessArgs("ip", "-json", "link", "show"),
 	); err != nil {

@@ -108,14 +108,14 @@ func getStressIoDescription() action_kit_api.ActionDescription {
 	}
 }
 
-func stressIo(request action_kit_api.PrepareActionRequestBody) (stress.StressOpts, error) {
+func stressIo(request action_kit_api.PrepareActionRequestBody) (stress.Opts, error) {
 	workers := extutil.ToInt(request.Config["workers"])
 	mode := extutil.ToString(request.Config["mode"])
 	if mode == "" {
 		mode = string(ModeReadWriteAndFlush)
 	}
 
-	opts := stress.StressOpts{
+	opts := stress.Opts{
 		TempPath: extutil.ToString(request.Config["path"]),
 		Timeout:  time.Duration(extutil.ToInt64(request.Config["duration"])) * time.Millisecond,
 	}

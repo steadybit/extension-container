@@ -13,7 +13,7 @@ func Test_stressIo(t *testing.T) {
 	tests := []struct {
 		name   string
 		config map[string]interface{}
-		want   stress.StressOpts
+		want   stress.Opts
 	}{
 		{
 			name: "default mode",
@@ -23,7 +23,7 @@ func Test_stressIo(t *testing.T) {
 				"path":       "/somepath",
 				"percentage": 50.0,
 			},
-			want: stress.StressOpts{
+			want: stress.Opts{
 				HddWorkers: extutil.Ptr(1),
 				HddBytes:   "50%",
 				IoWorkers:  extutil.Ptr(1),
@@ -40,7 +40,7 @@ func Test_stressIo(t *testing.T) {
 				"percentage": 50.0,
 				"mode":       "flush",
 			},
-			want: stress.StressOpts{
+			want: stress.Opts{
 				IoWorkers: extutil.Ptr(1),
 				TempPath:  "/somepath",
 				Timeout:   1000000000,
@@ -55,7 +55,7 @@ func Test_stressIo(t *testing.T) {
 				"percentage": 50.0,
 				"mode":       "read_write",
 			},
-			want: stress.StressOpts{
+			want: stress.Opts{
 				HddWorkers: extutil.Ptr(1),
 				HddBytes:   "50%",
 				TempPath:   "/somepath",

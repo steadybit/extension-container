@@ -30,6 +30,26 @@ type LinuxNamespaceWithInode struct {
 	Inode uint64
 }
 
+func FilterNamespaces(ns []LinuxNamespaceWithInode, types ...specs.LinuxNamespaceType) []LinuxNamespaceWithInode {
+	result := make([]LinuxNamespaceWithInode, 0, len(types))
+	for _, n := range ns {
+		for _, t := range types {
+			if n.Type == t {
+				result = append(result, n)
+			}
+		}
+	}
+	return result
+}
+
+func ToLinuxNamespaces(ns []LinuxNamespaceWithInode) []specs.LinuxNamespace {
+	result := make([]specs.LinuxNamespace, 0, len(ns))
+	for _, n := range ns {
+		result = append(result, n.LinuxNamespace)
+	}
+	return result
+}
+
 func SidecarImagePath() string {
 	sidecarImageOnce.Do(func() {
 		if _, err := os.Stat("sidecar"); err == nil {
@@ -139,20 +159,25 @@ func toRuncNamespaceType(t string) specs.LinuxNamespaceType {
 	}
 }
 
-func ResolveNamespacesUsingInode(ctx context.Context, namespaces []LinuxNamespaceWithInode) []specs.LinuxNamespace {
-	defer trace.StartRegion(ctx, "utils.ResolveNamespacesUsingInode").End()
-	var runcNamespaces []specs.LinuxNamespace
+// RefreshNamespacesUsingInode if the denoted namespace path doesn't exist the path update it using updating also the list.
+func RefreshNamespacesUsingInode(ctx context.Context, namespaces []LinuxNamespaceWithInode) {
 	for _, ns := range namespaces {
-		r := resolveNamespaceUsingInode(ctx, ns)
-		runcNamespaces = append(runcNamespaces, r)
+		refreshNamespacesUsingInode(ctx, ns)
 	}
-	return runcNamespaces
 }
 
-func resolveNamespaceUsingInode(ctx context.Context, ns LinuxNamespaceWithInode) specs.LinuxNamespace {
+func refreshNamespacesUsingInode(ctx context.Context, ns LinuxNamespaceWithInode) {
+	defer trace.StartRegion(ctx, "utils.refreshNamespacesUsingInode").End()
+
 	if ns.Inode == 0 {
-		return ns.LinuxNamespace
+		return
 	}
+
+	if _, err := os.Stat(ns.Path); err == nil {
+		return
+	}
+
+	log.Trace().Str("path", ns.Path).Msgf("refreshing %s namespace using inode %d to path", ns.Type, ns.Inode)
 
 	var out bytes.Buffer
 	cmd := RootCommandContext(ctx, "nsenter", "-t", "1", "-C", "--", "lsns", strconv.FormatUint(ns.Inode, 10), "--output=path", "--noheadings")
@@ -160,8 +185,8 @@ func resolveNamespaceUsingInode(ctx context.Context, ns LinuxNamespaceWithInode)
 	cmd.Stderr = &out
 
 	if err := cmd.Run(); err != nil {
-		log.Debug().Err(err).Str("stderr", out.String()).Msgf("could not resolve %s namespace using inode %d to path. Falling back to possibly outdated path %s", ns.Type, ns.Inode, ns.Path)
-		return ns.LinuxNamespace
+		log.Warn().Err(err).Str("stderr", out.String()).Msgf("could not refresh %s namespace using inode %d to path. %s doesn't exist anymore", ns.Type, ns.Inode, ns.Path)
+		return
 	}
 
 	for _, line := range strings.Split(strings.TrimSpace(out.String()), "\n") {
@@ -170,57 +195,32 @@ func resolveNamespaceUsingInode(ctx context.Context, ns LinuxNamespaceWithInode)
 			continue
 		}
 
-		return specs.LinuxNamespace{
-			Type: ns.Type,
-			Path: fields[0],
-		}
+		ns.Path = fields[0]
+		return
 	}
-
-	return ns.LinuxNamespace
 }
 
 func CheckNamespacesExists(ctx context.Context, namespaces []LinuxNamespaceWithInode, wantedTypes ...specs.LinuxNamespaceType) error {
 	defer trace.StartRegion(ctx, "utils.CheckNamespacesExists").End()
-	for _, ns := range namespaces {
-		wanted := false
-		if len(wantedTypes) == 0 {
-			wanted = true
-		} else {
-			for _, wantedType := range wantedTypes {
-				if ns.Type == wantedType {
-					wanted = true
-					break
-				}
-			}
-		}
 
-		if !wanted || ns.Path == "" {
+	filtered := namespaces
+	if len(wantedTypes) > 0 {
+		filtered = FilterNamespaces(namespaces, wantedTypes...)
+	}
+
+	for _, ns := range filtered {
+		if ns.Path == "" {
 			continue
 		}
 
-		resolved := resolveNamespaceUsingInode(ctx, ns)
+		refreshNamespacesUsingInode(ctx, ns)
 
-		if _, err := os.Stat(resolved.Path); err != nil && os.IsNotExist(err) {
-			return fmt.Errorf("namespace %s doesn't exist", resolved.Path)
+		if _, err := os.Stat(ns.Path); err != nil && os.IsNotExist(err) {
+			return fmt.Errorf("namespace %s doesn't exist", ns.Path)
 		}
 	}
 
 	return nil
-}
-
-// IsUsingHostNetwork determines weather the given process has the same network as the init process.
-func IsUsingHostNetwork(ctx context.Context, pid int) (bool, error) {
-	defer trace.StartRegion(ctx, "utils.IsUsingHostNetwork").End()
-	ns, err := ReadNamespaces(ctx, pid)
-	if err != nil {
-		return false, err
-	}
-	for _, n := range ns {
-		if n.Type == specs.NetworkNamespace {
-			return n.Path == "/proc/1/ns/net", nil
-		}
-	}
-	return true, nil
 }
 
 func CopyFileFromProcessToBundle(ctx context.Context, bundle string, pid int, path string) error {

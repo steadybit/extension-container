@@ -25,7 +25,7 @@ type Stress struct {
 
 var counter = atomic.Int32{}
 
-type StressOpts struct {
+type Opts struct {
 	CpuWorkers *int
 	CpuLoad    int
 	HddWorkers *int
@@ -38,7 +38,7 @@ type StressOpts struct {
 	VmBytes    string
 }
 
-func (o *StressOpts) Args() []string {
+func (o *Opts) Args() []string {
 	args := []string{"--timeout", strconv.Itoa(int(o.Timeout.Seconds()))}
 	if o.CpuWorkers != nil {
 		args = append(args, "--cpu", strconv.Itoa(*o.CpuWorkers), "--cpu-load", strconv.Itoa(o.CpuLoad))
@@ -61,7 +61,7 @@ func (o *StressOpts) Args() []string {
 	return args
 }
 
-func New(ctx context.Context, r runc.Runc, targetId string, opts StressOpts) (*Stress, error) {
+func New(ctx context.Context, r runc.Runc, targetId string, opts Opts) (*Stress, error) {
 	state, err := r.State(ctx, targetId)
 	if err != nil {
 		return nil, fmt.Errorf("could not load state of target container: %w", err)
@@ -91,7 +91,7 @@ func New(ctx context.Context, r runc.Runc, targetId string, opts StressOpts) (*S
 		runc.WithProcessArgs(append([]string{"stress-ng"}, opts.Args()...)...),
 		runc.WithProcessCwd("/tmp"),
 		runc.WithCgroupPath(cgroupPath, "stress"),
-		runc.WithSelectedNamespaces(utils.ResolveNamespacesUsingInode(ctx, namespaces), specs.PIDNamespace),
+		runc.WithNamespaces(utils.ToLinuxNamespaces(utils.FilterNamespaces(namespaces, specs.PIDNamespace))),
 		runc.WithCapabilities("CAP_SYS_RESOURCE"),
 		runc.WithMountIfNotPresent(specs.Mount{
 			Destination: "/tmp",

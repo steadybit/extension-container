@@ -6,13 +6,13 @@ import (
 	"time"
 )
 
-func Test_parseRunCStateToContainer(t *testing.T) {
+func Test_unmarshalGuarded(t *testing.T) {
 	type args struct {
 		output []byte
 	}
 
 	timeVal, _ := time.Parse(time.RFC3339, "2023-09-20T05:35:15.520959889Z")
-	container := &Container{
+	container := ContainerState{
 		ID:      "7d51145a4959742f7185563dc72f7fd9b08c6c375db406696ae0c94eac7f787e",
 		Status:  "running",
 		Bundle:  "/run/containerd/io.containerd.runtime.v2.task/moby/7d51145a4959742f7185563dc72f7fd9b08c6c375db406696ae0c94eac7f787e",
@@ -26,11 +26,11 @@ func Test_parseRunCStateToContainer(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		want    *Container
+		want    ContainerState
 		wantErr bool
 	}{
 		{
-			name: "parseRunCStateToContainer",
+			name: "json only output",
 			args: args{
 				output: []byte(payload),
 			},
@@ -50,19 +50,20 @@ func Test_parseRunCStateToContainer(t *testing.T) {
 			args: args{
 				output: []byte(warning),
 			},
-			want:    nil,
+			want:    ContainerState{},
 			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := parseRunCStateToContainer(tt.args.output)
+			var state ContainerState
+			err := unmarshalGuarded(tt.args.output, &state)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("parseRunCStateToContainer() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("unmarshalGuarded() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("parseRunCStateToContainer() got = %v, want %v", got, tt.want)
+			if !reflect.DeepEqual(state, tt.want) {
+				t.Errorf("unmarshalGuarded() got = %v, want %v", state, tt.want)
 			}
 		})
 	}
