@@ -171,14 +171,16 @@ func toRuncNamespaceType(t string) specs.LinuxNamespaceType {
 // RefreshNamespacesUsingInode if the denoted namespace path doesn't exist the path update it using updating also the list.
 func RefreshNamespacesUsingInode(ctx context.Context, namespaces []LinuxNamespaceWithInode) {
 	for _, ns := range namespaces {
-		refreshNamespacesUsingInode(ctx, ns)
+		refreshNamespacesUsingInode(ctx, &ns)
 	}
 }
 
-func refreshNamespacesUsingInode(ctx context.Context, ns LinuxNamespaceWithInode) {
+var listNamespaceUsingInode = listNamespaceUsingInodeImpl
+
+func refreshNamespacesUsingInode(ctx context.Context, ns *LinuxNamespaceWithInode) {
 	defer trace.StartRegion(ctx, "utils.refreshNamespacesUsingInode").End()
 
-	if ns.Inode == 0 {
+	if ns == nil || ns.Inode == 0 {
 		return
 	}
 
@@ -186,27 +188,45 @@ func refreshNamespacesUsingInode(ctx context.Context, ns LinuxNamespaceWithInode
 		return
 	}
 
-	log.Trace().Str("path", ns.Path).Msgf("refreshing %s namespace using inode %d to path", ns.Type, ns.Inode)
+	log.Trace().Str("type", string(ns.Type)).
+		Str("path", ns.Path).
+		Uint64("inode", ns.Inode).
+		Msg("refreshing namespace")
 
-	var sout bytes.Buffer
-	var serr bytes.Buffer
-	cmd := RootCommandContext(ctx, "lsns", strconv.FormatUint(ns.Inode, 10), "--output=path", "--noheadings")
-	cmd.Stdout = &sout
-	cmd.Stderr = &serr
+	out, err := listNamespaceUsingInode(ctx, ns.Inode)
 
-	for _, line := range strings.Split(strings.TrimSpace(serr.String()), "\n") {
+	if err != nil {
+		log.Warn().Str("type", string(ns.Type)).
+			Err(err).
+			Str("path", ns.Path).
+			Uint64("inode", ns.Inode).
+			Msg("failed refreshing namespace")
+	}
+
+	for _, line := range strings.Split(strings.TrimSpace(out), "\n") {
 		fields := strings.Fields(line)
 		if len(fields) != 1 {
 			continue
 		}
 
 		ns.Path = fields[0]
+		log.Trace().Str("type", string(ns.Type)).
+			Str("path", ns.Path).
+			Uint64("inode", ns.Inode).
+			Msg("refreshed namespace")
 		return
 	}
+}
 
+func listNamespaceUsingInodeImpl(ctx context.Context, inode uint64) (string, error) {
+	var sout, serr bytes.Buffer
+	cmd := RootCommandContext(ctx, "lsns", strconv.FormatUint(inode, 10), "--output=path", "--noheadings")
+	cmd.Stdout = &sout
+	cmd.Stderr = &serr
 	if err := cmd.Run(); err != nil {
-		log.Warn().Err(err).Str("stderr", serr.String()).Msgf("could not refresh %s namespace path using inode %d", ns.Type, ns.Inode)
+		return sout.String(), fmt.Errorf("lsns %w: %s", err, serr.String())
 	}
+	return sout.String(), nil
 }
 
 func CheckNamespacesExists(ctx context.Context, namespaces []LinuxNamespaceWithInode, wantedTypes ...specs.LinuxNamespaceType) error {
@@ -222,7 +242,7 @@ func CheckNamespacesExists(ctx context.Context, namespaces []LinuxNamespaceWithI
 			continue
 		}
 
-		refreshNamespacesUsingInode(ctx, ns)
+		refreshNamespacesUsingInode(ctx, &ns)
 
 		if _, err := os.Stat(ns.Path); err != nil && os.IsNotExist(err) {
 			return fmt.Errorf("namespace %s doesn't exist", ns.Path)
