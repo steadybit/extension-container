@@ -170,8 +170,8 @@ func toRuncNamespaceType(t string) specs.LinuxNamespaceType {
 
 // RefreshNamespacesUsingInode if the denoted namespace path doesn't exist the path update it using updating also the list.
 func RefreshNamespacesUsingInode(ctx context.Context, namespaces []LinuxNamespaceWithInode) {
-	for _, ns := range namespaces {
-		refreshNamespacesUsingInode(ctx, &ns)
+	for i := range namespaces {
+		refreshNamespacesUsingInode(ctx, &namespaces[i])
 	}
 }
 
