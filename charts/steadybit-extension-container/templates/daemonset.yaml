@@ -24,7 +24,6 @@ spec:
       labels:
         app.kubernetes.io/name: {{ include "extensionlib.names.name" . }}
         app: {{ include "extensionlib.names.name" . }}
-        steadybit.com/extension: "true"
         {{- include "extensionlib.labels" (list .) | nindent 8 }}
         {{- range $key, $value := .Values.extraLabels }}
         {{ $key }}: {{ $value }}
