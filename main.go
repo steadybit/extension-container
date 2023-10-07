@@ -29,11 +29,11 @@ func main() {
 	extbuild.PrintBuildInformation()
 	extruntime.LogRuntimeInformation(zerolog.InfoLevel)
 
-	exthealth.SetReady(false)
-	exthealth.StartProbes(int(config.Config.HealthPort))
-
 	config.ParseConfiguration()
 	config.ValidateConfiguration()
+
+	exthealth.SetReady(false)
+	exthealth.StartProbes(int(config.Config.HealthPort))
 
 	exthttp.RegisterHttpHandler("/", exthttp.GetterAsHandler(getExtensionList))
 
