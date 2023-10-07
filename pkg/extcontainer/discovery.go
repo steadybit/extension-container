@@ -4,19 +4,20 @@
 package extcontainer
 
 import (
+	"context"
 	"fmt"
 	dockerparser "github.com/novln/docker-parser"
+	"github.com/rs/zerolog/log"
 	"github.com/steadybit/discovery-kit/go/discovery_kit_api"
 	"github.com/steadybit/discovery-kit/go/discovery_kit_commons"
 	"github.com/steadybit/extension-container/config"
 	"github.com/steadybit/extension-container/pkg/container/types"
-	extension_kit "github.com/steadybit/extension-kit"
 	"github.com/steadybit/extension-kit/extbuild"
 	"github.com/steadybit/extension-kit/exthttp"
 	"github.com/steadybit/extension-kit/extutil"
-	"net/http"
 	"os"
 	"strings"
+	"time"
 )
 
 const (
@@ -33,7 +34,8 @@ func RegisterDiscoveryHandlers(client types.Client) {
 	exthttp.RegisterHttpHandler(discoveryBasePath+"/target-description", exthttp.GetterAsHandler(getTargetDescription))
 	exthttp.RegisterHttpHandler(discoveryBasePath+"/attribute-descriptions", exthttp.GetterAsHandler(getAttributeDescriptions))
 	discovery := containerDiscovery{client}
-	exthttp.RegisterHttpHandler(discoveryBasePath+"/discovered-targets", discovery.getDiscoveredTargets)
+	log.Info().Msgf("Starting container fetchData in background every %s", 30*time.Second)
+	exthttp.RegisterHttpHandler(discoveryBasePath+"/discovered-targets", discoveryHandler(schedule(context.Background(), 30*time.Second, discovery.getDiscoveredTargets)))
 }
 
 func GetDiscoveryList() discovery_kit_api.DiscoveryList {
@@ -147,18 +149,16 @@ func getAttributeDescriptions() discovery_kit_api.AttributeDescriptions {
 		},
 	}
 }
-func (d *containerDiscovery) getDiscoveredTargets(w http.ResponseWriter, r *http.Request, _ []byte) {
-	containers, err := d.client.List(r.Context())
+func (d *containerDiscovery) getDiscoveredTargets(ctx context.Context) ([]discovery_kit_api.Target, error) {
+	containers, err := d.client.List(ctx)
 	if err != nil {
-		exthttp.WriteError(w, extension_kit.ToError("Could not list containers.", err))
-		return
+		return nil, fmt.Errorf("could not list containers: %w", err)
 	}
 
 	hostname, _ := os.Hostname()
-	version, _ := d.client.Version(r.Context())
+	version, _ := d.client.Version(ctx)
 
-	var targets []discovery_kit_api.Target
-	targets = []discovery_kit_api.Target{}
+	targets := make([]discovery_kit_api.Target, 0, len(containers))
 	for _, container := range containers {
 		if ignoreContainer(container) {
 			continue
@@ -166,8 +166,7 @@ func (d *containerDiscovery) getDiscoveredTargets(w http.ResponseWriter, r *http
 
 		targets = append(targets, d.mapTarget(container, hostname, version))
 	}
-
-	exthttp.WriteBody(w, discovery_kit_api.DiscoveryData{Targets: extutil.Ptr(discovery_kit_commons.ApplyAttributeExcludes(targets, config.Config.DiscoveryAttributesExcludes))})
+	return discovery_kit_commons.ApplyAttributeExcludes(targets, config.Config.DiscoveryAttributesExcludes), nil
 }
 
 func ignoreContainer(container types.Container) bool {

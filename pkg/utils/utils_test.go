@@ -55,7 +55,7 @@ func Test_RefreshNamespacesUsingInode(t *testing.T) {
 			}},
 		},
 		{
-			name: "resolv using lsns on non-existent path",
+			name: "resolve using lsns on non-existent path",
 			ns: []LinuxNamespaceWithInode{{
 				LinuxNamespace: specs.LinuxNamespace{
 					Path: nonExistentPath,

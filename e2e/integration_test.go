@@ -929,7 +929,7 @@ func testDiscovery(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	require.NoError(t, err, "failed to create pod")
 	defer func() { _ = nginx.Delete() }()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	target, err := e2e.PollForTarget(ctx, e, "com.steadybit.extension_container.container", func(target discovery_kit_api.Target) bool {
