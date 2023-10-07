@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.1.27
+
+- fix: possible failed rollback of attacks for restarted containers
+
 ## v1.1.26
 
 - fix: possible failed rollback of attacks for restarted containers
