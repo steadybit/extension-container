@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.1.28
+
+- reduce discovery interval and decouple listing containers from http request
+
 ## v1.1.27
 
 - fix: possible failed rollback of attacks for restarted containers
