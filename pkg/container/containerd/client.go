@@ -10,18 +10,16 @@ import (
 	"github.com/containerd/containerd/errdefs"
 	"github.com/rs/zerolog/log"
 	"github.com/steadybit/extension-container/pkg/container/types"
-	"github.com/steadybit/extension-container/pkg/extcontainer"
 	"strings"
 	"syscall"
 	"time"
 )
 
-// Client implements the engines.Client interface for containerd
-type Client struct {
+type client struct {
 	containerd *containerd.Client
 }
 
-func (c *Client) Socket() string {
+func (c *client) Socket() string {
 	return c.containerd.Conn().Target()
 }
 
@@ -30,20 +28,20 @@ func New(socket string, namespace string) (types.Client, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create containerd client: %w", err)
 	}
-	return &Client{containerdClient}, nil
+	return &client{containerdClient}, nil
 }
 
-func (c *Client) Runtime() types.Runtime {
+func (c *client) Runtime() types.Runtime {
 	return types.RuntimeContainerd
 }
 
-func (c *Client) List(ctx context.Context) ([]types.Container, error) {
+func (c *client) List(ctx context.Context) ([]types.Container, error) {
 	containers, err := c.containerd.Containers(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list containers: %w", err)
 	}
 
-	var result []types.Container
+	result := make([]types.Container, 0, len(containers))
 	for _, container := range containers {
 		if status, err := getStatus(ctx, container); status.Status != containerd.Running &&
 			status.Status != containerd.Paused && status.Status != containerd.Pausing {
@@ -74,8 +72,8 @@ func getStatus(ctx context.Context, container containerd.Container) (containerd.
 	return task.Status(ctx)
 }
 
-func (c *Client) GetPid(ctx context.Context, containerId string) (int, error) {
-	container, err := c.containerd.LoadContainer(ctx, extcontainer.RemovePrefix(containerId))
+func (c *client) GetPid(ctx context.Context, containerId string) (int, error) {
+	container, err := c.containerd.LoadContainer(ctx, containerId)
 	if err != nil {
 		return 0, fmt.Errorf("failed to load container: %w", err)
 	}
@@ -91,13 +89,10 @@ func toContainer(ctx context.Context, container containerd.Container) (*Containe
 	if err != nil {
 		return nil, err
 	}
-	result := Container{
-		info,
-	}
-	return &result, nil
+	return &Container{info}, nil
 }
 
-func (c *Client) Pause(ctx context.Context, id string) error {
+func (c *client) Pause(ctx context.Context, id string) error {
 	container, err := c.containerd.LoadContainer(ctx, id)
 	if err != nil {
 		return fmt.Errorf("failed to load container %s: %w", id, err)
@@ -113,7 +108,7 @@ func (c *Client) Pause(ctx context.Context, id string) error {
 	return task.Pause(ctx)
 }
 
-func (c *Client) Unpause(ctx context.Context, id string) error {
+func (c *client) Unpause(ctx context.Context, id string) error {
 	container, err := c.containerd.LoadContainer(ctx, id)
 	if err != nil {
 		return fmt.Errorf("failed to load container %s: %w", id, err)
@@ -129,7 +124,7 @@ func (c *Client) Unpause(ctx context.Context, id string) error {
 	return task.Resume(ctx)
 }
 
-func (c *Client) Stop(ctx context.Context, id string, graceful bool) error {
+func (c *client) Stop(ctx context.Context, id string, graceful bool) error {
 	container, err := c.containerd.LoadContainer(ctx, id)
 	if err != nil {
 		return fmt.Errorf("failed to load container %s: %w", id, err)
@@ -176,7 +171,7 @@ func (c *Client) Stop(ctx context.Context, id string, graceful bool) error {
 	return nil
 }
 
-func (c *Client) Version(ctx context.Context) (string, error) {
+func (c *client) Version(ctx context.Context) (string, error) {
 	version, err := c.containerd.Version(ctx)
 	if err != nil {
 		return "", err
@@ -184,6 +179,6 @@ func (c *Client) Version(ctx context.Context) (string, error) {
 	return version.Version, nil
 }
 
-func (c *Client) Close() error {
+func (c *client) Close() error {
 	return c.containerd.Close()
 }

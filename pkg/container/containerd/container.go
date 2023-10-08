@@ -14,8 +14,8 @@ func (c *Container) Id() string {
 	return c.info.ID
 }
 
-func (c *Container) Names() []string {
-	return make([]string, 0)
+func (c *Container) Name() string {
+	return ""
 }
 
 func (c *Container) ImageName() string {

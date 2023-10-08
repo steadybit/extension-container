@@ -200,17 +200,12 @@ func ignoreContainer(container types.Container) bool {
 func (d *containerDiscovery) mapTarget(container types.Container, hostname string, version string) discovery_kit_api.Target {
 	attributes := make(map[string][]string)
 
-	containerNames := container.Names()
-	for i, name := range containerNames {
-		containerNames[i] = strings.TrimPrefix(name, "/")
-	}
-	attributes["container.name"] = containerNames
+	name := strings.TrimPrefix(container.Name(), "/")
+	attributes["container.name"] = []string{name}
 	if hostname != "" {
 		attributes["container.host"] = []string{hostname}
 		attributes["host.hostname"] = []string{hostname}
-		for _, name := range containerNames {
-			attributes["container.host/name"] = append(attributes["container.name"], fmt.Sprintf("%s/%s", hostname, name))
-		}
+		attributes["container.host/name"] = []string{fmt.Sprintf("%s/%s", hostname, name)}
 	}
 	attributes["container.image"] = []string{container.ImageName()}
 
@@ -238,8 +233,8 @@ func (d *containerDiscovery) mapTarget(container types.Container, hostname strin
 	}
 
 	label := container.Id()
-	if len(container.Names()) > 0 {
-		label = container.Names()[0]
+	if len(name) > 0 {
+		label = name
 	} else if container.Labels()["io.kubernetes.container.name"] != "" {
 		label = fmt.Sprintf("%s_%s_%s",
 			container.Labels()["io.kubernetes.pod.namespace"],

@@ -9,23 +9,22 @@ import (
 	dtypes "github.com/docker/docker/api/types"
 	dcontainer "github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
-	"github.com/docker/docker/client"
+	dclient "github.com/docker/docker/client"
 	"github.com/steadybit/extension-container/pkg/container/types"
 	"github.com/steadybit/extension-container/pkg/extcontainer"
 	"github.com/steadybit/extension-kit/extutil"
 	"strings"
 )
 
-// Client implements the types.Client interface for Docker
-type Client struct {
-	docker *client.Client
+type client struct {
+	docker *dclient.Client
 }
 
-func (c *Client) Socket() string {
+func (c *client) Socket() string {
 	return c.docker.DaemonHost()
 }
 
-func (c *Client) Runtime() types.Runtime {
+func (c *client) Runtime() types.Runtime {
 	return types.RuntimeDocker
 }
 
@@ -33,35 +32,32 @@ func New(address string) (types.Client, error) {
 	if !strings.Contains(address, "://") {
 		address = "unix://" + address
 	}
-	dockerClient, err := client.NewClientWithOpts(client.WithHost(address), client.WithAPIVersionNegotiation())
+	dockerClient, err := dclient.NewClientWithOpts(dclient.WithHost(address), dclient.WithAPIVersionNegotiation())
 	if err != nil {
-		return nil, fmt.Errorf("failed to create Docker client: %w", err)
+		return nil, fmt.Errorf("failed to create Docker dclient: %w", err)
 	}
-	return &Client{dockerClient}, nil
+	return &client{dockerClient}, nil
 }
 
-func (c *Client) List(ctx context.Context) ([]types.Container, error) {
-	statusFilter := filters.NewArgs()
-	statusFilter.Add("status", "restarting")
-	statusFilter.Add("status", "running")
-	statusFilter.Add("status", "paused")
+func (c *client) List(ctx context.Context) ([]types.Container, error) {
+	listFilters := filters.NewArgs()
+	listFilters.Add("status", "restarting")
+	listFilters.Add("status", "running")
+	listFilters.Add("status", "paused")
 
-	containers, err := c.docker.ContainerList(ctx, dtypes.ContainerListOptions{
-		Filters: statusFilter,
-	})
+	containers, err := c.docker.ContainerList(ctx, dtypes.ContainerListOptions{Filters: listFilters})
 	if err != nil {
 		return nil, fmt.Errorf("failed to list containers: %w", err)
 	}
 
-	result := make([]types.Container, len(containers))
-	for i, container := range containers {
-		result[i] = &Container{container}
+	result := make([]types.Container, 0, len(containers))
+	for _, container := range containers {
+		result = append(result, &Container{container})
 	}
-
 	return result, nil
 }
 
-func (c *Client) GetPid(ctx context.Context, containerId string) (int, error) {
+func (c *client) GetPid(ctx context.Context, containerId string) (int, error) {
 	info, err := c.docker.ContainerInspect(ctx, extcontainer.RemovePrefix(containerId))
 	if err != nil {
 		return 0, fmt.Errorf("failed to inspect container: %w", err)
@@ -69,15 +65,15 @@ func (c *Client) GetPid(ctx context.Context, containerId string) (int, error) {
 	return info.State.Pid, nil
 }
 
-func (c *Client) Pause(ctx context.Context, id string) error {
+func (c *client) Pause(ctx context.Context, id string) error {
 	return c.docker.ContainerPause(ctx, id)
 }
 
-func (c *Client) Unpause(ctx context.Context, id string) error {
+func (c *client) Unpause(ctx context.Context, id string) error {
 	return c.docker.ContainerUnpause(ctx, id)
 }
 
-func (c *Client) Stop(ctx context.Context, id string, graceful bool) error {
+func (c *client) Stop(ctx context.Context, id string, graceful bool) error {
 	opt := dcontainer.StopOptions{}
 	if !graceful {
 		opt.Timeout = extutil.Ptr(0)
@@ -90,7 +86,7 @@ func (c *Client) Stop(ctx context.Context, id string, graceful bool) error {
 	return nil
 }
 
-func (c *Client) Version(ctx context.Context) (string, error) {
+func (c *client) Version(ctx context.Context) (string, error) {
 	version, err := c.docker.ServerVersion(ctx)
 	if err != nil {
 		return "", err
@@ -98,6 +94,6 @@ func (c *Client) Version(ctx context.Context) (string, error) {
 	return version.Version, nil
 }
 
-func (c *Client) Close() error {
+func (c *client) Close() error {
 	return c.docker.Close()
 }

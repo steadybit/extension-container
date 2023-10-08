@@ -14,8 +14,8 @@ func (c *Container) Id() string {
 	return c.container.Id
 }
 
-func (c *Container) Names() []string {
-	return []string{c.container.Metadata.Name}
+func (c *Container) Name() string {
+	return c.container.Metadata.Name
 }
 
 func (c *Container) ImageName() string {

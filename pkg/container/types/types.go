@@ -9,7 +9,7 @@ import (
 
 type Container interface {
 	Id() string
-	Names() []string
+	Name() string
 	ImageName() string
 	Labels() map[string]string
 }
@@ -33,14 +33,22 @@ var (
 type Runtime string
 
 type Client interface {
+	// List returns a list of all running containers
 	List(ctx context.Context) ([]Container, error)
 	Stop(ctx context.Context, id string, graceful bool) error
+	// Pause pauses the given container
 	Pause(ctx context.Context, id string) error
+	// Unpause unpauses the given container
 	Unpause(ctx context.Context, id string) error
+	// Version returns the version of the runtime
 	Version(ctx context.Context) (string, error)
+	// GetPid returns the pid of the given container
 	GetPid(ctx context.Context, id string) (int, error)
+	// Close closes the client
 	Close() error
+	// Runtime returns the runtime
 	Runtime() Runtime
+	// Socket returns the socket
 	Socket() string
 }
 

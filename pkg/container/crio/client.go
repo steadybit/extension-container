@@ -16,17 +16,16 @@ import (
 	"time"
 )
 
-// Client implements the engines.Client interface for CRI-O
-type Client struct {
+type client struct {
 	cri        criapi.RuntimeServiceClient
 	connection *grpc.ClientConn
 }
 
-func (c *Client) Socket() string {
+func (c *client) Socket() string {
 	return c.connection.Target()
 }
 
-func (c *Client) Runtime() types.Runtime {
+func (c *client) Runtime() types.Runtime {
 	return types.RuntimeCrio
 }
 
@@ -36,7 +35,7 @@ func New(socket string) (types.Client, error) {
 		return nil, fmt.Errorf("failed to connect to cri socket: %w", err)
 	}
 	criClient := criapi.NewRuntimeServiceClient(connection)
-	return &Client{criClient, connection}, nil
+	return &client{criClient, connection}, nil
 }
 
 func newConnection(socket string) (*grpc.ClientConn, error) {
@@ -61,7 +60,7 @@ func dialer(ctx context.Context, addr string) (net.Conn, error) {
 	return net.DialTimeout("unix", addr, 0)
 }
 
-func (c *Client) List(ctx context.Context) ([]types.Container, error) {
+func (c *client) List(ctx context.Context) ([]types.Container, error) {
 	containerList, err := c.cri.ListContainers(ctx, &criapi.ListContainersRequest{
 		Filter: &criapi.ContainerFilter{
 			State: &criapi.ContainerStateValue{
@@ -73,15 +72,14 @@ func (c *Client) List(ctx context.Context) ([]types.Container, error) {
 		return nil, fmt.Errorf("failed to list CRI-O containers: %w", err)
 	}
 
-	result := make([]types.Container, len(containerList.Containers))
-	for i, container := range containerList.Containers {
-		result[i] = &Container{container}
+	result := make([]types.Container, 0, len(containerList.Containers))
+	for _, container := range containerList.Containers {
+		result = append(result, &Container{container})
 	}
-
 	return result, nil
 }
 
-func (c *Client) GetPid(ctx context.Context, containerId string) (int, error) {
+func (c *client) GetPid(ctx context.Context, containerId string) (int, error) {
 	res, err := c.cri.ContainerStatus(ctx, &criapi.ContainerStatusRequest{
 		ContainerId: containerId,
 		Verbose:     true,
@@ -103,15 +101,15 @@ func (c *Client) GetPid(ctx context.Context, containerId string) (int, error) {
 	return info.Pid, nil
 }
 
-func (c *Client) Pause(_ context.Context, _ string) error {
+func (c *client) Pause(_ context.Context, _ string) error {
 	return fmt.Errorf("not supported")
 }
 
-func (c *Client) Unpause(_ context.Context, _ string) error {
+func (c *client) Unpause(_ context.Context, _ string) error {
 	return fmt.Errorf("not supported")
 }
 
-func (c *Client) Stop(ctx context.Context, id string, graceful bool) error {
+func (c *client) Stop(ctx context.Context, id string, graceful bool) error {
 	timeout := 10
 	if !graceful {
 		timeout = 0
@@ -126,14 +124,14 @@ func (c *Client) Stop(ctx context.Context, id string, graceful bool) error {
 	return nil
 }
 
-func (c *Client) Version(ctx context.Context) (string, error) {
+func (c *client) Version(ctx context.Context) (string, error) {
 	versionResponse, err := c.cri.Version(ctx, &criapi.VersionRequest{})
 	if err != nil {
 		return "", err
 	}
-	return versionResponse.Version, nil
+	return versionResponse.RuntimeVersion, nil
 }
 
-func (c *Client) Close() error {
+func (c *client) Close() error {
 	return c.connection.Close()
 }
