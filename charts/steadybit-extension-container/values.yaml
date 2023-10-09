@@ -51,7 +51,7 @@ resources:
     # resources.requests.memory -- The minimal amount of memory needed
     memory: "32Mi"
     # resources.requests.cpu -- The minimal amount of cpu shares needed
-    cpu: "50m"
+    cpu: "100m"
   limits:
     # resources.limits.memory -- The limit of memory to be used
     memory: "128Mi"
