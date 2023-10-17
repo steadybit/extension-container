@@ -184,7 +184,7 @@ func refreshNamespacesUsingInode(ctx context.Context, ns *LinuxNamespaceWithInod
 		return
 	}
 
-	if _, err := os.Stat(ns.Path); err == nil {
+	if _, err := os.Lstat(ns.Path); err == nil {
 		return
 	}
 
@@ -244,7 +244,7 @@ func CheckNamespacesExists(ctx context.Context, namespaces []LinuxNamespaceWithI
 
 		refreshNamespacesUsingInode(ctx, &ns)
 
-		if _, err := os.Stat(ns.Path); err != nil && os.IsNotExist(err) {
+		if _, err := os.Lstat(ns.Path); err != nil && os.IsNotExist(err) {
 			return fmt.Errorf("namespace %s doesn't exist", ns.Path)
 		}
 	}
