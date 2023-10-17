@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.1.29
+
+- don't follow symlinks when checking for namespace existence
+
 ## v1.1.28
 
 - reduce discovery interval and decouple listing containers from http request
