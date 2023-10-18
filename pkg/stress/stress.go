@@ -6,6 +6,7 @@ package stress
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/rs/zerolog/log"
@@ -63,12 +64,29 @@ func (o *Opts) Args() []string {
 
 func New(ctx context.Context, r runc.Runc, config utils.TargetContainerConfig, opts Opts) (*Stress, error) {
 	id := getNextContainerId(config.ContainerID)
-	bundle, cleanupBundle, err := r.PrepareBundle(ctx, utils.SidecarImagePath(), id)
+	success := false
+
+	bundle, err := r.Create(ctx, utils.SidecarImagePath(), id)
 	if err != nil {
 		return nil, fmt.Errorf("could not prepare bundle: %w", err)
 	}
+	defer func() {
+		if !success {
+			if err := bundle.Remove(); err != nil {
+				log.Warn().Str("id", id).Err(err).Msg("could not remove bundle")
+			}
+		}
+	}()
 
-	if err := r.EditSpec(ctx, bundle,
+	if opts.TempPath != "" {
+		if err := bundle.MountFromProcess(ctx, config.Pid, opts.TempPath, "/stress-temp"); err != nil {
+			log.Warn().Err(err).Msgf("could not mount %s", opts.TempPath)
+		} else {
+			opts.TempPath = "/stress-temp"
+		}
+	}
+
+	if err := bundle.EditSpec(ctx,
 		runc.WithHostname(id),
 		runc.WithAnnotations(map[string]string{
 			"com.steadybit.sidecar": "true",
@@ -88,7 +106,7 @@ func New(ctx context.Context, r runc.Runc, config utils.TargetContainerConfig, o
 	}
 
 	wait := make(chan error)
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, ctxCancel := context.WithCancel(context.Background())
 	start := func() error {
 		log.Info().
 			Str("targetContainer", config.ContainerID).
@@ -96,17 +114,16 @@ func New(ctx context.Context, r runc.Runc, config utils.TargetContainerConfig, o
 			Msg("Starting stress-ng")
 		go func() {
 			var outb bytes.Buffer
-			err := r.Run(ctx, id, bundle, runc.IoOpts{
+			err := r.Run(ctx, bundle, runc.IoOpts{
 				Stdin:  nil,
 				Stdout: &outb,
 				Stderr: &outb,
 			})
 
-			if exitErr, ok := err.(*exec.ExitError); ok {
+			var exitErr *exec.ExitError
+			if errors.As(err, &exitErr) {
 				exitErr.Stderr = outb.Bytes()
 				wait <- exitErr
-			} else {
-				wait <- err
 			}
 		}()
 		return nil
@@ -116,11 +133,19 @@ func New(ctx context.Context, r runc.Runc, config utils.TargetContainerConfig, o
 		log.Info().
 			Str("targetContainer", config.ContainerID).
 			Msg("Stopping stress-ng")
-		cancel()
-		_ = r.Delete(context.Background(), id, true)
-		_ = cleanupBundle()
+
+		ctxCancel()
+
+		if err := r.Delete(context.Background(), id, true); err != nil {
+			log.Warn().Str("id", id).Err(err).Msg("could not delete container")
+		}
+
+		if err := bundle.Remove(); err != nil {
+			log.Warn().Str("id", id).Err(err).Msg("could not remove bundle")
+		}
 	}
 
+	success = true
 	return &Stress{
 		start: start,
 		stop:  stop,

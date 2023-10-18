@@ -90,7 +90,7 @@ func ReadCgroupPath(ctx context.Context, pid int) (string, error) {
 	cmd.Stdout = &out
 	cmd.Stderr = &out
 	if err := cmd.Run(); err != nil {
-		return "", fmt.Errorf("%s: %s", err, out.String())
+		return "", fmt.Errorf("%w: %s", err, out.String())
 	}
 
 	minHid := 9999
@@ -250,19 +250,6 @@ func CheckNamespacesExists(ctx context.Context, namespaces []LinuxNamespaceWithI
 	}
 
 	return nil
-}
-
-func CopyFileFromProcessToBundle(ctx context.Context, bundle string, pid int, path string) error {
-	defer trace.StartRegion(ctx, "utils.CopyFileFromProcessToBundle").End()
-	var out bytes.Buffer
-	cmd := RootCommandContext(ctx, "cat", filepath.Join("/proc", strconv.Itoa(pid), "root", path))
-	cmd.Stdout = &out
-	cmd.Stderr = &out
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("%s: %s", err, out.String())
-	}
-
-	return os.WriteFile(filepath.Join(bundle, "rootfs", path), out.Bytes(), 0644)
 }
 
 func RootCommandContext(ctx context.Context, name string, arg ...string) *exec.Cmd {

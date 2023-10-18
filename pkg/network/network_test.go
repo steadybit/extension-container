@@ -33,7 +33,7 @@ func Test_generateAndRunCommands_should_serialize(t *testing.T) {
 
 	var concurrent int64
 	runcMock := &MockedRunc{}
-	runcMock.On("PrepareBundle", mock.Anything, mock.Anything, mock.Anything).Return("", func() error { return nil }, nil)
+	runcMock.On("Create", mock.Anything, mock.Anything, mock.Anything).Return("", func() error { return nil }, nil)
 	runcMock.On("EditSpec", mock.Anything, mock.Anything).Return(nil)
 	runcMock.On("Run", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
 		counter := atomic.AddInt64(&concurrent, 1)
@@ -59,24 +59,22 @@ func Test_generateAndRunCommands_should_serialize(t *testing.T) {
 type MockedRunc struct {
 	mock.Mock
 }
+type MockedBundle struct {
+	mock.Mock
+}
 
 func (m *MockedRunc) State(ctx context.Context, id string) (*runc.ContainerState, error) {
 	args := m.Called(ctx, id)
 	return args.Get(0).(*runc.ContainerState), args.Error(1)
 }
 
-func (m *MockedRunc) Spec(ctx context.Context, bundle string) error {
-	args := m.Called(ctx, bundle)
+func (b *MockedBundle) EditSpec(ctx context.Context, editors ...runc.SpecEditor) error {
+	args := b.Called(ctx, editors)
 	return args.Error(0)
 }
 
-func (m *MockedRunc) EditSpec(ctx context.Context, bundle string, editors ...runc.SpecEditor) error {
-	args := m.Called(bundle, editors)
-	return args.Error(0)
-}
-
-func (m *MockedRunc) Run(ctx context.Context, id, bundle string, ioOpts runc.IoOpts) error {
-	args := m.Called(ctx, id, bundle, ioOpts)
+func (m *MockedRunc) Run(ctx context.Context, bundle runc.ContainerBundle, ioOpts runc.IoOpts) error {
+	args := m.Called(ctx, bundle, ioOpts)
 	return args.Error(0)
 }
 
@@ -85,7 +83,7 @@ func (m *MockedRunc) Delete(ctx context.Context, id string, force bool) error {
 	return args.Error(0)
 }
 
-func (m *MockedRunc) PrepareBundle(ctx context.Context, image string, id string) (string, func() error, error) {
+func (m *MockedRunc) Create(ctx context.Context, image, id string) (runc.ContainerBundle, error) {
 	args := m.Called(ctx, image, id)
-	return args.String(0), args.Get(1).(func() error), args.Error(2)
+	return args.Get(1).(runc.ContainerBundle), args.Error(2)
 }

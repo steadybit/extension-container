@@ -207,6 +207,7 @@ func testNetworkDelay(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			netperf.AssertLatency(t, 0, unaffectedLatency+40*time.Millisecond)
 		})
 	}
+	requireAllSidecarsCleanedUp(t, m, e)
 }
 
 func testNetworkPackageLoss(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
@@ -279,6 +280,7 @@ func testNetworkPackageLoss(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			iperf.AssertPackageLoss(t, 0, 5)
 		})
 	}
+	requireAllSidecarsCleanedUp(t, m, e)
 }
 
 func testNetworkPackageCorruption(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
@@ -351,6 +353,7 @@ func testNetworkPackageCorruption(t *testing.T, m *e2e.Minikube, e *e2e.Extensio
 			iperf.AssertPackageLoss(t, 0, 5)
 		})
 	}
+	requireAllSidecarsCleanedUp(t, m, e)
 }
 
 func testNetworkLimitBandwidth(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
@@ -426,6 +429,7 @@ func testNetworkLimitBandwidth(t *testing.T, m *e2e.Minikube, e *e2e.Extension) 
 			iperf.AssertBandwidth(t, unlimited*0.85, unlimited*1.15)
 		})
 	}
+	requireAllSidecarsCleanedUp(t, m, e)
 }
 
 func testNetworkBlackhole(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
@@ -511,6 +515,7 @@ func testNetworkBlackhole(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 
 		require.Equal(t, hostnameBefore, hostnameAfter, "must not alter the hostname")
 	}
+	requireAllSidecarsCleanedUp(t, m, e)
 }
 
 func testNetworkBlackhole3Containers(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
@@ -539,9 +544,9 @@ func testNetworkBlackhole3Containers(t *testing.T, m *e2e.Minikube, e *e2e.Exten
 	targets := []*action_kit_api.Target{targetNginx}
 
 	for i := 0; i < additionalContainers; i++ {
-		targetbb, err := e2e.NewContainerTarget(m, nginx.Pod, fmt.Sprintf("bb-%d", i))
+		target, err := e2e.NewContainerTarget(m, nginx.Pod, fmt.Sprintf("bb-%d", i))
 		require.NoError(t, err)
-		targets = append(targets, targetbb)
+		targets = append(targets, target)
 	}
 
 	config := struct {
@@ -616,7 +621,8 @@ func testNetworkBlackhole3Containers(t *testing.T, m *e2e.Minikube, e *e2e.Exten
 	for _, a := range actions {
 		defer func(action client.ActionExecution) { _ = action.Cancel() }(a)
 	}
-	require.Emptyf(t, chErrors, "errors: %v", chErrors)
+
+	require.Empty(t, chErrors)
 
 	nginx.AssertIsReachable(t, false)
 	nginx.AssertCanReach(t, "https://steadybit.com", false)
@@ -633,10 +639,11 @@ func testNetworkBlackhole3Containers(t *testing.T, m *e2e.Minikube, e *e2e.Exten
 	}
 
 	wg.Wait()
-	require.Emptyf(t, chErrors, "errors: %v", chErrors)
+	require.Empty(t, chErrors)
 
 	nginx.AssertIsReachable(t, true)
 	nginx.AssertCanReach(t, "https://steadybit.com", true)
+	requireAllSidecarsCleanedUp(t, m, e)
 }
 
 func testNetworkBlockDns(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
@@ -702,6 +709,7 @@ func testNetworkBlockDns(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			nginx.AssertCanReach(t, "https://steadybit.com", true)
 		})
 	}
+	requireAllSidecarsCleanedUp(t, m, e)
 }
 
 func testStressCpu(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
@@ -732,6 +740,7 @@ func testStressCpu(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	require.NoError(t, err)
 
 	require.Equal(t, hostnameBefore, hostnameAfter, "must not alter the hostname")
+	requireAllSidecarsCleanedUp(t, m, e)
 }
 
 func testStressMemory(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
@@ -800,28 +809,56 @@ func testStressMemory(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			}
 		})
 	}
+	requireAllSidecarsCleanedUp(t, m, e)
 }
 
 func testStressIo(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	nginx := e2e.Nginx{Minikube: m}
-	err := nginx.Deploy("nginx-stress-io")
+	err := nginx.Deploy("nginx-stress-io", func(c *acorev1.PodApplyConfiguration) {
+		c.Spec.Containers[0].VolumeMounts = []acorev1.VolumeMountApplyConfiguration{
+			{
+				Name:      extutil.Ptr("host-tmp"),
+				MountPath: extutil.Ptr("/host-tmp"),
+			},
+		}
+		c.Spec.Volumes = []acorev1.VolumeApplyConfiguration{
+			{
+				Name: extutil.Ptr("host-tmp"),
+				VolumeSourceApplyConfiguration: acorev1.VolumeSourceApplyConfiguration{
+					HostPath: &acorev1.HostPathVolumeSourceApplyConfiguration{
+						Path: extutil.Ptr("/tmp"),
+					},
+				},
+			},
+		}
+
+	})
 	require.NoError(t, err, "failed to create pod")
 	defer func() { _ = nginx.Delete() }()
 
 	target, err := nginx.Target()
 	require.NoError(t, err)
 
-	config := struct {
-		Duration   int    `json:"duration"`
-		Path       string `json:"path"`
-		Percentage int    `json:"percentage"`
-		Workers    int    `json:"workers"`
-	}{Duration: 5000, Workers: 1, Percentage: 50, Path: "/tmp"}
-	action, err := e.RunAction(fmt.Sprintf("%s.stress_io", extcontainer.BaseActionID), target, config, executionContext)
-	defer func() { _ = action.Cancel() }()
-	require.NoError(t, err)
-	e2e.AssertProcessRunningInContainer(t, m, nginx.Pod, "nginx", "stress-ng", false)
-	require.NoError(t, action.Cancel())
+	modes := []string{"read_write_and_flush", "read_write", "read_write_and_flush"}
+
+	for _, mode := range modes {
+		t.Run(mode, func(t *testing.T) {
+			config := struct {
+				Duration   int    `json:"duration"`
+				Path       string `json:"path"`
+				Percentage int    `json:"percentage"`
+				Workers    int    `json:"workers"`
+				Mode       string `json:"mode"`
+			}{Duration: 5000, Workers: 1, Percentage: 50, Path: "/host-tmp", Mode: mode}
+
+			action, err := e.RunAction(fmt.Sprintf("%s.stress_io", extcontainer.BaseActionID), target, config, executionContext)
+			defer func() { _ = action.Cancel() }()
+			require.NoError(t, err)
+			e2e.AssertProcessRunningInContainer(t, m, nginx.Pod, "nginx", "stress-ng", false)
+			require.NoError(t, action.Cancel())
+		})
+	}
+	requireAllSidecarsCleanedUp(t, m, e)
 }
 
 func testPauseContainer(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
@@ -1002,6 +1039,7 @@ func testHostNetwork(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			}
 		})
 	}
+	requireAllSidecarsCleanedUp(t, m, e)
 }
 
 func testNetworkDelayOnTwoContainers(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
@@ -1041,4 +1079,13 @@ func testNetworkDelayOnTwoContainers(t *testing.T, m *e2e.Minikube, e *e2e.Exten
 	action2, err2 := e.RunAction(fmt.Sprintf("%s.network_delay", extcontainer.BaseActionID), target2, config, executionContext)
 	defer func() { _ = action2.Cancel() }()
 	require.NoError(t, err2)
+
+	requireAllSidecarsCleanedUp(t, m, e)
+}
+
+func requireAllSidecarsCleanedUp(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
+	out, err := m.PodExec(e.Pod, "steadybit-extension-container", "ls", "/tmp/steadybit/containers")
+	require.NoError(t, err)
+	space := strings.TrimSpace(out)
+	require.Empty(t, space, "no sidecar directories must be present")
 }

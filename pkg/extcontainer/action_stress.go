@@ -182,7 +182,7 @@ func (a *stressAction) Stop(ctx context.Context, state *StressActionState) (*act
 
 	messages := make([]action_kit_api.Message, 0)
 
-	stopped := a.cancelStressContainer(state.ExecutionId)
+	stopped := a.stopStressContainer(state.ExecutionId)
 	if stopped {
 		messages = append(messages, action_kit_api.Message{
 			Level:   extutil.Ptr(action_kit_api.Info),
@@ -203,19 +203,17 @@ func (a *stressAction) isStressCompleted(executionId uuid.UUID) (bool, error) {
 
 	select {
 	case err := <-s.(*stress.Stress).Wait():
-		a.stresses.Delete(executionId)
 		return true, err
 	default:
 		return false, nil
 	}
 }
 
-func (a *stressAction) cancelStressContainer(executionId uuid.UUID) bool {
-	s, ok := a.stresses.Load(executionId)
+func (a *stressAction) stopStressContainer(executionId uuid.UUID) bool {
+	s, ok := a.stresses.LoadAndDelete(executionId)
 	if !ok {
 		return false
 	}
-
 	s.(*stress.Stress).Stop()
 	return true
 }

@@ -25,10 +25,18 @@ import (
 
 type Runc interface {
 	State(ctx context.Context, id string) (*ContainerState, error)
-	EditSpec(ctx context.Context, bundle string, editors ...SpecEditor) error
-	Run(ctx context.Context, id, bundle string, ioOpts IoOpts) error
+	Create(ctx context.Context, image, id string) (ContainerBundle, error)
+	Run(ctx context.Context, container ContainerBundle, ioOpts IoOpts) error
 	Delete(ctx context.Context, id string, force bool) error
-	PrepareBundle(ctx context.Context, image string, id string) (string, func() error, error)
+}
+
+type ContainerBundle interface {
+	EditSpec(ctx context.Context, editors ...SpecEditor) error
+	MountFromProcess(ctx context.Context, fromPid int, fromPath, mountpoint string) error
+	CopyFileFromProcess(ctx context.Context, pid int, fromPath, toPath string) error
+	Path() string
+	ContainerId() string
+	Remove() error
 }
 
 type defaultRunc struct {
@@ -36,6 +44,33 @@ type defaultRunc struct {
 	Debug         bool
 	SystemdCgroup bool
 	Rootless      string
+}
+
+type runcContainerBundle struct {
+	id         string
+	path       string
+	finalizers []func() error
+	runc       *defaultRunc
+}
+
+func (b *runcContainerBundle) Path() string {
+	return b.path
+}
+
+func (b *runcContainerBundle) ContainerId() string {
+	return b.id
+}
+
+func (b *runcContainerBundle) addFinalizer(f func() error) {
+	b.finalizers = append(b.finalizers, f)
+}
+
+func (b *runcContainerBundle) Remove() error {
+	var errs []error
+	for i := len(b.finalizers) - 1; i >= 0; i-- {
+		errs = append(errs, b.finalizers[i]())
+	}
+	return errors.Join(errs...)
 }
 
 type ContainerState struct {
@@ -72,7 +107,7 @@ func (r *defaultRunc) State(ctx context.Context, id string) (*ContainerState, er
 	output := outputBuffer.Bytes()
 	stderr := errorBuffer.Bytes()
 	if err != nil {
-		return nil, fmt.Errorf("%s (%s): %s", err, stderr, output)
+		return nil, fmt.Errorf("ws (%s): %s", err, stderr, output)
 	}
 
 	log.Trace().Str("output", string(output)).Str("stderr", string(stderr)).Msg("get container state")
@@ -84,21 +119,121 @@ func (r *defaultRunc) State(ctx context.Context, id string) (*ContainerState, er
 	return &state, nil
 }
 
-func (r *defaultRunc) spec(ctx context.Context, bundle string) error {
-	defer trace.StartRegion(ctx, "runc.Spec").End()
-	log.Trace().Str("bundle", bundle).Msg("creating container spec")
-	output, err := r.command(ctx, "spec", "--bundle", bundle).CombinedOutput()
-	if err != nil {
+func (r *defaultRunc) Create(ctx context.Context, image string, id string) (ContainerBundle, error) {
+	defer trace.StartRegion(ctx, "runc.Create").End()
+
+	bundle := runcContainerBundle{
+		id:   id,
+		path: filepath.Join("/tmp/steadybit/containers", id),
+		runc: r,
+	}
+	_ = os.RemoveAll(bundle.path)
+
+	success := false
+	defer func() {
+		if !success {
+			err := bundle.Remove()
+			if err != nil {
+				log.Warn().Err(err).Msg("failed to run bundle finalizers")
+			}
+		}
+	}()
+
+	log.Trace().Str("bundle", bundle.path).Msg("creating container bundle")
+	if err := os.MkdirAll(bundle.path, 0775); err != nil {
+		return nil, fmt.Errorf("failed to create directory '%s': %w", bundle.path, err)
+	}
+	bundle.addFinalizer(func() error {
+		log.Trace().Str("bundle", bundle.path).Msg("removing container bundle")
+		return os.RemoveAll(bundle.path)
+	})
+
+	var imagePath string
+	if imageStat, err := os.Stat(image); err != nil {
+		return nil, fmt.Errorf("failed to read image: %w", err)
+	} else if imageStat.IsDir() {
+		if abs, err := filepath.Abs(image); err == nil {
+			imagePath = abs
+		} else {
+			log.Debug().Err(err).Str("image", image).Msg("failed to get absolute path for image")
+			imagePath = image
+		}
+	} else {
+		extractPath := filepath.Join("/tmp/", image, strconv.FormatInt(imageStat.ModTime().Unix(), 10))
+		if err := extractImage(image, extractPath); err != nil {
+			return nil, fmt.Errorf("failed to extract image: %w", err)
+		}
+		imagePath = extractPath
+	}
+
+	if err := bundle.mountRootfsOverlay(ctx, imagePath); err != nil {
+		return nil, fmt.Errorf("failed to mount image: %w", err)
+	}
+
+	if err := r.createSpec(ctx, bundle.path); err != nil {
+		return nil, fmt.Errorf("failed to create container spec: %w", err)
+	}
+
+	log.Trace().Str("bundle", bundle.path).Str("id", id).Msg("prepared container bundle")
+	success = true
+	return &bundle, nil
+}
+
+func (r *defaultRunc) Delete(ctx context.Context, id string, force bool) error {
+	defer trace.StartRegion(ctx, "runc.Delete").End()
+	log.Trace().Str("id", id).Msg("deleting container")
+	if output, err := r.command(ctx, "delete", fmt.Sprintf("--force=%t", force), id).CombinedOutput(); err != nil {
 		return fmt.Errorf("%s: %s", err, output)
 	}
 	return nil
 }
 
+type IoOpts struct {
+	Stdin  io.Reader
+	Stdout io.Writer
+	Stderr io.Writer
+}
+
+func InheritStdIo() IoOpts {
+	return IoOpts{
+		Stdin:  nil,
+		Stdout: os.Stdout,
+		Stderr: os.Stderr,
+	}
+}
+
+func (o IoOpts) WithStdin(reader io.Reader) IoOpts {
+	return IoOpts{
+		Stdin:  reader,
+		Stdout: o.Stdout,
+		Stderr: o.Stderr,
+	}
+}
+
+func (r *defaultRunc) Run(ctx context.Context, container ContainerBundle, ioOpts IoOpts) error {
+	defer trace.StartRegion(ctx, "runc.Run").End()
+	bundle, ok := container.(*runcContainerBundle)
+	if !ok {
+		return fmt.Errorf("invalid bundle type: %T", container)
+	}
+
+	log.Trace().Str("id", bundle.id).Msg("running container")
+
+	cmd := r.command(ctx, "run", "--bundle", bundle.path, bundle.id)
+	cmd.Stdin = ioOpts.Stdin
+	cmd.Stdout = ioOpts.Stdout
+	cmd.Stderr = ioOpts.Stderr
+	err := cmd.Run()
+
+	log.Trace().Str("id", bundle.id).Int("exitCode", cmd.ProcessState.ExitCode()).Msg("container exited")
+	return err
+}
+
 type SpecEditor func(spec *specs.Spec)
 
-func (r *defaultRunc) EditSpec(ctx context.Context, bundle string, editors ...SpecEditor) error {
+func (b *runcContainerBundle) EditSpec(ctx context.Context, editors ...SpecEditor) error {
 	defer trace.StartRegion(ctx, "runc.EditSpec").End()
-	spec, err := readSpec(filepath.Join(bundle, "config.json"))
+	spec, err := readSpec(filepath.Join(b.path, "config.json"))
 	if err != nil {
 		return err
 	}
@@ -108,9 +243,19 @@ func (r *defaultRunc) EditSpec(ctx context.Context, bundle string, editors ...Sp
 	for _, fn := range editors {
 		fn(spec)
 	}
-	err = writeSpec(filepath.Join(bundle, "config.json"), spec)
-	log.Trace().Str("bundle", bundle).Interface("spec", spec).Msg("written runc spec")
+	err = writeSpec(filepath.Join(b.path, "config.json"), spec)
+	log.Trace().Str("bundle", b.path).Interface("createSpec", spec).Msg("written runc createSpec")
 	return err
+}
+
+func (r *defaultRunc) createSpec(ctx context.Context, bundle string) error {
+	defer trace.StartRegion(ctx, "runc.Spec").End()
+	log.Trace().Str("bundle", bundle).Msg("creating container createSpec")
+	output, err := r.command(ctx, "spec", "--bundle", bundle).CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("%w: %s", err, output)
+	}
+	return nil
 }
 
 func readSpec(file string) (*specs.Spec, error) {
@@ -136,42 +281,6 @@ func writeSpec(file string, spec *specs.Spec) error {
 	return os.WriteFile(file, content, 0644)
 }
 
-type IoOpts struct {
-	Stdin  io.Reader
-	Stdout io.Writer
-	Stderr io.Writer
-}
-
-func InheritStdIo() IoOpts {
-	return IoOpts{
-		Stdin:  nil,
-		Stdout: os.Stdout,
-		Stderr: os.Stderr,
-	}
-}
-
-func (o IoOpts) WithStdin(reader io.Reader) IoOpts {
-	return IoOpts{
-		Stdin:  reader,
-		Stdout: o.Stdout,
-		Stderr: o.Stderr,
-	}
-}
-
-func (r *defaultRunc) Run(ctx context.Context, id, bundle string, ioOpts IoOpts) error {
-	defer trace.StartRegion(ctx, "runc.Run").End()
-	log.Trace().Str("id", id).Msg("running container")
-
-	cmd := r.command(ctx, "run", "--bundle", bundle, id)
-	cmd.Stdin = ioOpts.Stdin
-	cmd.Stdout = ioOpts.Stdout
-	cmd.Stderr = ioOpts.Stderr
-	err := cmd.Run()
-
-	log.Trace().Str("id", id).Int("exitCode", cmd.ProcessState.ExitCode()).Msg("container exited")
-	return err
-}
-
 func (r *defaultRunc) command(ctx context.Context, args ...string) *exec.Cmd {
 	return utils.RootCommandContext(ctx, "runc", append(r.args(), args...)...)
 }
@@ -193,87 +302,31 @@ func (r *defaultRunc) args() []string {
 	return out
 }
 
-func (r *defaultRunc) Delete(ctx context.Context, id string, force bool) error {
-	defer trace.StartRegion(ctx, "runc.Delete").End()
-	log.Trace().Str("id", id).Msg("deleting container")
-	output, err := r.command(ctx, "delete", fmt.Sprintf("--force=%t", force), id).CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("%s: %s", err, output)
-	}
-	log.Trace().Str("id", id).Msg("deleted container")
-	return nil
-}
-
-func (r *defaultRunc) PrepareBundle(ctx context.Context, image string, id string) (string, func() error, error) {
-	defer trace.StartRegion(ctx, "runc.PrepareBundle").End()
-	bundle := filepath.Join("/tmp/steadybit/containers", id)
-
-	_ = os.RemoveAll(bundle)
-
-	log.Trace().Str("bundle", bundle).Msg("creating container bundle")
-	if err := os.MkdirAll(bundle, 0775); err != nil {
-		return "", nil, fmt.Errorf("failed to create directory '%s': %w", bundle, err)
-	}
-
-	removeBundle := func() error {
-		log.Trace().Str("bundle", bundle).Msg("cleaning up container bundle")
-		return os.RemoveAll(bundle)
-	}
-
-	var imagePath string
-	if imageStat, err := os.Stat(image); err != nil {
-		return bundle, removeBundle, fmt.Errorf("failed to read image: %w", err)
-	} else if imageStat.IsDir() {
-		if abs, err := filepath.Abs(image); err == nil {
-			imagePath = abs
-		} else {
-			log.Debug().Err(err).Str("image", image).Msg("failed to get absolute path for image")
-			imagePath = image
-		}
-	} else {
-		extractPath := filepath.Join("/tmp/", image, strconv.FormatInt(imageStat.ModTime().Unix(), 10))
-		if err := extractSidecarImage(image, extractPath); err != nil {
-			return bundle, removeBundle, fmt.Errorf("failed to extract image: %w", err)
-		}
-		imagePath = extractPath
-	}
-
-	if err := mountOverlay(ctx, bundle, imagePath); err != nil {
-		return bundle, removeBundle, fmt.Errorf("failed to mount image: %w", err)
-	}
-
-	cleanup := func() error {
-		return errors.Join(unmountOverlay(ctx, bundle), removeBundle())
-	}
-
-	if err := r.spec(ctx, bundle); err != nil {
-		return "", cleanup, err
-	}
-
-	log.Trace().Str("bundle", bundle).Str("id", id).Msg("prepared container bundle")
-	return bundle, cleanup, nil
-}
-
-func mountOverlay(ctx context.Context, bundle string, image string) error {
-	upper := filepath.Join(bundle, "upper")
+func (b *runcContainerBundle) mountRootfsOverlay(ctx context.Context, image string) error {
+	upper := filepath.Join(b.path, "upper")
 	err := os.MkdirAll(upper, 0775)
 	if err != nil {
 		return fmt.Errorf("failed to create directory '%s': %w", upper, err)
 	}
 
-	work := filepath.Join(bundle, "work")
+	work := filepath.Join(b.path, "work")
 	err = os.MkdirAll(work, 0775)
 	if err != nil {
 		return fmt.Errorf("failed to create directory '%s': %w", work, err)
 	}
 
-	rootfs := filepath.Join(bundle, "rootfs")
+	rootfs := filepath.Join(b.path, "rootfs")
 	err = os.MkdirAll(rootfs, 0775)
 	if err != nil {
 		return fmt.Errorf("failed to create directory '%s': %w", rootfs, err)
 	}
 
-	log.Trace().Str("lowerdir", image).Str("upper", upper).Str("work", work).Str("rootfs", rootfs).Msg("mounting overlay")
+	log.Trace().
+		Str("lowerdir", image).
+		Str("upper", upper).
+		Str("work", work).
+		Str("rootfs", rootfs).
+		Msg("mounting overlay")
 	out, err := utils.RootCommandContext(ctx,
 		"mount",
 		"-t",
@@ -283,12 +336,15 @@ func mountOverlay(ctx context.Context, bundle string, image string) error {
 		"overlay",
 		rootfs).CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("%s: %s", err, out)
+		return fmt.Errorf("%w: %s", err, out)
 	}
+	b.addFinalizer(func() error {
+		return unmount(context.Background(), rootfs)
+	})
 	return nil
 }
 
-func extractSidecarImage(src, dst string) error {
+func extractImage(src, dst string) error {
 	if _, err := os.Stat(dst); err == nil {
 		//image was already extracted.
 		return nil
@@ -302,17 +358,7 @@ func extractSidecarImage(src, dst string) error {
 	log.Trace().Str("src", src).Str("dst", dst).Msg("extracting sidecar image")
 	out, err := exec.Command("tar", "-C", dst, "-xf", src).CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("%s: %s", err, out)
-	}
-	return nil
-}
-
-func unmountOverlay(ctx context.Context, bundle string) error {
-	rootfs := filepath.Join(bundle, "rootfs")
-	log.Trace().Str("rootfs", rootfs).Msg("unmounting overlay")
-	out, err := utils.RootCommandContext(ctx, "unmount", rootfs).CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("%s: %s", err, out)
+		return fmt.Errorf("%w: %s", err, out)
 	}
 	return nil
 }
@@ -330,4 +376,53 @@ func unmarshalGuarded(output []byte, v any) error {
 	}
 
 	return err
+}
+
+func (b *runcContainerBundle) CopyFileFromProcess(ctx context.Context, pid int, fromPath, toPath string) error {
+	defer trace.StartRegion(ctx, "utils.CopyFileFromProcessToBundle").End()
+	var out bytes.Buffer
+	cmd := utils.RootCommandContext(ctx, "cat", filepath.Join("/proc", strconv.Itoa(pid), "root", fromPath))
+	cmd.Stdout = &out
+	cmd.Stderr = &out
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("%w: %s", err, out.String())
+	}
+
+	return os.WriteFile(filepath.Join(b.path, "rootfs", toPath), out.Bytes(), 0644)
+}
+
+func (b *runcContainerBundle) MountFromProcess(ctx context.Context, fromPid int, fromPath, toPath string) error {
+	defer trace.StartRegion(ctx, "utils.MountFromProcessToBundle").End()
+
+	mountpoint := filepath.Join(b.path, "rootfs", toPath)
+	log.Trace().
+		Int("fromPid", fromPid).
+		Str("fromPath", fromPath).
+		Str("mountpoint", mountpoint).
+		Msg("mount from process to bundle")
+
+	if err := os.Mkdir(mountpoint, 0755); err != nil && !os.IsExist(err) {
+		return fmt.Errorf("could not create mountpoint %s: %w", mountpoint, err)
+	}
+
+	var out bytes.Buffer
+	cmd := utils.RootCommandContext(ctx, "nsmount", strconv.Itoa(fromPid), fromPath, strconv.Itoa(os.Getpid()), mountpoint)
+	cmd.Stdout = &out
+	cmd.Stderr = &out
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("%w: %s", err, out.String())
+	}
+	b.addFinalizer(func() error {
+		return unmount(context.Background(), mountpoint)
+	})
+	return nil
+}
+
+func unmount(ctx context.Context, path string) error {
+	log.Trace().Str("path", path).Msg("unmounting")
+	out, err := utils.RootCommandContext(ctx, "umount", "-v", path).CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("%w: %s", err, out)
+	}
+	return nil
 }

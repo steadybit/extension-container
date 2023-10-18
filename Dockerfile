@@ -24,6 +24,17 @@ RUN goreleaser build --snapshot="${BUILD_SNAPSHOT}" --single-target -o extension
     && setcap "cap_setuid,cap_setgid,cap_sys_admin,cap_dac_override+eip" ./extension
 
 ##
+## Build rust
+##
+FROM rust:1.73-bookworm AS build-nsmount
+
+WORKDIR /app
+
+COPY nsmount nsmount
+
+RUN cd nsmount && cargo build --release
+
+##
 ## Runtime
 ##
 FROM debian:bookworm-slim
@@ -51,6 +62,7 @@ WORKDIR /
 ADD  ./sidecar_linux_$TARGETARCH.tar /sidecar
 COPY --from=build /app/extension /extension
 COPY --from=build /app/licenses /licenses
+COPY --from=build-nsmount /app/nsmount/target/release/nsmount /usr/local/bin/nsmount
 
 EXPOSE 8086 8082
 
