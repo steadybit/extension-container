@@ -8,3 +8,5 @@
 /dist
 /licenses
 /nsmount/target
+
+dist/

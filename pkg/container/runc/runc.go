@@ -107,7 +107,7 @@ func (r *defaultRunc) State(ctx context.Context, id string) (*ContainerState, er
 	output := outputBuffer.Bytes()
 	stderr := errorBuffer.Bytes()
 	if err != nil {
-		return nil, fmt.Errorf("ws (%s): %s", err, stderr, output)
+		return nil, fmt.Errorf("%w (%s): %s", err, stderr, output)
 	}
 
 	log.Trace().Str("output", string(output)).Str("stderr", string(stderr)).Msg("get container state")
@@ -406,7 +406,7 @@ func (b *runcContainerBundle) MountFromProcess(ctx context.Context, fromPid int,
 	}
 
 	var out bytes.Buffer
-	cmd := utils.RootCommandContext(ctx, "nsmount", strconv.Itoa(fromPid), fromPath, strconv.Itoa(os.Getpid()), mountpoint)
+	cmd := utils.RootCommandContext(ctx, config.Config.NsmountPath, strconv.Itoa(fromPid), fromPath, strconv.Itoa(os.Getpid()), mountpoint)
 	cmd.Stdout = &out
 	cmd.Stderr = &out
 	if err := cmd.Run(); err != nil {

@@ -65,8 +65,10 @@ nfpms:
         type: config
       - src: ./sidecar_{{ .Os }}_{{ .Arch }}.tar
         dst: /opt/steadybit/extension-container/sidecar.tar
+      - src: ./nsmount/target/{{ .Arch }}-unknown-{{ .Os }}-gnu/release/nsmount
+        dst: /opt/steadybit/extension-container/nsmount
       - src: ./licenses
-        dst: /opt/steadybit/extension-aws/licenses
+        dst: /opt/steadybit/extension-container/licenses
 
     scripts:
       preinstall: ./linuxpkg/scripts/preinstall.sh

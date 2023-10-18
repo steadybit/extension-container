@@ -22,18 +22,6 @@ COPY . .
 
 RUN goreleaser build --snapshot="${BUILD_SNAPSHOT}" --single-target -o extension \
     && setcap "cap_setuid,cap_setgid,cap_sys_admin,cap_dac_override+eip" ./extension
-
-##
-## Build rust
-##
-FROM rust:1.73-bookworm AS build-nsmount
-
-WORKDIR /app
-
-COPY nsmount nsmount
-
-RUN cd nsmount && cargo build --release
-
 ##
 ## Runtime
 ##
@@ -45,6 +33,8 @@ ARG USERNAME=steadybit
 ARG USER_UID=10000
 ARG USER_GID=$USER_UID
 ARG TARGETARCH
+
+ENV STEADYBIT_EXTENSION_NSMOUNT_PATH="/nsmount"
 
 RUN groupadd --gid $USER_GID $USERNAME \
     && useradd --uid $USER_UID --gid $USER_GID -m $USERNAME
@@ -60,9 +50,9 @@ USER $USERNAME
 WORKDIR /
 
 ADD  ./sidecar_linux_$TARGETARCH.tar /sidecar
+COPY ./nsmount/target/${TARGETARCH}-unknown-linux-gnu/release/nsmount /nsmount
 COPY --from=build /app/extension /extension
 COPY --from=build /app/licenses /licenses
-COPY --from=build-nsmount /app/nsmount/target/release/nsmount /usr/local/bin/nsmount
 
 EXPOSE 8086 8082
 
