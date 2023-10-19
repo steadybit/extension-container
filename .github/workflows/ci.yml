@@ -67,9 +67,6 @@ jobs:
 
   audit:
     name: Audit
-    needs:
-      - build-sidecar-images
-      - build-nsmount
     runs-on:
       labels: steadybit_runner_ubuntu_latest_4cores_16GB
     timeout-minutes: 60
@@ -81,13 +78,6 @@ jobs:
 
       - name: Remove non-semver tags (from helmchart) for goreleaser to work properly
         run: git tag -d $(git tag -l | grep -v "^v[0-9]*.[0-9]*.[0-9]*")
-
-      - uses: actions/download-artifact@v3
-        with:
-          name: nsmount
-      - uses: actions/download-artifact@v3
-        with:
-          name: sidecar-images
 
       - uses: actions/setup-go@v4
         with:
