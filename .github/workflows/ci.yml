@@ -19,8 +19,58 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
+  build-sidecar-images:
+    name: Build Sidecar Images
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build sidecar images
+        run: make sidecar
+
+      - uses: actions/upload-artifact@v3
+        with:
+          name: sidecar-images
+          path: sidecar_*_*.tar
+          retention-days: 7
+
+  build-nsmount:
+    name: Build nsmount
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+
+      - name: Build nsmount
+        run: |
+          cargo install cross --git https://github.com/cross-rs/cross
+          make nsmount
+
+      - uses: actions/upload-artifact@v3
+        with:
+          name: nsmount
+          path: nsmount/target/*/release
+          retention-days: 7
+
   audit:
     name: Audit
+    needs:
+      - audit
+      - build-sidecar-images
+      - build-nsmount
     runs-on:
       labels: steadybit_runner_ubuntu_latest_4cores_16GB
     timeout-minutes: 60
@@ -31,8 +81,14 @@ jobs:
           fetch-depth: 0
 
       - name: Remove non-semver tags (from helmchart) for goreleaser to work properly
-        run: |
-          git tag -d $(git tag -l | grep -v "^v[0-9]*.[0-9]*.[0-9]*")
+        run: git tag -d $(git tag -l | grep -v "^v[0-9]*.[0-9]*.[0-9]*")
+
+      - uses: actions/download-artifact@v3
+        with:
+          name: nsmount
+      - uses: actions/download-artifact@v3
+        with:
+          name: sidecar-images
 
       - uses: actions/setup-go@v4
         with:
@@ -77,56 +133,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
-  build-sidecar-images:
-    name: Build Sidecar Images
-    needs:
-      - audit
-    runs-on: ubuntu-latest
-    timeout-minutes: 60
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - uses: docker/setup-qemu-action@v3
-      - uses: docker/setup-buildx-action@v3
-
-      - name: Build sidecar images
-        run: make sidecar
-
-      - uses: actions/upload-artifact@v3
-        with:
-          name: sidecar-images
-          path: sidecar_*_*.tar
-          retention-days: 7
-
-  build-nsmount:
-    name: Build nsmount
-    needs:
-      - audit
-    runs-on: ubuntu-latest
-    timeout-minutes: 60
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - uses: docker/setup-qemu-action@v3
-      - uses: docker/setup-buildx-action@v3
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
-
-      - name: Build nsmount
-        run: |
-          cargo install cross --git https://github.com/cross-rs/cross
-          make nsmount
-
-      - uses: actions/upload-artifact@v3
-        with:
-          name: nsmount
-          path: nsmount/target/*/release/*/nsmount
-          retention-days: 7
-
   build-images:
     name: Build Docker Images
     needs:
@@ -146,8 +152,7 @@ jobs:
           fetch-depth: 0
 
       - name: Remove non-semver tags (from helmchart) for goreleaser to work properly
-        run: |
-          git tag -d $(git tag -l | grep -v "^v[0-9]*.[0-9]*.[0-9]*")
+        run: git tag -d $(git tag -l | grep -v "^v[0-9]*.[0-9]*.[0-9]*")
 
       - uses: actions/download-artifact@v3
         with:
@@ -212,8 +217,7 @@ jobs:
           fetch-depth: 0
 
       - name: Remove non-semver tags (from helmchart) for goreleaser to work properly
-        run: |
-          git tag -d $(git tag -l | grep -v "^v[0-9]*.[0-9]*.[0-9]*")
+        run: git tag -d $(git tag -l | grep -v "^v[0-9]*.[0-9]*.[0-9]*")
 
       - uses: actions/download-artifact@v3
         with:
