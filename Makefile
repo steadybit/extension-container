@@ -41,7 +41,7 @@ charttesting:
 	@set -e; \
 	for dir in charts/steadybit-extension-*; do \
 		echo "Unit Testing $$dir"; \
-		helm unittest $$dir; \
+		helm unittest $$dir $(ARGS); \
 	done
 
 ## chartlint: Lint charts

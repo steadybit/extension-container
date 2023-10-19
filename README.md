@@ -31,6 +31,7 @@ by [steadybit/extension-kit](https://github.com/steadybit/extension-kit#environm
 The capabilities needed by this extension are: (which are provided by the helm chart)
 
 - SYS_ADMIN
+- SYS_CHROOT
 - SYS_RESOURCE
 - SYS_PTRACE
 - KILL
@@ -104,7 +105,7 @@ runtime socket.
 
 Resource attacks starting stress-ng processes, the network attacks are starting ip or tc processes as runc container
 reusing the target container's linux namespace(s), control group(s) and user.
-This requires the following capabilities: SYS_ADMIN, SYS_RESOURCE, SYS_PTRACE, KILL, NET_ADMIN, DAC_OVERRIDE, SETUID,
+This requires the following capabilities: SYS_CHROOT, SYS_ADMIN, SYS_RESOURCE, SYS_PTRACE, KILL, NET_ADMIN, DAC_OVERRIDE, SETUID,
 SETGID, AUDIT_WRITE.
 The needed binaries are included in the extension container image.
 

@@ -39,7 +39,7 @@ jobs:
         with:
           name: sidecar-images
           path: sidecar_*_*.tar
-          retention-days: 7
+          retention-days: 3
 
   build-nsmount:
     name: Build nsmount
@@ -62,8 +62,8 @@ jobs:
       - uses: actions/upload-artifact@v3
         with:
           name: nsmount
-          path: nsmount/target/*/release
-          retention-days: 7
+          path: nsmount/target
+          retention-days: 3
 
   audit:
     name: Audit
@@ -148,6 +148,7 @@ jobs:
       - uses: actions/download-artifact@v3
         with:
           name: nsmount
+          path: nsmount/target
       - uses: actions/download-artifact@v3
         with:
           name: sidecar-images
@@ -213,6 +214,7 @@ jobs:
       - uses: actions/download-artifact@v3
         with:
           name: nsmount
+          path: nsmount/target
       - uses: actions/download-artifact@v3
         with:
           name: sidecar-images

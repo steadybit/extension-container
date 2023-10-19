@@ -813,10 +813,6 @@ func testStressMemory(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 }
 
 func testStressIo(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
-	if m.Runtime == "cri-o" {
-		t.Skip("currently doesn't work with minikube cri-o runtime")
-	}
-
 	nginx := e2e.Nginx{Minikube: m}
 	err := nginx.Deploy("nginx-stress-io", func(c *acorev1.PodApplyConfiguration) {
 		c.Spec.Containers[0].VolumeMounts = []acorev1.VolumeMountApplyConfiguration{

@@ -21,7 +21,7 @@ RUN go mod download
 COPY . .
 
 RUN goreleaser build --snapshot="${BUILD_SNAPSHOT}" --single-target -o extension \
-    && setcap "cap_setuid,cap_setgid,cap_sys_admin,cap_dac_override+eip" ./extension
+    && setcap "cap_setuid,cap_sys_chroot,cap_setgid,cap_sys_admin,cap_dac_override+eip" ./extension
 ##
 ## Runtime
 ##

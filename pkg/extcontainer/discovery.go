@@ -182,17 +182,16 @@ func ignoreContainer(container types.Container) bool {
 		return true
 	}
 
-	for _, tag := range config.Config.ExcludeContainersByTags {
-		tagName := tag
-		tagValue := "true"
-		if tokens := strings.Split(tag, "="); len(tokens) == 2 {
-			tagName = tokens[0]
-			tagValue = tokens[1]
-		}
+	if config.Config.DisableDiscoveryExcludes {
+		return false
+	}
 
-		if label := container.Labels()[tagName]; label == tagValue {
-			return true
-		}
+	if label := container.Labels()["steadybit.com.discovery-disabled"]; label == "true" {
+		return true
+	}
+
+	if label := container.Labels()["com.steadybit.agent"]; label == "true" {
+		return true
 	}
 
 	return false

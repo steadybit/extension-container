@@ -17,7 +17,7 @@ type Specification struct {
 	RuncSystemdCgroup           bool     `json:"runcSystemdCgroup" split_words:"true" required:"false"`
 	RuncDebug                   bool     `json:"runcDebug" split_words:"true" required:"false"`
 	NsmountPath                 string   `json:"nsmountPath" split_words:"true" default:"nsmount"`
-	ExcludeContainersByTags     []string `required:"false" split_words:"true" default:"com.steadybit.agent,steadybit.com.discovery-disabled"`
+	DisableDiscoveryExcludes    bool     `required:"false" split_words:"true" default:"false"`
 	DiscoveryCallInterval       string   `json:"discoveryCallInterval" split_words:"true" required:"false" default:"30s"`
 	DiscoveryAttributesExcludes []string `json:"discoveryAttributesExcludes" split_words:"true" required:"false"`
 	Port                        uint16   `json:"port" split_words:"true" required:"false" default:"8086"`
