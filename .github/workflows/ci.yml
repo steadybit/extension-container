@@ -68,7 +68,6 @@ jobs:
   audit:
     name: Audit
     needs:
-      - audit
       - build-sidecar-images
       - build-nsmount
     runs-on:
@@ -96,6 +95,8 @@ jobs:
 
       - uses: docker/setup-qemu-action@v3
       - uses: docker/setup-buildx-action@v3
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - run: cargo install cross --git https://github.com/cross-rs/cross
 
       # we want to run minikube in kvm so we need this and the large runners.
       - name: Enable KVM group perms
