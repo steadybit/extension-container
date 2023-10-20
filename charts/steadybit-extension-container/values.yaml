@@ -130,6 +130,7 @@ securityContext:
   capabilities:
     add:
       - SYS_ADMIN
+      - SYS_CHROOT
       - SYS_RESOURCE
       - SYS_PTRACE
       - KILL
@@ -144,4 +145,4 @@ discovery:
   disableExcludes: false
   attributes:
     # discovery.attributes.excludes -- List of attributes to exclude from container discovery.
-    excludes: [ ]
+    excludes: []

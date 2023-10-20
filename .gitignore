@@ -7,3 +7,6 @@
 /gpg.key
 /dist
 /licenses
+/nsmount/target
+
+dist/

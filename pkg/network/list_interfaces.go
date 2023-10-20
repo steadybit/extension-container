@@ -38,21 +38,23 @@ type ExtraMount struct {
 
 func ListInterfaces(ctx context.Context, r runc.Runc, config utils.TargetContainerConfig) ([]Interface, error) {
 	defer trace.StartRegion(ctx, "network.ListInterfaces").End()
-
 	id := getNextContainerId(config.ContainerID)
 
-	bundle, cleanup, err := r.PrepareBundle(ctx, utils.SidecarImagePath(), id)
-	defer func() { _ = cleanup() }()
+	bundle, err := r.Create(ctx, utils.SidecarImagePath(), id)
 	if err != nil {
 		return nil, err
 	}
+	defer func() {
+		if err := bundle.Remove(); err != nil {
+			log.Warn().Str("id", id).Err(err).Msg("could not remove bundle")
+		}
+	}()
 
 	namespaces := utils.FilterNamespaces(config.Namespaces, []specs.LinuxNamespaceType{specs.NetworkNamespace}...)
 	utils.RefreshNamespacesUsingInode(ctx, namespaces)
 
-	if err = r.EditSpec(
+	if err = bundle.EditSpec(
 		ctx,
-		bundle,
 		runc.WithHostname(fmt.Sprintf("ip-link-show-%s", id)),
 		runc.WithAnnotations(map[string]string{
 			"com.steadybit.sidecar": "true",
@@ -65,8 +67,12 @@ func ListInterfaces(ctx context.Context, r runc.Runc, config utils.TargetContain
 	}
 
 	var outb, errb bytes.Buffer
-	err = r.Run(ctx, id, bundle, runc.IoOpts{Stdout: &outb, Stderr: &errb})
-	defer func() { _ = r.Delete(context.Background(), id, true) }()
+	err = r.Run(ctx, bundle, runc.IoOpts{Stdout: &outb, Stderr: &errb})
+	defer func() {
+		if err := r.Delete(context.Background(), id, true); err != nil {
+			log.Warn().Str("id", id).Err(err).Msg("could not delete container")
+		}
+	}()
 	if err != nil {
 		return nil, fmt.Errorf("could not list interfaces: %w: %s", err, errb.String())
 	}

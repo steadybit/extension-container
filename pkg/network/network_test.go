@@ -32,9 +32,14 @@ func Test_generateAndRunCommands_should_serialize(t *testing.T) {
 	defer func() { sidecarImagePath = utils.SidecarImagePath }()
 
 	var concurrent int64
+	bundle := MockBundle{id: "1", path: "/1"}
+	bundle.On("EditSpec", mock.Anything, mock.Anything).Return(nil)
+	bundle.On("Remove", mock.Anything, mock.Anything).Return(nil)
+	bundle.On("CopyFileFromProcess", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	bundle.On("MountFromProcess", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
+
 	runcMock := &MockedRunc{}
-	runcMock.On("PrepareBundle", mock.Anything, mock.Anything, mock.Anything).Return("", func() error { return nil }, nil)
-	runcMock.On("EditSpec", mock.Anything, mock.Anything).Return(nil)
+	runcMock.On("Create", mock.Anything, mock.Anything, mock.Anything).Return(&bundle, nil)
 	runcMock.On("Run", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
 		counter := atomic.AddInt64(&concurrent, 1)
 		defer func() { atomic.AddInt64(&concurrent, -1) }()
@@ -65,18 +70,13 @@ func (m *MockedRunc) State(ctx context.Context, id string) (*runc.ContainerState
 	return args.Get(0).(*runc.ContainerState), args.Error(1)
 }
 
-func (m *MockedRunc) Spec(ctx context.Context, bundle string) error {
-	args := m.Called(ctx, bundle)
-	return args.Error(0)
+func (m *MockedRunc) Create(ctx context.Context, image, id string) (runc.ContainerBundle, error) {
+	args := m.Called(ctx, image, id)
+	return args.Get(0).(runc.ContainerBundle), args.Error(1)
 }
 
-func (m *MockedRunc) EditSpec(ctx context.Context, bundle string, editors ...runc.SpecEditor) error {
-	args := m.Called(bundle, editors)
-	return args.Error(0)
-}
-
-func (m *MockedRunc) Run(ctx context.Context, id, bundle string, ioOpts runc.IoOpts) error {
-	args := m.Called(ctx, id, bundle, ioOpts)
+func (m *MockedRunc) Run(ctx context.Context, container runc.ContainerBundle, ioOpts runc.IoOpts) error {
+	args := m.Called(ctx, container, ioOpts)
 	return args.Error(0)
 }
 
@@ -85,7 +85,36 @@ func (m *MockedRunc) Delete(ctx context.Context, id string, force bool) error {
 	return args.Error(0)
 }
 
-func (m *MockedRunc) PrepareBundle(ctx context.Context, image string, id string) (string, func() error, error) {
-	args := m.Called(ctx, image, id)
-	return args.String(0), args.Get(1).(func() error), args.Error(2)
+type MockBundle struct {
+	mock.Mock
+	path string
+	id   string
+}
+
+func (m *MockBundle) EditSpec(ctx context.Context, editors ...runc.SpecEditor) error {
+	args := m.Called(ctx, editors)
+	return args.Error(0)
+}
+
+func (m *MockBundle) MountFromProcess(ctx context.Context, fromPid int, fromPath, mountpoint string) error {
+	args := m.Called(ctx, fromPid, fromPath, mountpoint)
+	return args.Error(0)
+}
+
+func (m *MockBundle) CopyFileFromProcess(ctx context.Context, pid int, fromPath, toPath string) error {
+	args := m.Called(ctx, pid, fromPath, toPath)
+	return args.Error(0)
+}
+
+func (m *MockBundle) Path() string {
+	return m.path
+}
+
+func (m *MockBundle) ContainerId() string {
+	return m.id
+}
+
+func (m *MockBundle) Remove() error {
+	args := m.Called()
+	return args.Error(0)
 }

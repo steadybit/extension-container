@@ -133,19 +133,22 @@ func executeIpCommands(ctx context.Context, r runc.Runc, config utils.TargetCont
 	}
 
 	id := getNextContainerId(config.ContainerID)
-	bundle, cleanup, err := r.PrepareBundle(ctx, sidecarImagePath(), id)
-	defer func() { _ = cleanup() }()
+	bundle, err := r.Create(ctx, sidecarImagePath(), id)
 	if err != nil {
 		return err
 	}
+	defer func() {
+		if err := bundle.Remove(); err != nil {
+			log.Warn().Str("id", id).Err(err).Msg("could not remove bundle")
+		}
+	}()
 
 	cmd := []string{"ip", "-family", string(family), "-force", "-batch", "-"}
 	namespaces := utils.FilterNamespaces(config.Namespaces, []specs.LinuxNamespaceType{specs.NetworkNamespace}...)
 	utils.RefreshNamespacesUsingInode(ctx, namespaces)
 
-	if err = r.EditSpec(
+	if err = bundle.EditSpec(
 		ctx,
-		bundle,
 		runc.WithHostname(fmt.Sprintf("ip-%s", id)),
 		runc.WithAnnotations(map[string]string{"com.steadybit.sidecar": "true"}),
 		runc.WithNamespaces(utils.ToLinuxNamespaces(namespaces)),
@@ -157,12 +160,16 @@ func executeIpCommands(ctx context.Context, r runc.Runc, config utils.TargetCont
 
 	log.Debug().Strs("cmds", cmds).Str("family", string(family)).Msg("running ip commands")
 	var outb bytes.Buffer
-	err = r.Run(ctx, id, bundle, runc.IoOpts{
+	err = r.Run(ctx, bundle, runc.IoOpts{
 		Stdin:  networkutils.ToReader(cmds),
 		Stdout: &outb,
 		Stderr: &outb,
 	})
-	defer func() { _ = r.Delete(context.Background(), id, true) }()
+	defer func() {
+		if err := r.Delete(context.Background(), id, true); err != nil {
+			log.Warn().Str("id", id).Err(err).Msg("could not delete container")
+		}
+	}()
 	if err != nil {
 		if parsed := networkutils.ParseBatchError(cmd, bytes.NewReader(outb.Bytes())); parsed != nil {
 			return parsed
@@ -179,19 +186,22 @@ func executeTcCommands(ctx context.Context, r runc.Runc, config utils.TargetCont
 	}
 
 	id := getNextContainerId(config.ContainerID)
-	bundle, cleanup, err := r.PrepareBundle(ctx, sidecarImagePath(), id)
-	defer func() { _ = cleanup() }()
+	bundle, err := r.Create(ctx, sidecarImagePath(), id)
 	if err != nil {
 		return err
 	}
+	defer func() {
+		if err := bundle.Remove(); err != nil {
+			log.Warn().Str("id", id).Err(err).Msg("could not remove bundle")
+		}
+	}()
 
 	namespaces := utils.FilterNamespaces(config.Namespaces, []specs.LinuxNamespaceType{specs.NetworkNamespace}...)
 	utils.RefreshNamespacesUsingInode(ctx, namespaces)
 
 	cmd := []string{"tc", "-force", "-batch", "-"}
-	if err = r.EditSpec(
+	if err = bundle.EditSpec(
 		ctx,
-		bundle,
 		runc.WithHostname(fmt.Sprintf("tc-%s", id)),
 		runc.WithAnnotations(map[string]string{"com.steadybit.sidecar": "true"}),
 		runc.WithNamespaces(utils.ToLinuxNamespaces(namespaces)),
@@ -203,12 +213,16 @@ func executeTcCommands(ctx context.Context, r runc.Runc, config utils.TargetCont
 
 	log.Debug().Strs("cmds", cmds).Msg("running tc commands")
 	var outb bytes.Buffer
-	err = r.Run(ctx, id, bundle, runc.IoOpts{
+	err = r.Run(ctx, bundle, runc.IoOpts{
 		Stdin:  networkutils.ToReader(cmds),
 		Stdout: &outb,
 		Stderr: &outb,
 	})
-	defer func() { _ = r.Delete(context.Background(), id, true) }()
+	defer func() {
+		if err := r.Delete(context.Background(), id, true); err != nil {
+			log.Warn().Str("id", id).Err(err).Msg("could not delete container")
+		}
+	}()
 	if err != nil {
 		if parsed := networkutils.ParseBatchError(cmd, bytes.NewReader(outb.Bytes())); parsed != nil {
 			return parsed

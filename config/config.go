@@ -16,11 +16,12 @@ type Specification struct {
 	RuncRootless                string   `json:"runcRootless" split_words:"true" required:"false"`
 	RuncSystemdCgroup           bool     `json:"runcSystemdCgroup" split_words:"true" required:"false"`
 	RuncDebug                   bool     `json:"runcDebug" split_words:"true" required:"false"`
+	NsmountPath                 string   `json:"nsmountPath" split_words:"true" default:"nsmount"`
 	DisableDiscoveryExcludes    bool     `required:"false" split_words:"true" default:"false"`
 	DiscoveryCallInterval       string   `json:"discoveryCallInterval" split_words:"true" required:"false" default:"30s"`
+	DiscoveryAttributesExcludes []string `json:"discoveryAttributesExcludes" split_words:"true" required:"false"`
 	Port                        uint16   `json:"port" split_words:"true" required:"false" default:"8086"`
 	HealthPort                  uint16   `json:"healthPort" split_words:"true" required:"false" default:"8082"`
-	DiscoveryAttributesExcludes []string `json:"discoveryAttributesExcludes" split_words:"true" required:"false"`
 }
 
 var (

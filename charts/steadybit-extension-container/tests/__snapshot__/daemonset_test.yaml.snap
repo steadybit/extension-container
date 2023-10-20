@@ -64,6 +64,7 @@ manifest should match snapshot using containerd and using resource limits:
                 capabilities:
                   add:
                     - SYS_ADMIN
+                    - SYS_CHROOT
                     - SYS_RESOURCE
                     - SYS_PTRACE
                     - KILL
@@ -176,6 +177,7 @@ manifest should match snapshot using crio using podAnnotations and Labels:
                 capabilities:
                   add:
                     - SYS_ADMIN
+                    - SYS_CHROOT
                     - SYS_RESOURCE
                     - SYS_PTRACE
                     - KILL
@@ -286,6 +288,7 @@ manifest should match snapshot using docker:
                 capabilities:
                   add:
                     - SYS_ADMIN
+                    - SYS_CHROOT
                     - SYS_RESOURCE
                     - SYS_PTRACE
                     - KILL
@@ -400,6 +403,7 @@ manifest should match snapshot with TLS:
                 capabilities:
                   add:
                     - SYS_ADMIN
+                    - SYS_CHROOT
                     - SYS_RESOURCE
                     - SYS_PTRACE
                     - KILL
@@ -517,6 +521,7 @@ manifest should match snapshot with different containerPorts:
                 capabilities:
                   add:
                     - SYS_ADMIN
+                    - SYS_CHROOT
                     - SYS_RESOURCE
                     - SYS_PTRACE
                     - KILL
@@ -629,6 +634,7 @@ manifest should match snapshot with discover all deployments:
                 capabilities:
                   add:
                     - SYS_ADMIN
+                    - SYS_CHROOT
                     - SYS_RESOURCE
                     - SYS_PTRACE
                     - KILL
@@ -746,6 +752,7 @@ manifest should match snapshot with extra env vars:
                 capabilities:
                   add:
                     - SYS_ADMIN
+                    - SYS_CHROOT
                     - SYS_RESOURCE
                     - SYS_PTRACE
                     - KILL
@@ -858,6 +865,7 @@ manifest should match snapshot with extra labels:
                 capabilities:
                   add:
                     - SYS_ADMIN
+                    - SYS_CHROOT
                     - SYS_RESOURCE
                     - SYS_PTRACE
                     - KILL
@@ -974,6 +982,7 @@ manifest should match snapshot with mutual TLS:
                 capabilities:
                   add:
                     - SYS_ADMIN
+                    - SYS_CHROOT
                     - SYS_RESOURCE
                     - SYS_PTRACE
                     - KILL
@@ -1104,6 +1113,7 @@ manifest should match snapshot with mutual TLS using containerPaths:
                 capabilities:
                   add:
                     - SYS_ADMIN
+                    - SYS_CHROOT
                     - SYS_RESOURCE
                     - SYS_PTRACE
                     - KILL
@@ -1214,6 +1224,7 @@ manifest should match snapshot with podSecurityContext:
                 capabilities:
                   add:
                     - SYS_ADMIN
+                    - SYS_CHROOT
                     - SYS_RESOURCE
                     - SYS_PTRACE
                     - KILL
@@ -1326,6 +1337,7 @@ manifest should match snapshot with priority class:
                 capabilities:
                   add:
                     - SYS_ADMIN
+                    - SYS_CHROOT
                     - SYS_RESOURCE
                     - SYS_PTRACE
                     - KILL
@@ -1437,6 +1449,7 @@ manifest should match snapshot with update strategy:
                 capabilities:
                   add:
                     - SYS_ADMIN
+                    - SYS_CHROOT
                     - SYS_RESOURCE
                     - SYS_PTRACE
                     - KILL
