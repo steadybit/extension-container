@@ -540,8 +540,8 @@ k8s.io/apimachinery v0.29.0-alpha.2 h1:Hc7Qm7rUgZKXAwqP/7pxOIqrKVY9FagZZAQKtqvSq
 k8s.io/apimachinery v0.29.0-alpha.2/go.mod h1:4Af47tS1WBajkTEItD4q/rOAaPzoTx4iic5/l/IRC7E=
 k8s.io/client-go v0.29.0-alpha.2 h1:a7ysyjdfQmevfrm+aIhebQD4OioDvMqVkIP+E2XDXts=
 k8s.io/client-go v0.29.0-alpha.2/go.mod h1:0qMkj0IzCOyLy4tzPvh0nabZVNLZTew9ATMMP91FzRw=
-k8s.io/cri-api v0.28.2 h1:RzDo9YY9tkWhAx9/UZEcn6ug1WcvDhU3eA1YLevFreI=
-k8s.io/cri-api v0.28.2/go.mod h1:xXygwvSOGcT/2KXg8sMYTHns2xFem3949kCQn5IS1k4=
+k8s.io/cri-api v0.28.3 h1:84ifk56rAy7yYI1zYqTjLLishpFgs3q7BkCKhoLhmFA=
+k8s.io/cri-api v0.28.3/go.mod h1:MTdJO2fikImnX+YzE2Ccnosj3Hw2Cinw2fXYV3ppUIE=
 k8s.io/klog/v2 v2.100.1 h1:7WCHKK6K8fNhTqfBhISHQ97KrnJNFZMcQvKp7gP/tmg=
 k8s.io/klog/v2 v2.100.1/go.mod h1:y1WjHnz7Dj687irZUWR/WLkLc5N1YHtjLdmgWjndZn0=
 k8s.io/kube-openapi v0.0.0-20230905202853-d090da108d2f h1:eeEUOoGYWhOz7EyXqhlR2zHKNw2mNJ9vzJmub6YN6kk=
