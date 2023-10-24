@@ -139,21 +139,21 @@ func executeIpCommands(ctx context.Context, r runc.Runc, config utils.TargetCont
 	}
 	defer func() {
 		if err := bundle.Remove(); err != nil {
-			log.Warn().Str("id", id).Err(err).Msg("could not remove bundle")
+			log.Warn().Str("id", id).Err(err).Msg("failed to remove bundle")
 		}
 	}()
 
-	cmd := []string{"ip", "-family", string(family), "-force", "-batch", "-"}
 	namespaces := utils.FilterNamespaces(config.Namespaces, []specs.LinuxNamespaceType{specs.NetworkNamespace}...)
 	utils.RefreshNamespacesUsingInode(ctx, namespaces)
 
+	processArgs := []string{"ip", "-family", string(family), "-force", "-batch", "-"}
 	if err = bundle.EditSpec(
 		ctx,
 		runc.WithHostname(fmt.Sprintf("ip-%s", id)),
 		runc.WithAnnotations(map[string]string{"com.steadybit.sidecar": "true"}),
 		runc.WithNamespaces(utils.ToLinuxNamespaces(namespaces)),
 		runc.WithCapabilities("CAP_NET_ADMIN"),
-		runc.WithProcessArgs(cmd...),
+		runc.WithProcessArgs(processArgs...),
 	); err != nil {
 		return err
 	}
@@ -167,11 +167,11 @@ func executeIpCommands(ctx context.Context, r runc.Runc, config utils.TargetCont
 	})
 	defer func() {
 		if err := r.Delete(context.Background(), id, true); err != nil {
-			log.Warn().Str("id", id).Err(err).Msg("could not delete container")
+			log.Warn().Str("id", id).Err(err).Msg("failed to delete container")
 		}
 	}()
 	if err != nil {
-		if parsed := networkutils.ParseBatchError(cmd, bytes.NewReader(outb.Bytes())); parsed != nil {
+		if parsed := networkutils.ParseBatchError(processArgs, bytes.NewReader(outb.Bytes())); parsed != nil {
 			return parsed
 		}
 		return fmt.Errorf("%s ip failed: %w, output: %s", id, err, outb.String())
@@ -192,21 +192,21 @@ func executeTcCommands(ctx context.Context, r runc.Runc, config utils.TargetCont
 	}
 	defer func() {
 		if err := bundle.Remove(); err != nil {
-			log.Warn().Str("id", id).Err(err).Msg("could not remove bundle")
+			log.Warn().Str("id", id).Err(err).Msg("failed to remove bundle")
 		}
 	}()
 
 	namespaces := utils.FilterNamespaces(config.Namespaces, []specs.LinuxNamespaceType{specs.NetworkNamespace}...)
 	utils.RefreshNamespacesUsingInode(ctx, namespaces)
 
-	cmd := []string{"tc", "-force", "-batch", "-"}
+	processArgs := []string{"tc", "-force", "-batch", "-"}
 	if err = bundle.EditSpec(
 		ctx,
 		runc.WithHostname(fmt.Sprintf("tc-%s", id)),
 		runc.WithAnnotations(map[string]string{"com.steadybit.sidecar": "true"}),
 		runc.WithNamespaces(utils.ToLinuxNamespaces(namespaces)),
 		runc.WithCapabilities("CAP_NET_ADMIN"),
-		runc.WithProcessArgs(cmd...),
+		runc.WithProcessArgs(processArgs...),
 	); err != nil {
 		return err
 	}
@@ -220,11 +220,11 @@ func executeTcCommands(ctx context.Context, r runc.Runc, config utils.TargetCont
 	})
 	defer func() {
 		if err := r.Delete(context.Background(), id, true); err != nil {
-			log.Warn().Str("id", id).Err(err).Msg("could not delete container")
+			log.Warn().Str("id", id).Err(err).Msg("failed to delete container")
 		}
 	}()
 	if err != nil {
-		if parsed := networkutils.ParseBatchError(cmd, bytes.NewReader(outb.Bytes())); parsed != nil {
+		if parsed := networkutils.ParseBatchError(processArgs, bytes.NewReader(outb.Bytes())); parsed != nil {
 			return parsed
 		}
 		return fmt.Errorf("%s tc failed: %w, output: %s", id, err, outb.String())

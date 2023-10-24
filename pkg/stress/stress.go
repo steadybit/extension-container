@@ -14,14 +14,20 @@ import (
 	"github.com/steadybit/extension-container/pkg/utils"
 	"os/exec"
 	"strconv"
+	"sync"
 	"sync/atomic"
+	"syscall"
 	"time"
 )
 
 type Stress struct {
-	stop  func()
-	start func() error
-	err   chan error
+	bundle runc.ContainerBundle
+	runc   runc.Runc
+
+	cond   *sync.Cond
+	exited bool
+	err    error
+	args   []string
 }
 
 var counter = atomic.Int32{}
@@ -68,30 +74,31 @@ func New(ctx context.Context, r runc.Runc, config utils.TargetContainerConfig, o
 
 	bundle, err := r.Create(ctx, utils.SidecarImagePath(), id)
 	if err != nil {
-		return nil, fmt.Errorf("could not prepare bundle: %w", err)
+		return nil, fmt.Errorf("failed to prepare bundle: %w", err)
 	}
 	defer func() {
 		if !success {
 			if err := bundle.Remove(); err != nil {
-				log.Warn().Str("id", id).Err(err).Msg("could not remove bundle")
+				log.Warn().Str("id", id).Err(err).Msg("failed to remove bundle")
 			}
 		}
 	}()
 
 	if opts.TempPath != "" {
 		if err := bundle.MountFromProcess(ctx, config.Pid, opts.TempPath, "/stress-temp"); err != nil {
-			log.Warn().Err(err).Msgf("could not mount %s", opts.TempPath)
+			log.Warn().Err(err).Msgf("failed to mount %s", opts.TempPath)
 		} else {
 			opts.TempPath = "/stress-temp"
 		}
 	}
 
+	processArgs := append([]string{"stress-ng"}, opts.Args()...)
 	if err := bundle.EditSpec(ctx,
 		runc.WithHostname(id),
 		runc.WithAnnotations(map[string]string{
 			"com.steadybit.sidecar": "true",
 		}),
-		runc.WithProcessArgs(append([]string{"stress-ng"}, opts.Args()...)...),
+		runc.WithProcessArgs(processArgs...),
 		runc.WithProcessCwd("/tmp"),
 		runc.WithCgroupPath(config.CGroupPath, "stress"),
 		runc.WithNamespaces(utils.ToLinuxNamespaces(utils.FilterNamespaces(config.Namespaces, specs.PIDNamespace))),
@@ -102,54 +109,15 @@ func New(ctx context.Context, r runc.Runc, config utils.TargetContainerConfig, o
 			Options:     []string{"noexec", "nosuid", "nodev", "rprivate"},
 		}),
 	); err != nil {
-		return nil, fmt.Errorf("could not create config.json: %w", err)
-	}
-
-	wait := make(chan error)
-	ctx, ctxCancel := context.WithCancel(context.Background())
-	start := func() error {
-		log.Info().
-			Str("targetContainer", config.ContainerID).
-			Strs("args", opts.Args()).
-			Msg("Starting stress-ng")
-		go func() {
-			var outb bytes.Buffer
-			err := r.Run(ctx, bundle, runc.IoOpts{
-				Stdin:  nil,
-				Stdout: &outb,
-				Stderr: &outb,
-			})
-
-			var exitErr *exec.ExitError
-			if errors.As(err, &exitErr) {
-				exitErr.Stderr = outb.Bytes()
-				wait <- exitErr
-			}
-		}()
-		return nil
-	}
-
-	stop := func() {
-		log.Info().
-			Str("targetContainer", config.ContainerID).
-			Msg("Stopping stress-ng")
-
-		ctxCancel()
-
-		if err := r.Delete(context.Background(), id, true); err != nil {
-			log.Warn().Str("id", id).Err(err).Msg("could not delete container")
-		}
-
-		if err := bundle.Remove(); err != nil {
-			log.Warn().Str("id", id).Err(err).Msg("could not remove bundle")
-		}
+		return nil, fmt.Errorf("failed to create config.json: %w", err)
 	}
 
 	success = true
 	return &Stress{
-		start: start,
-		stop:  stop,
-		err:   wait,
+		bundle: bundle,
+		runc:   r,
+		cond:   sync.NewCond(&sync.Mutex{}),
+		args:   processArgs,
 	}, nil
 }
 
@@ -157,14 +125,84 @@ func getNextContainerId(targetId string) string {
 	return fmt.Sprintf("sb-stress-%d-%s", counter.Add(1), targetId[:8])
 }
 
-func (s *Stress) Wait() <-chan error {
-	return s.err
+func (s *Stress) Exited() (bool, error) {
+	s.cond.L.Lock()
+	defer s.cond.L.Unlock()
+	return s.exited, s.err
 }
 
 func (s *Stress) Start() error {
-	return s.start()
+	log.Info().
+		Str("targetContainer", s.bundle.ContainerId()).
+		Strs("args", s.args).
+		Msg("Starting stress-ng")
+
+	var outb bytes.Buffer
+	cmd, err := s.runc.RunCommand(context.Background(), s.bundle)
+	cmd.Stdout = &outb
+	cmd.Stderr = &outb
+	if err != nil {
+		return fmt.Errorf("failed to run stress-ng: %w", err)
+	}
+
+	err = cmd.Start()
+	if err != nil {
+		return fmt.Errorf("failed to start stress-ng: %w", err)
+	}
+
+	go func() {
+		err := cmd.Wait()
+		log.Trace().Str("id", s.bundle.ContainerId()).Int("exitCode", cmd.ProcessState.ExitCode()).Msg("stress-ng exited")
+
+		s.cond.L.Lock()
+		defer s.cond.L.Unlock()
+
+		s.exited = true
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
+			exitErr.Stderr = outb.Bytes()
+			s.err = exitErr
+		} else {
+			s.err = err
+		}
+
+		s.cond.Broadcast()
+	}()
+
+	return nil
 }
 
 func (s *Stress) Stop() {
-	s.stop()
+	log.Info().
+		Str("targetContainer", s.bundle.ContainerId()).
+		Msg("Stopping stress-ng")
+
+	if err := s.runc.Kill(context.Background(), s.bundle.ContainerId(), syscall.SIGINT); err != nil {
+		log.Warn().Str("id", s.bundle.ContainerId()).Err(err).Msg("failed to send SIGINT to container")
+	}
+
+	timer := time.AfterFunc(10*time.Second, func() {
+		if err := s.runc.Kill(context.Background(), s.bundle.ContainerId(), syscall.SIGTERM); err != nil {
+			log.Warn().Str("id", s.bundle.ContainerId()).Err(err).Msg("failed to send SIGTERM to container")
+		}
+	})
+
+	s.wait()
+	timer.Stop()
+
+	if err := s.runc.Delete(context.Background(), s.bundle.ContainerId(), false); err != nil {
+		log.Warn().Str("id", s.bundle.ContainerId()).Err(err).Msg("failed to delete container")
+	}
+
+	if err := s.bundle.Remove(); err != nil {
+		log.Warn().Str("id", s.bundle.ContainerId()).Err(err).Msg("failed to remove bundle")
+	}
+}
+
+func (s *Stress) wait() {
+	s.cond.L.Lock()
+	defer s.cond.L.Unlock()
+	if !s.exited {
+		s.cond.Wait()
+	}
 }

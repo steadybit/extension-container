@@ -20,6 +20,7 @@ import (
 	"path/filepath"
 	"runtime/trace"
 	"strconv"
+	"syscall"
 	"time"
 )
 
@@ -27,7 +28,9 @@ type Runc interface {
 	State(ctx context.Context, id string) (*ContainerState, error)
 	Create(ctx context.Context, image, id string) (ContainerBundle, error)
 	Run(ctx context.Context, container ContainerBundle, ioOpts IoOpts) error
+	RunCommand(ctx context.Context, container ContainerBundle) (*exec.Cmd, error)
 	Delete(ctx context.Context, id string, force bool) error
+	Kill(background context.Context, id string, signal syscall.Signal) error
 }
 
 type ContainerBundle interface {
@@ -194,14 +197,6 @@ type IoOpts struct {
 	Stderr io.Writer
 }
 
-func InheritStdIo() IoOpts {
-	return IoOpts{
-		Stdin:  nil,
-		Stdout: os.Stdout,
-		Stderr: os.Stderr,
-	}
-}
-
 func (o IoOpts) WithStdin(reader io.Reader) IoOpts {
 	return IoOpts{
 		Stdin:  reader,
@@ -212,21 +207,39 @@ func (o IoOpts) WithStdin(reader io.Reader) IoOpts {
 
 func (r *defaultRunc) Run(ctx context.Context, container ContainerBundle, ioOpts IoOpts) error {
 	defer trace.StartRegion(ctx, "runc.Run").End()
-	bundle, ok := container.(*runcContainerBundle)
-	if !ok {
-		return fmt.Errorf("invalid bundle type: %T", container)
+	cmd, err := r.RunCommand(ctx, container)
+	if err != nil {
+		return err
 	}
 
-	log.Trace().Str("id", bundle.id).Msg("running container")
-
-	cmd := r.command(ctx, "run", "--bundle", bundle.path, bundle.id)
 	cmd.Stdin = ioOpts.Stdin
 	cmd.Stdout = ioOpts.Stdout
 	cmd.Stderr = ioOpts.Stderr
-	err := cmd.Run()
 
-	log.Trace().Str("id", bundle.id).Int("exitCode", cmd.ProcessState.ExitCode()).Msg("container exited")
+	log.Trace().Str("id", container.ContainerId()).Msg("running container")
+	err = cmd.Run()
+
+	log.Trace().Str("id", container.ContainerId()).Int("exitCode", cmd.ProcessState.ExitCode()).Msg("container exited")
 	return err
+}
+
+func (r *defaultRunc) RunCommand(ctx context.Context, container ContainerBundle) (*exec.Cmd, error) {
+	defer trace.StartRegion(ctx, "runc.RunCommand").End()
+	bundle, ok := container.(*runcContainerBundle)
+	if !ok {
+		return nil, fmt.Errorf("invalid bundle type: %T", container)
+	}
+
+	return r.command(ctx, "run", "--bundle", bundle.path, bundle.id), nil
+}
+
+func (r *defaultRunc) Kill(ctx context.Context, id string, signal syscall.Signal) error {
+	defer trace.StartRegion(ctx, "runc.Kill").End()
+	log.Trace().Str("id", id).Int("signal", int(signal)).Msg("sending signal to container")
+	if output, err := r.command(ctx, "kill", strconv.Itoa(int(signal)), id).CombinedOutput(); err != nil {
+		return fmt.Errorf("%s: %s", err, output)
+	}
+	return nil
 }
 
 type SpecEditor func(spec *specs.Spec)
@@ -402,7 +415,7 @@ func (b *runcContainerBundle) MountFromProcess(ctx context.Context, fromPid int,
 		Msg("mount from process to bundle")
 
 	if err := os.Mkdir(mountpoint, 0755); err != nil && !os.IsExist(err) {
-		return fmt.Errorf("could not create mountpoint %s: %w", mountpoint, err)
+		return fmt.Errorf("failed to create mountpoint %s: %w", mountpoint, err)
 	}
 
 	var out bytes.Buffer

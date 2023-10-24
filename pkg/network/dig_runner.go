@@ -30,16 +30,16 @@ func (r *RuncDigRunner) Run(ctx context.Context, arg []string, stdin io.Reader) 
 	}
 	defer func() {
 		if err := bundle.Remove(); err != nil {
-			log.Warn().Str("id", id).Err(err).Msg("could not remove bundle")
+			log.Warn().Str("id", id).Err(err).Msg("failed to remove bundle")
 		}
 	}()
 
 	if err := bundle.CopyFileFromProcess(ctx, r.Config.Pid, "/etc/resolv.conf", "/etc/resolv.conf"); err != nil {
-		log.Warn().Err(err).Msg("could not copy /etc/resolv.conf")
+		log.Warn().Err(err).Msg("failed to copy /etc/resolv.conf")
 	}
 
 	if err := bundle.CopyFileFromProcess(ctx, r.Config.Pid, "/etc/hosts", "/etc/hosts"); err != nil {
-		log.Warn().Err(err).Msg("could not copy /etc/hosts")
+		log.Warn().Err(err).Msg("failed to copy /etc/hosts")
 	}
 
 	namespaces := utils.FilterNamespaces(r.Config.Namespaces, []specs.LinuxNamespaceType{specs.NetworkNamespace}...)
@@ -62,7 +62,7 @@ func (r *RuncDigRunner) Run(ctx context.Context, arg []string, stdin io.Reader) 
 	err = r.Runc.Run(ctx, bundle, runc.IoOpts{Stdin: stdin, Stdout: &outb, Stderr: &errb})
 	defer func() {
 		if err := r.Runc.Delete(context.Background(), id, true); err != nil {
-			log.Warn().Str("id", id).Err(err).Msg("could not delete container")
+			log.Warn().Str("id", id).Err(err).Msg("failed to delete container")
 		}
 	}()
 	if err != nil {

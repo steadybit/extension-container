@@ -77,7 +77,7 @@ func SidecarImagePath() string {
 				return
 			}
 
-			log.Fatal().Msg("Could not find sidecar image")
+			log.Fatal().Msg("failed to find sidecar image")
 		}
 	})
 	return sidecarImage
@@ -110,7 +110,7 @@ func ReadCgroupPath(ctx context.Context, pid int) (string, error) {
 		}
 	}
 	if cgroup == "" {
-		return "", fmt.Errorf("could not read cgroup for pid %d\n%s", pid, out.String())
+		return "", fmt.Errorf("failed to read cgroup for pid %d\n%s", pid, out.String())
 	}
 	return cgroup, nil
 }
@@ -143,7 +143,7 @@ func ReadNamespaces(ctx context.Context, pid int) ([]LinuxNamespaceWithInode, er
 		}
 		inode, err := strconv.ParseUint(fields[0], 10, 64)
 		if err != nil {
-			log.Warn().Err(err).Msgf("could not parse inode %s. omitting inode namespace information", fields[0])
+			log.Warn().Err(err).Msgf("failed to parse inode %s. omitting inode namespace information", fields[0])
 		}
 		ns := LinuxNamespaceWithInode{
 			Inode: inode,

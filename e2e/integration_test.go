@@ -735,6 +735,7 @@ func testStressCpu(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	require.NoError(t, err)
 	e2e.AssertProcessRunningInContainer(t, m, nginx.Pod, "nginx", "stress-ng", false)
 	require.NoError(t, action.Cancel())
+	e2e.AssertProcessNOTRunningInContainer(t, m, nginx.Pod, "nginx", "stress-ng")
 
 	hostnameAfter, err := m.PodExec(nginx.Pod, "nginx", "hostname")
 	require.NoError(t, err)
@@ -807,6 +808,7 @@ func testStressMemory(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 				err := action.Wait()
 				require.ErrorContains(t, err, *tt.wantedErr)
 			}
+			e2e.AssertProcessNOTRunningInContainer(t, m, nginx.Pod, "nginx", "stress-ng")
 		})
 	}
 	requireAllSidecarsCleanedUp(t, m, e)
@@ -831,17 +833,17 @@ func testStressIo(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 				},
 			},
 		}
-
 	})
 	require.NoError(t, err, "failed to create pod")
 	defer func() { _ = nginx.Delete() }()
 
+	_, err = m.PodExec(nginx.Pod, "nginx", "mkdir", "-p", "/host-tmp/stressng")
+	require.NoError(t, err)
+
 	target, err := nginx.Target()
 	require.NoError(t, err)
 
-	modes := []string{"read_write_and_flush", "read_write", "read_write_and_flush"}
-
-	for _, mode := range modes {
+	for _, mode := range []string{"read_write_and_flush", "read_write", "flush"} {
 		t.Run(mode, func(t *testing.T) {
 			config := struct {
 				Duration   int    `json:"duration"`
@@ -849,15 +851,22 @@ func testStressIo(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 				Percentage int    `json:"percentage"`
 				Workers    int    `json:"workers"`
 				Mode       string `json:"mode"`
-			}{Duration: 5000, Workers: 1, Percentage: 50, Path: "/host-tmp", Mode: mode}
+			}{Duration: 5000, Workers: 1, Percentage: 50, Path: "/host-tmp/stressng", Mode: mode}
 
 			action, err := e.RunAction(fmt.Sprintf("%s.stress_io", extcontainer.BaseActionID), target, config, executionContext)
 			defer func() { _ = action.Cancel() }()
 			require.NoError(t, err)
 			e2e.AssertProcessRunningInContainer(t, m, nginx.Pod, "nginx", "stress-ng", false)
 			require.NoError(t, action.Cancel())
+			e2e.AssertProcessNOTRunningInContainer(t, m, nginx.Pod, "nginx", "stress-ng")
 		})
 	}
+
+	out, err := m.PodExec(nginx.Pod, "nginx", "ls", "/host-tmp/stressng")
+	require.NoError(t, err)
+	space := strings.TrimSpace(out)
+	require.Empty(t, space, "no stress-ng directories must be present")
+
 	requireAllSidecarsCleanedUp(t, m, e)
 }
 

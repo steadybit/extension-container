@@ -5,6 +5,7 @@ package extcontainer
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
@@ -125,41 +126,12 @@ func (a *stressAction) Status(ctx context.Context, state *StressActionState) (*a
 	trace.Log(ctx, "actionId", a.description.Id)
 	trace.Log(ctx, "executionId", state.ExecutionId.String())
 
-	completed, err := a.isStressCompleted(state.ExecutionId)
-	if err != nil {
-		errMessage := err.Error()
-
-		if exitErr, ok := err.(*exec.ExitError); ok {
-			exitCode := exitErr.ExitCode()
-			if len(exitErr.Stderr) > 0 {
-				errMessage = fmt.Sprintf("%s\n%s", exitErr.Error(), string(exitErr.Stderr))
-			}
-
-			for _, ignore := range state.IgnoreExitCodes {
-				if exitCode == ignore {
-					return &action_kit_api.StatusResult{
-						Completed: true,
-						Messages: &[]action_kit_api.Message{
-							{
-								Level:   extutil.Ptr(action_kit_api.Warn),
-								Message: fmt.Sprintf("stress-ng exited unexpectedly: %s", errMessage),
-							},
-						},
-					}, nil
-				}
-			}
-		}
-
-		return &action_kit_api.StatusResult{
-			Completed: true,
-			Error: &action_kit_api.ActionKitError{
-				Status: extutil.Ptr(action_kit_api.Failed),
-				Title:  fmt.Sprintf("Failed to stress container: %s", errMessage),
-			},
-		}, nil
+	exited, err := a.stressExited(state.ExecutionId)
+	if !exited {
+		return &action_kit_api.StatusResult{Completed: false}, nil
 	}
 
-	if completed {
+	if err == nil {
 		return &action_kit_api.StatusResult{
 			Completed: true,
 			Messages: &[]action_kit_api.Message{
@@ -171,7 +143,37 @@ func (a *stressAction) Status(ctx context.Context, state *StressActionState) (*a
 		}, nil
 	}
 
-	return &action_kit_api.StatusResult{Completed: false}, nil
+	errMessage := err.Error()
+
+	var exitErr *exec.ExitError
+	if errors.As(err, &exitErr) {
+		exitCode := exitErr.ExitCode()
+		if len(exitErr.Stderr) > 0 {
+			errMessage = fmt.Sprintf("%s\n%s", exitErr.Error(), string(exitErr.Stderr))
+		}
+
+		for _, ignore := range state.IgnoreExitCodes {
+			if exitCode == ignore {
+				return &action_kit_api.StatusResult{
+					Completed: true,
+					Messages: &[]action_kit_api.Message{
+						{
+							Level:   extutil.Ptr(action_kit_api.Warn),
+							Message: fmt.Sprintf("stress-ng exited unexpectedly: %s", errMessage),
+						},
+					},
+				}, nil
+			}
+		}
+	}
+
+	return &action_kit_api.StatusResult{
+		Completed: true,
+		Error: &action_kit_api.ActionKitError{
+			Status: extutil.Ptr(action_kit_api.Failed),
+			Title:  fmt.Sprintf("Failed to stress container: %s", errMessage),
+		},
+	}, nil
 }
 
 func (a *stressAction) Stop(ctx context.Context, state *StressActionState) (*action_kit_api.StopResult, error) {
@@ -195,18 +197,12 @@ func (a *stressAction) Stop(ctx context.Context, state *StressActionState) (*act
 	}, nil
 }
 
-func (a *stressAction) isStressCompleted(executionId uuid.UUID) (bool, error) {
+func (a *stressAction) stressExited(executionId uuid.UUID) (bool, error) {
 	s, ok := a.stresses.Load(executionId)
 	if !ok {
 		return true, nil
 	}
-
-	select {
-	case err := <-s.(*stress.Stress).Wait():
-		return true, err
-	default:
-		return false, nil
-	}
+	return s.(*stress.Stress).Exited()
 }
 
 func (a *stressAction) stopStressContainer(executionId uuid.UUID) bool {

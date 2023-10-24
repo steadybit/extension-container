@@ -46,7 +46,7 @@ func ListInterfaces(ctx context.Context, r runc.Runc, config utils.TargetContain
 	}
 	defer func() {
 		if err := bundle.Remove(); err != nil {
-			log.Warn().Str("id", id).Err(err).Msg("could not remove bundle")
+			log.Warn().Str("id", id).Err(err).Msg("failed to remove bundle")
 		}
 	}()
 
@@ -70,17 +70,17 @@ func ListInterfaces(ctx context.Context, r runc.Runc, config utils.TargetContain
 	err = r.Run(ctx, bundle, runc.IoOpts{Stdout: &outb, Stderr: &errb})
 	defer func() {
 		if err := r.Delete(context.Background(), id, true); err != nil {
-			log.Warn().Str("id", id).Err(err).Msg("could not delete container")
+			log.Warn().Str("id", id).Err(err).Msg("failed to delete container")
 		}
 	}()
 	if err != nil {
-		return nil, fmt.Errorf("could not list interfaces: %w: %s", err, errb.String())
+		return nil, fmt.Errorf("failed to list interfaces: %w: %s", err, errb.String())
 	}
 
 	var interfaces []Interface
 	err = json.Unmarshal(outb.Bytes(), &interfaces)
 	if err != nil {
-		return nil, fmt.Errorf("could not unmarshal interfaces: %w", err)
+		return nil, fmt.Errorf("failed to unmarshal interfaces: %w", err)
 	}
 
 	log.Trace().Interface("interfaces", interfaces).Msg("listed network interfaces")

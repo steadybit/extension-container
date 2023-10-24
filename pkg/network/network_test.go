@@ -6,8 +6,10 @@ import (
 	"github.com/steadybit/extension-container/pkg/container/runc"
 	"github.com/steadybit/extension-container/pkg/utils"
 	"github.com/stretchr/testify/mock"
+	"os/exec"
 	"sync"
 	"sync/atomic"
+	"syscall"
 	"testing"
 	"time"
 )
@@ -83,6 +85,14 @@ func (m *MockedRunc) Run(ctx context.Context, container runc.ContainerBundle, io
 func (m *MockedRunc) Delete(ctx context.Context, id string, force bool) error {
 	args := m.Called(ctx, id, force)
 	return args.Error(0)
+}
+
+func (m *MockedRunc) RunCommand(_ context.Context, _ runc.ContainerBundle) (*exec.Cmd, error) {
+	panic("implement me")
+}
+
+func (m *MockedRunc) Kill(_ context.Context, _ string, _ syscall.Signal) error {
+	panic("implement me")
 }
 
 type MockBundle struct {

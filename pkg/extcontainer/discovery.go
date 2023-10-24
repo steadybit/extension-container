@@ -152,7 +152,7 @@ func getAttributeDescriptions() discovery_kit_api.AttributeDescriptions {
 func (d *containerDiscovery) getDiscoveredTargets(ctx context.Context) ([]discovery_kit_api.Target, error) {
 	containers, err := d.client.List(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("could not list containers: %w", err)
+		return nil, fmt.Errorf("failed to list containers: %w", err)
 	}
 
 	hostname, _ := os.Hostname()
