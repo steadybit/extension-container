@@ -236,7 +236,7 @@ func (r *defaultRunc) RunCommand(ctx context.Context, container ContainerBundle)
 func (r *defaultRunc) Kill(ctx context.Context, id string, signal syscall.Signal) error {
 	defer trace.StartRegion(ctx, "runc.Kill").End()
 	log.Trace().Str("id", id).Int("signal", int(signal)).Msg("sending signal to container")
-	if output, err := r.command(ctx, "kill", strconv.Itoa(int(signal)), id).CombinedOutput(); err != nil {
+	if output, err := r.command(ctx, "kill", id, strconv.Itoa(int(signal))).CombinedOutput(); err != nil {
 		return fmt.Errorf("%s: %s", err, output)
 	}
 	return nil

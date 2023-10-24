@@ -177,12 +177,13 @@ func (s *Stress) Stop() {
 		Str("targetContainer", s.bundle.ContainerId()).
 		Msg("Stopping stress-ng")
 
-	if err := s.runc.Kill(context.Background(), s.bundle.ContainerId(), syscall.SIGINT); err != nil {
+	ctx := context.Background()
+	if err := s.runc.Kill(ctx, s.bundle.ContainerId(), syscall.SIGINT); err != nil {
 		log.Warn().Str("id", s.bundle.ContainerId()).Err(err).Msg("failed to send SIGINT to container")
 	}
 
 	timer := time.AfterFunc(10*time.Second, func() {
-		if err := s.runc.Kill(context.Background(), s.bundle.ContainerId(), syscall.SIGTERM); err != nil {
+		if err := s.runc.Kill(ctx, s.bundle.ContainerId(), syscall.SIGTERM); err != nil {
 			log.Warn().Str("id", s.bundle.ContainerId()).Err(err).Msg("failed to send SIGTERM to container")
 		}
 	})
@@ -190,7 +191,7 @@ func (s *Stress) Stop() {
 	s.wait()
 	timer.Stop()
 
-	if err := s.runc.Delete(context.Background(), s.bundle.ContainerId(), false); err != nil {
+	if err := s.runc.Delete(ctx, s.bundle.ContainerId(), false); err != nil {
 		log.Warn().Str("id", s.bundle.ContainerId()).Err(err).Msg("failed to delete container")
 	}
 

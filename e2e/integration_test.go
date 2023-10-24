@@ -851,7 +851,7 @@ func testStressIo(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 				Percentage int    `json:"percentage"`
 				Workers    int    `json:"workers"`
 				Mode       string `json:"mode"`
-			}{Duration: 5000, Workers: 1, Percentage: 50, Path: "/host-tmp/stressng", Mode: mode}
+			}{Duration: 20000, Workers: 1, Percentage: 50, Path: "/host-tmp/stressng", Mode: mode}
 
 			action, err := e.RunAction(fmt.Sprintf("%s.stress_io", extcontainer.BaseActionID), target, config, executionContext)
 			defer func() { _ = action.Cancel() }()
@@ -859,13 +859,13 @@ func testStressIo(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			e2e.AssertProcessRunningInContainer(t, m, nginx.Pod, "nginx", "stress-ng", false)
 			require.NoError(t, action.Cancel())
 			e2e.AssertProcessNOTRunningInContainer(t, m, nginx.Pod, "nginx", "stress-ng")
+
+			out, err := m.PodExec(nginx.Pod, "nginx", "ls", "/host-tmp/stressng")
+			require.NoError(t, err)
+			space := strings.TrimSpace(out)
+			require.Empty(t, space, "no stress-ng directories must be present")
 		})
 	}
-
-	out, err := m.PodExec(nginx.Pod, "nginx", "ls", "/host-tmp/stressng")
-	require.NoError(t, err)
-	space := strings.TrimSpace(out)
-	require.Empty(t, space, "no stress-ng directories must be present")
 
 	requireAllSidecarsCleanedUp(t, m, e)
 }
