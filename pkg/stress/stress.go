@@ -4,6 +4,7 @@
 package stress
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"errors"
@@ -12,6 +13,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/steadybit/extension-container/pkg/container/runc"
 	"github.com/steadybit/extension-container/pkg/utils"
+	"io"
 	"os/exec"
 	"strconv"
 	"sync"
@@ -138,12 +140,28 @@ func (s *Stress) Start() error {
 		Msg("Starting stress-ng")
 
 	var outb bytes.Buffer
+	pr, pw := io.Pipe()
+	writer := io.MultiWriter(&outb, pw)
+
 	cmd, err := s.runc.RunCommand(context.Background(), s.bundle)
-	cmd.Stdout = &outb
-	cmd.Stderr = &outb
+	cmd.Stdout = writer
+	cmd.Stderr = writer
 	if err != nil {
 		return fmt.Errorf("failed to run stress-ng: %w", err)
 	}
+
+	go func() {
+		defer func() { _ = pr.Close() }()
+		bufReader := bufio.NewReader(pr)
+
+		for {
+			if line, err := bufReader.ReadString('\n'); err != nil {
+				break
+			} else {
+				log.Debug().Str("id", s.bundle.ContainerId()).Msg(line)
+			}
+		}
+	}()
 
 	err = cmd.Start()
 	if err != nil {
@@ -151,6 +169,7 @@ func (s *Stress) Start() error {
 	}
 
 	go func() {
+		defer func() { _ = pw.Close() }()
 		err := cmd.Wait()
 		log.Trace().Str("id", s.bundle.ContainerId()).Int("exitCode", cmd.ProcessState.ExitCode()).Msg("stress-ng exited")
 
