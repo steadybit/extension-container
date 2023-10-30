@@ -4,7 +4,7 @@ go 1.20
 
 require (
 	github.com/containerd/containerd v1.7.6
-	github.com/docker/docker v24.0.6+incompatible
+	github.com/docker/docker v24.0.7+incompatible
 	github.com/google/uuid v1.3.1
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/novln/docker-parser v1.0.0
