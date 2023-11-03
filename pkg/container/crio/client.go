@@ -6,8 +6,8 @@ package crio
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"github.com/pkg/errors"
 	"github.com/steadybit/extension-container/pkg/container/types"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
