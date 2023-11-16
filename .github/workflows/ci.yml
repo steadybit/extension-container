@@ -105,7 +105,7 @@ jobs:
           minikube config set cpus max
           minikube config set memory 8g
           # exec in a new sell for the group change to take effect
-          sudo -u $USER make audit
+          sudo -u $USER env PATH=$PATH make audit
 
       - name: Check Sonar Token
         id: check-sonar
