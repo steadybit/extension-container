@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.1.30
+
+- Update dependencies
+
+
 ## v1.1.29
 
 - don't follow symlinks when checking for namespace existence
