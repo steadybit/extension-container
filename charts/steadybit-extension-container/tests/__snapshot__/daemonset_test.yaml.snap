@@ -40,9 +40,14 @@ manifest should match snapshot using containerd and using resource limits:
               image: ghcr.io/steadybit/extension-container:latest
               imagePullPolicy: Always
               livenessProbe:
+                failureThreshold: 5
                 httpGet:
                   path: /health/liveness
                   port: 8082
+                initialDelaySeconds: 10
+                periodSeconds: 10
+                successThreshold: 1
+                timeoutSeconds: 5
               name: steadybit-extension-container
               ports:
                 - containerPort: 8086
@@ -50,9 +55,14 @@ manifest should match snapshot using containerd and using resource limits:
                 - containerPort: 8082
                   name: health
               readinessProbe:
+                failureThreshold: 3
                 httpGet:
                   path: /health/readiness
                   port: 8082
+                initialDelaySeconds: 10
+                periodSeconds: 10
+                successThreshold: 1
+                timeoutSeconds: 1
               resources:
                 limits:
                   cpu: 100m
@@ -153,9 +163,14 @@ manifest should match snapshot using crio using podAnnotations and Labels:
               image: ghcr.io/steadybit/extension-container:latest
               imagePullPolicy: Always
               livenessProbe:
+                failureThreshold: 5
                 httpGet:
                   path: /health/liveness
                   port: 8082
+                initialDelaySeconds: 10
+                periodSeconds: 10
+                successThreshold: 1
+                timeoutSeconds: 5
               name: steadybit-extension-container
               ports:
                 - containerPort: 8086
@@ -163,9 +178,14 @@ manifest should match snapshot using crio using podAnnotations and Labels:
                 - containerPort: 8082
                   name: health
               readinessProbe:
+                failureThreshold: 3
                 httpGet:
                   path: /health/readiness
                   port: 8082
+                initialDelaySeconds: 10
+                periodSeconds: 10
+                successThreshold: 1
+                timeoutSeconds: 1
               resources:
                 limits:
                   cpu: 500m
@@ -264,9 +284,14 @@ manifest should match snapshot using docker:
               image: ghcr.io/steadybit/extension-container:latest
               imagePullPolicy: Always
               livenessProbe:
+                failureThreshold: 5
                 httpGet:
                   path: /health/liveness
                   port: 8082
+                initialDelaySeconds: 10
+                periodSeconds: 10
+                successThreshold: 1
+                timeoutSeconds: 5
               name: steadybit-extension-container
               ports:
                 - containerPort: 8086
@@ -274,9 +299,14 @@ manifest should match snapshot using docker:
                 - containerPort: 8082
                   name: health
               readinessProbe:
+                failureThreshold: 3
                 httpGet:
                   path: /health/readiness
                   port: 8082
+                initialDelaySeconds: 10
+                periodSeconds: 10
+                successThreshold: 1
+                timeoutSeconds: 1
               resources:
                 limits:
                   cpu: 500m
@@ -379,9 +409,14 @@ manifest should match snapshot with TLS:
               image: ghcr.io/steadybit/extension-container:latest
               imagePullPolicy: Always
               livenessProbe:
+                failureThreshold: 5
                 httpGet:
                   path: /health/liveness
                   port: 8082
+                initialDelaySeconds: 10
+                periodSeconds: 10
+                successThreshold: 1
+                timeoutSeconds: 5
               name: steadybit-extension-container
               ports:
                 - containerPort: 8086
@@ -389,9 +424,14 @@ manifest should match snapshot with TLS:
                 - containerPort: 8082
                   name: health
               readinessProbe:
+                failureThreshold: 3
                 httpGet:
                   path: /health/readiness
                   port: 8082
+                initialDelaySeconds: 10
+                periodSeconds: 10
+                successThreshold: 1
+                timeoutSeconds: 1
               resources:
                 limits:
                   cpu: 500m
@@ -497,9 +537,14 @@ manifest should match snapshot with different containerPorts:
               image: ghcr.io/steadybit/extension-container:latest
               imagePullPolicy: Always
               livenessProbe:
+                failureThreshold: 5
                 httpGet:
                   path: /health/liveness
                   port: 9091
+                initialDelaySeconds: 10
+                periodSeconds: 10
+                successThreshold: 1
+                timeoutSeconds: 5
               name: steadybit-extension-container
               ports:
                 - containerPort: 9090
@@ -507,9 +552,14 @@ manifest should match snapshot with different containerPorts:
                 - containerPort: 9091
                   name: health
               readinessProbe:
+                failureThreshold: 3
                 httpGet:
                   path: /health/readiness
                   port: 9091
+                initialDelaySeconds: 10
+                periodSeconds: 10
+                successThreshold: 1
+                timeoutSeconds: 1
               resources:
                 limits:
                   cpu: 500m
@@ -610,9 +660,14 @@ manifest should match snapshot with discover all deployments:
               image: ghcr.io/steadybit/extension-container:latest
               imagePullPolicy: Always
               livenessProbe:
+                failureThreshold: 5
                 httpGet:
                   path: /health/liveness
                   port: 8082
+                initialDelaySeconds: 10
+                periodSeconds: 10
+                successThreshold: 1
+                timeoutSeconds: 5
               name: steadybit-extension-container
               ports:
                 - containerPort: 8086
@@ -620,9 +675,14 @@ manifest should match snapshot with discover all deployments:
                 - containerPort: 8082
                   name: health
               readinessProbe:
+                failureThreshold: 3
                 httpGet:
                   path: /health/readiness
                   port: 8082
+                initialDelaySeconds: 10
+                periodSeconds: 10
+                successThreshold: 1
+                timeoutSeconds: 1
               resources:
                 limits:
                   cpu: 500m
@@ -728,9 +788,14 @@ manifest should match snapshot with extra env vars:
               image: ghcr.io/steadybit/extension-container:latest
               imagePullPolicy: Always
               livenessProbe:
+                failureThreshold: 5
                 httpGet:
                   path: /health/liveness
                   port: 8082
+                initialDelaySeconds: 10
+                periodSeconds: 10
+                successThreshold: 1
+                timeoutSeconds: 5
               name: steadybit-extension-container
               ports:
                 - containerPort: 8086
@@ -738,9 +803,14 @@ manifest should match snapshot with extra env vars:
                 - containerPort: 8082
                   name: health
               readinessProbe:
+                failureThreshold: 3
                 httpGet:
                   path: /health/readiness
                   port: 8082
+                initialDelaySeconds: 10
+                periodSeconds: 10
+                successThreshold: 1
+                timeoutSeconds: 1
               resources:
                 limits:
                   cpu: 500m
@@ -841,9 +911,14 @@ manifest should match snapshot with extra labels:
               image: ghcr.io/steadybit/extension-container:latest
               imagePullPolicy: Always
               livenessProbe:
+                failureThreshold: 5
                 httpGet:
                   path: /health/liveness
                   port: 8082
+                initialDelaySeconds: 10
+                periodSeconds: 10
+                successThreshold: 1
+                timeoutSeconds: 5
               name: steadybit-extension-container
               ports:
                 - containerPort: 8086
@@ -851,9 +926,14 @@ manifest should match snapshot with extra labels:
                 - containerPort: 8082
                   name: health
               readinessProbe:
+                failureThreshold: 3
                 httpGet:
                   path: /health/readiness
                   port: 8082
+                initialDelaySeconds: 10
+                periodSeconds: 10
+                successThreshold: 1
+                timeoutSeconds: 1
               resources:
                 limits:
                   cpu: 500m
@@ -958,9 +1038,14 @@ manifest should match snapshot with mutual TLS:
               image: ghcr.io/steadybit/extension-container:latest
               imagePullPolicy: Always
               livenessProbe:
+                failureThreshold: 5
                 httpGet:
                   path: /health/liveness
                   port: 8082
+                initialDelaySeconds: 10
+                periodSeconds: 10
+                successThreshold: 1
+                timeoutSeconds: 5
               name: steadybit-extension-container
               ports:
                 - containerPort: 8086
@@ -968,9 +1053,14 @@ manifest should match snapshot with mutual TLS:
                 - containerPort: 8082
                   name: health
               readinessProbe:
+                failureThreshold: 3
                 httpGet:
                   path: /health/readiness
                   port: 8082
+                initialDelaySeconds: 10
+                periodSeconds: 10
+                successThreshold: 1
+                timeoutSeconds: 1
               resources:
                 limits:
                   cpu: 500m
@@ -1089,9 +1179,14 @@ manifest should match snapshot with mutual TLS using containerPaths:
               image: ghcr.io/steadybit/extension-container:latest
               imagePullPolicy: Always
               livenessProbe:
+                failureThreshold: 5
                 httpGet:
                   path: /health/liveness
                   port: 8082
+                initialDelaySeconds: 10
+                periodSeconds: 10
+                successThreshold: 1
+                timeoutSeconds: 5
               name: steadybit-extension-container
               ports:
                 - containerPort: 8086
@@ -1099,9 +1194,14 @@ manifest should match snapshot with mutual TLS using containerPaths:
                 - containerPort: 8082
                   name: health
               readinessProbe:
+                failureThreshold: 3
                 httpGet:
                   path: /health/readiness
                   port: 8082
+                initialDelaySeconds: 10
+                periodSeconds: 10
+                successThreshold: 1
+                timeoutSeconds: 1
               resources:
                 limits:
                   cpu: 500m
@@ -1200,9 +1300,14 @@ manifest should match snapshot with podSecurityContext:
               image: ghcr.io/steadybit/extension-container:latest
               imagePullPolicy: Always
               livenessProbe:
+                failureThreshold: 5
                 httpGet:
                   path: /health/liveness
                   port: 8082
+                initialDelaySeconds: 10
+                periodSeconds: 10
+                successThreshold: 1
+                timeoutSeconds: 5
               name: steadybit-extension-container
               ports:
                 - containerPort: 8086
@@ -1210,9 +1315,14 @@ manifest should match snapshot with podSecurityContext:
                 - containerPort: 8082
                   name: health
               readinessProbe:
+                failureThreshold: 3
                 httpGet:
                   path: /health/readiness
                   port: 8082
+                initialDelaySeconds: 10
+                periodSeconds: 10
+                successThreshold: 1
+                timeoutSeconds: 1
               resources:
                 limits:
                   cpu: 500m
@@ -1313,9 +1423,14 @@ manifest should match snapshot with priority class:
               image: ghcr.io/steadybit/extension-container:latest
               imagePullPolicy: Always
               livenessProbe:
+                failureThreshold: 5
                 httpGet:
                   path: /health/liveness
                   port: 8082
+                initialDelaySeconds: 10
+                periodSeconds: 10
+                successThreshold: 1
+                timeoutSeconds: 5
               name: steadybit-extension-container
               ports:
                 - containerPort: 8086
@@ -1323,9 +1438,14 @@ manifest should match snapshot with priority class:
                 - containerPort: 8082
                   name: health
               readinessProbe:
+                failureThreshold: 3
                 httpGet:
                   path: /health/readiness
                   port: 8082
+                initialDelaySeconds: 10
+                periodSeconds: 10
+                successThreshold: 1
+                timeoutSeconds: 1
               resources:
                 limits:
                   cpu: 500m
@@ -1425,9 +1545,14 @@ manifest should match snapshot with update strategy:
               image: ghcr.io/steadybit/extension-container:latest
               imagePullPolicy: Always
               livenessProbe:
+                failureThreshold: 5
                 httpGet:
                   path: /health/liveness
                   port: 8082
+                initialDelaySeconds: 10
+                periodSeconds: 10
+                successThreshold: 1
+                timeoutSeconds: 5
               name: steadybit-extension-container
               ports:
                 - containerPort: 8086
@@ -1435,9 +1560,14 @@ manifest should match snapshot with update strategy:
                 - containerPort: 8082
                   name: health
               readinessProbe:
+                failureThreshold: 3
                 httpGet:
                   path: /health/readiness
                   port: 8082
+                initialDelaySeconds: 10
+                periodSeconds: 10
+                successThreshold: 1
+                timeoutSeconds: 1
               resources:
                 limits:
                   cpu: 500m
