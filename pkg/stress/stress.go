@@ -6,6 +6,7 @@ package stress
 import (
 	"context"
 	"fmt"
+	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/rs/zerolog/log"
 	"github.com/steadybit/extension-container/pkg/container/runc"
 	"github.com/steadybit/extension-container/pkg/utils"
@@ -67,12 +68,49 @@ func (o *Opts) Args() []string {
 func New(ctx context.Context, r runc.Runc, config utils.TargetContainerConfig, opts Opts) (*Stress, error) {
 	id := getNextContainerId(config.ContainerID)
 
-	processArgs := append([]string{"stress-ng"}, opts.Args()...)
-	bundle, err := runc.CreateBundle(ctx, r, config, id, opts.TempPath, processArgs, "stress", "/stress-temp")
+	success := false
 
+	bundle, err := r.Create(ctx, utils.SidecarImagePath(), id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to prepare bundle: %w", err)
 	}
+	defer func() {
+		if !success {
+			if err := bundle.Remove(); err != nil {
+				log.Warn().Str("id", id).Err(err).Msg("failed to remove bundle")
+			}
+		}
+	}()
+
+	if opts.TempPath != "" {
+		if err := bundle.MountFromProcess(ctx, config.Pid, opts.TempPath, "/stress-temp"); err != nil {
+			log.Warn().Err(err).Msgf("failed to mount %s", opts.TempPath)
+		} else {
+			opts.TempPath = "/stress-temp"
+		}
+	}
+
+	processArgs := append([]string{"stress-ng"}, opts.Args()...)
+	if err := bundle.EditSpec(ctx,
+		runc.WithHostname(id),
+		runc.WithAnnotations(map[string]string{
+			"com.steadybit.sidecar": "true",
+		}),
+		runc.WithProcessArgs(processArgs...),
+		runc.WithProcessCwd("/tmp"),
+		runc.WithCgroupPath(config.CGroupPath, "stress"),
+		runc.WithNamespaces(utils.ToLinuxNamespaces(utils.FilterNamespaces(config.Namespaces, specs.PIDNamespace))),
+		runc.WithCapabilities("CAP_SYS_RESOURCE"),
+		runc.WithMountIfNotPresent(specs.Mount{
+			Destination: "/tmp",
+			Type:        "tmpfs",
+			Options:     []string{"noexec", "nosuid", "nodev", "rprivate"},
+		}),
+	); err != nil {
+		return nil, fmt.Errorf("failed to create config.json: %w", err)
+	}
+
+	success = true
 
 	return &Stress{
 		bundle: bundle,
@@ -98,10 +136,12 @@ func (s *Stress) Start() error {
 		Strs("args", s.args).
 		Msg("Starting stress-ng")
 
-	err := runc.RunBundle(s.runc, s.bundle, s.cond, &s.exited, &s.err, "stress-ng")
+	err := runc.RunBundle(context.Background(), s.runc, s.bundle, s.cond, &s.exited, &s.err, "stress-ng")
 	if err != nil {
 		return fmt.Errorf("failed to start stress-ng: %w", err)
 	}
+
+
 	return nil
 }
 
