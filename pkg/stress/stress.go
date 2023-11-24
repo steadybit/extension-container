@@ -4,17 +4,11 @@
 package stress
 
 import (
-	"bufio"
-	"bytes"
 	"context"
-	"errors"
 	"fmt"
-	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/rs/zerolog/log"
 	"github.com/steadybit/extension-container/pkg/container/runc"
 	"github.com/steadybit/extension-container/pkg/utils"
-	"io"
-	"os/exec"
 	"strconv"
 	"sync"
 	"sync/atomic"
@@ -72,49 +66,14 @@ func (o *Opts) Args() []string {
 
 func New(ctx context.Context, r runc.Runc, config utils.TargetContainerConfig, opts Opts) (*Stress, error) {
 	id := getNextContainerId(config.ContainerID)
-	success := false
 
-	bundle, err := r.Create(ctx, utils.SidecarImagePath(), id)
+	processArgs := append([]string{"stress-ng"}, opts.Args()...)
+	bundle, err := runc.CreateBundle(ctx, r, config, id, opts.TempPath, processArgs, "stress", "/stress-temp")
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to prepare bundle: %w", err)
 	}
-	defer func() {
-		if !success {
-			if err := bundle.Remove(); err != nil {
-				log.Warn().Str("id", id).Err(err).Msg("failed to remove bundle")
-			}
-		}
-	}()
 
-	if opts.TempPath != "" {
-		if err := bundle.MountFromProcess(ctx, config.Pid, opts.TempPath, "/stress-temp"); err != nil {
-			log.Warn().Err(err).Msgf("failed to mount %s", opts.TempPath)
-		} else {
-			opts.TempPath = "/stress-temp"
-		}
-	}
-
-	processArgs := append([]string{"stress-ng"}, opts.Args()...)
-	if err := bundle.EditSpec(ctx,
-		runc.WithHostname(id),
-		runc.WithAnnotations(map[string]string{
-			"com.steadybit.sidecar": "true",
-		}),
-		runc.WithProcessArgs(processArgs...),
-		runc.WithProcessCwd("/tmp"),
-		runc.WithCgroupPath(config.CGroupPath, "stress"),
-		runc.WithNamespaces(utils.ToLinuxNamespaces(utils.FilterNamespaces(config.Namespaces, specs.PIDNamespace))),
-		runc.WithCapabilities("CAP_SYS_RESOURCE"),
-		runc.WithMountIfNotPresent(specs.Mount{
-			Destination: "/tmp",
-			Type:        "tmpfs",
-			Options:     []string{"noexec", "nosuid", "nodev", "rprivate"},
-		}),
-	); err != nil {
-		return nil, fmt.Errorf("failed to create config.json: %w", err)
-	}
-
-	success = true
 	return &Stress{
 		bundle: bundle,
 		runc:   r,
@@ -139,55 +98,10 @@ func (s *Stress) Start() error {
 		Strs("args", s.args).
 		Msg("Starting stress-ng")
 
-	var outb bytes.Buffer
-	pr, pw := io.Pipe()
-	writer := io.MultiWriter(&outb, pw)
-
-	cmd, err := s.runc.RunCommand(context.Background(), s.bundle)
-	cmd.Stdout = writer
-	cmd.Stderr = writer
-	if err != nil {
-		return fmt.Errorf("failed to run stress-ng: %w", err)
-	}
-
-	go func() {
-		defer func() { _ = pr.Close() }()
-		bufReader := bufio.NewReader(pr)
-
-		for {
-			if line, err := bufReader.ReadString('\n'); err != nil {
-				break
-			} else {
-				log.Debug().Str("id", s.bundle.ContainerId()).Msg(line)
-			}
-		}
-	}()
-
-	err = cmd.Start()
+	err := runc.RunBundle(s.runc, s.bundle, s.cond, &s.exited, &s.err, "stress-ng")
 	if err != nil {
 		return fmt.Errorf("failed to start stress-ng: %w", err)
 	}
-
-	go func() {
-		defer func() { _ = pw.Close() }()
-		err := cmd.Wait()
-		log.Trace().Str("id", s.bundle.ContainerId()).Int("exitCode", cmd.ProcessState.ExitCode()).Msg("stress-ng exited")
-
-		s.cond.L.Lock()
-		defer s.cond.L.Unlock()
-
-		s.exited = true
-		var exitErr *exec.ExitError
-		if errors.As(err, &exitErr) {
-			exitErr.Stderr = outb.Bytes()
-			s.err = exitErr
-		} else {
-			s.err = err
-		}
-
-		s.cond.Broadcast()
-	}()
-
 	return nil
 }
 

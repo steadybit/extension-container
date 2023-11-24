@@ -39,6 +39,13 @@ Changing the Helm chart without bumping the version will result in the following
     Error: error creating GitHub release steadybit-extension-scaffold-1.0.0: POST https://api.github.com/repos/steadybit/extension-scaffold/releases: 422 Validation Failed [{Resource:Release Field:tag_name Code:already_exists Message:}]
 ```
 
+## Building the Docker Image
+
+### Cross
+You need  an installation of cross (https://github.com/cross-rs/cross) to build the docker image for all platforms
+
+Therefore you also need rust (https://rustup.rs/)
+
 ## Contributor License Agreement (CLA)
 
 In order to accept your pull request, we need you to submit a CLA. You only need to do this once. If you are submitting a pull request for the first time, just submit a Pull Request and our CLA Bot will give you instructions on how to sign the CLA before merging your Pull Request.

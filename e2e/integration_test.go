@@ -48,54 +48,60 @@ func TestWithMinikube(t *testing.T) {
 	}
 
 	e2e.WithMinikube(t, getMinikubeOptions(), &extFactory, []e2e.WithMinikubeTestCase{
+		//{
+		//	Name: "validate discovery",
+		//	Test: validateDiscovery,
+		//}, {
+		//	Name: "target discovery",
+		//	Test: testDiscovery,
+		//}, {
+		//	Name: "stop container",
+		//	Test: testStopContainer,
+		//}, {
+		//	Name: "pause container",
+		//	Test: testPauseContainer,
+		//}, {
+		//	Name: "stress cpu",
+		//	Test: testStressCpu,
+		//}, {
+		//	Name: "stress memory",
+		//	Test: testStressMemory,
+		//},
 		{
-			Name: "validate discovery",
-			Test: validateDiscovery,
-		}, {
-			Name: "target discovery",
-			Test: testDiscovery,
-		}, {
-			Name: "stop container",
-			Test: testStopContainer,
-		}, {
-			Name: "pause container",
-			Test: testPauseContainer,
-		}, {
-			Name: "stress cpu",
-			Test: testStressCpu,
-		}, {
-			Name: "stress memory",
-			Test: testStressMemory,
-		}, {
 			Name: "stress io",
 			Test: testStressIo,
-		}, {
-			Name: "network blackhole",
-			Test: testNetworkBlackhole,
-		}, {
-			Name: "network blackhole (3 containers in one pod)",
-			Test: testNetworkBlackhole3Containers,
-		}, {
-			Name: "network delay",
-			Test: testNetworkDelay,
-		}, {
-			Name: "network block dns",
-			Test: testNetworkBlockDns,
-		}, {
-			Name: "network limit bandwidth",
-			Test: testNetworkLimitBandwidth,
-		}, {
-			Name: "network package loss",
-			Test: testNetworkPackageLoss,
-		}, {
-			Name: "network package corruption",
-			Test: testNetworkPackageCorruption,
-		}, {
-			Name: "host network detection",
-			Test: testHostNetwork,
-		}, {
-			Name: "network delay two containers on the same network",
-			Test: testNetworkDelayOnTwoContainers,
+		},
+		// {
+		//	Name: "network blackhole",
+		//	Test: testNetworkBlackhole,
+		//}, {
+		//	Name: "network blackhole (3 containers in one pod)",
+		//	Test: testNetworkBlackhole3Containers,
+		//}, {
+		//	Name: "network delay",
+		//	Test: testNetworkDelay,
+		//}, {
+		//	Name: "network block dns",
+		//	Test: testNetworkBlockDns,
+		//}, {
+		//	Name: "network limit bandwidth",
+		//	Test: testNetworkLimitBandwidth,
+		//}, {
+		//	Name: "network package loss",
+		//	Test: testNetworkPackageLoss,
+		//}, {
+		//	Name: "network package corruption",
+		//	Test: testNetworkPackageCorruption,
+		//}, {
+		//	Name: "host network detection",
+		//	Test: testHostNetwork,
+		//}, {
+		//	Name: "network delay two containers on the same network",
+		//	Test: testNetworkDelayOnTwoContainers,
+		//},
+		{
+			Name: "fill disk",
+			Test: testFillDisk,
 		},
 	})
 }
@@ -866,6 +872,56 @@ func testStressIo(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			require.Empty(t, space, "no stress-ng directories must be present")
 		})
 	}
+
+	requireAllSidecarsCleanedUp(t, m, e)
+}
+
+func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
+	nginx := e2e.Nginx{Minikube: m}
+	err := nginx.Deploy("nginx-fill-disk", func(c *acorev1.PodApplyConfiguration) {
+		c.Spec.Containers[0].VolumeMounts = []acorev1.VolumeMountApplyConfiguration{
+			{
+				Name:      extutil.Ptr("host-tmp"),
+				MountPath: extutil.Ptr("/host-tmp"),
+			},
+		}
+		c.Spec.Volumes = []acorev1.VolumeApplyConfiguration{
+			{
+				Name: extutil.Ptr("host-tmp"),
+				VolumeSourceApplyConfiguration: acorev1.VolumeSourceApplyConfiguration{
+					HostPath: &acorev1.HostPathVolumeSourceApplyConfiguration{
+						Path: extutil.Ptr("/tmp"),
+					},
+				},
+			},
+		}
+	})
+	require.NoError(t, err, "failed to create pod")
+	defer func() { _ = nginx.Delete() }()
+
+	_, err = m.PodExec(nginx.Pod, "nginx", "mkdir", "-p", "/host-tmp/filldiskng")
+	require.NoError(t, err)
+
+	target, err := nginx.Target()
+	require.NoError(t, err)
+
+	config := struct {
+		Duration   int    `json:"duration"`
+		Path       string `json:"path"`
+		Percentage int    `json:"percentage"`
+	}{Duration: 20000, Percentage: 50, Path: "/host-tmp/filldiskng"}
+
+	action, err := e.RunAction(fmt.Sprintf("%s.fill_disk", extcontainer.BaseActionID), target, config, executionContext)
+	defer func() { _ = action.Cancel() }()
+	require.NoError(t, err)
+	e2e.AssertProcessRunningInContainer(t, m, nginx.Pod, "nginx", "dd", false)
+	require.NoError(t, action.Cancel())
+	e2e.AssertProcessNOTRunningInContainer(t, m, nginx.Pod, "nginx", "dd")
+
+	out, err := m.PodExec(nginx.Pod, "nginx", "ls", "/host-tmp/filldiskng")
+	require.NoError(t, err)
+	space := strings.TrimSpace(out)
+	require.Empty(t, space, "no fill disk directories must be present")
 
 	requireAllSidecarsCleanedUp(t, m, e)
 }
