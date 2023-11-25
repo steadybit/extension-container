@@ -34,7 +34,10 @@ var (
 
 func NewContainerDiscovery(client types.Client) discovery_kit_sdk.TargetDiscovery {
 	discovery := &containerDiscovery{client: client}
-	return discovery_kit_sdk.NewCachedTargetDiscovery(discovery, discovery_kit_sdk.WithRefreshTargetsInterval(context.Background(), 30*time.Second))
+	return discovery_kit_sdk.NewCachedTargetDiscovery(discovery,
+		discovery_kit_sdk.WithRefreshTargetsNow(),
+		discovery_kit_sdk.WithRefreshTargetsInterval(context.Background(), 30*time.Second),
+	)
 }
 
 func (d *containerDiscovery) Describe() discovery_kit_api.DiscoveryDescription {
