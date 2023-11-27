@@ -69,7 +69,7 @@ sidecar:
 	docker buildx build --platform="linux/amd64" -f Dockerfile.sidecar --output type=tar,dest=sidecar_linux_amd64.tar .
 	docker buildx build --platform="linux/arm64" -f Dockerfile.sidecar --output type=tar,dest=sidecar_linux_arm64.tar .
 
-## container: build the nsmount binary
+## nsmount: build the nsmount binary
 .PHONY: nsmount
 nsmount:
 	cd nsmount && cross build --release --target x86_64-unknown-linux-gnu
@@ -80,7 +80,6 @@ nsmount:
 ## container: build the container image
 .PHONY: container
 container: sidecar nsmount
-	git tag -d $$(git tag -l | grep -v "^v[0-9]*.[0-9]*.[0-9]*") # delete all tags locally that are not semver
 	docker buildx build --build-arg BUILD_WITH_COVERAGE="true" -t extension-container:latest --output=type=docker .
 
 ## container: build the linux packages

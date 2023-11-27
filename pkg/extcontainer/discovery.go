@@ -7,13 +7,12 @@ import (
 	"context"
 	"fmt"
 	dockerparser "github.com/novln/docker-parser"
-	"github.com/rs/zerolog/log"
 	"github.com/steadybit/discovery-kit/go/discovery_kit_api"
 	"github.com/steadybit/discovery-kit/go/discovery_kit_commons"
+	"github.com/steadybit/discovery-kit/go/discovery_kit_sdk"
 	"github.com/steadybit/extension-container/config"
 	"github.com/steadybit/extension-container/pkg/container/types"
 	"github.com/steadybit/extension-kit/extbuild"
-	"github.com/steadybit/extension-kit/exthttp"
 	"github.com/steadybit/extension-kit/extutil"
 	"os"
 	"strings"
@@ -21,7 +20,6 @@ import (
 )
 
 const (
-	discoveryBasePath        = basePath + "/discovery"
 	labelPrefixAppKubernetes = "app.kubernetes.io/"
 )
 
@@ -29,52 +27,30 @@ type containerDiscovery struct {
 	client types.Client
 }
 
-func RegisterDiscoveryHandlers(client types.Client) {
-	exthttp.RegisterHttpHandler(discoveryBasePath, exthttp.GetterAsHandler(getDiscoveryDescription))
-	exthttp.RegisterHttpHandler(discoveryBasePath+"/target-description", exthttp.GetterAsHandler(getTargetDescription))
-	exthttp.RegisterHttpHandler(discoveryBasePath+"/attribute-descriptions", exthttp.GetterAsHandler(getAttributeDescriptions))
-	discovery := containerDiscovery{client}
-	log.Info().Msgf("Starting container fetchData in background every %s", 30*time.Second)
-	exthttp.RegisterHttpHandler(discoveryBasePath+"/discovered-targets", discoveryHandler(schedule(context.Background(), 30*time.Second, discovery.getDiscoveredTargets)))
+var (
+	_ discovery_kit_sdk.TargetDescriber    = (*containerDiscovery)(nil)
+	_ discovery_kit_sdk.AttributeDescriber = (*containerDiscovery)(nil)
+)
+
+func NewContainerDiscovery(client types.Client) discovery_kit_sdk.TargetDiscovery {
+	discovery := &containerDiscovery{client: client}
+	return discovery_kit_sdk.NewCachedTargetDiscovery(discovery,
+		discovery_kit_sdk.WithRefreshTargetsNow(),
+		discovery_kit_sdk.WithRefreshTargetsInterval(context.Background(), 30*time.Second),
+	)
 }
 
-func GetDiscoveryList() discovery_kit_api.DiscoveryList {
-	return discovery_kit_api.DiscoveryList{
-		Discoveries: []discovery_kit_api.DescribingEndpointReference{
-			{
-				Method: "GET",
-				Path:   discoveryBasePath,
-			},
-		},
-		TargetTypes: []discovery_kit_api.DescribingEndpointReference{
-			{
-				Method: "GET",
-				Path:   discoveryBasePath + "/target-description",
-			},
-		},
-		TargetAttributes: []discovery_kit_api.DescribingEndpointReference{
-			{
-				Method: "GET",
-				Path:   discoveryBasePath + "/attribute-descriptions",
-			},
-		},
-		TargetEnrichmentRules: []discovery_kit_api.DescribingEndpointReference{},
-	}
-}
-
-func getDiscoveryDescription() discovery_kit_api.DiscoveryDescription {
+func (d *containerDiscovery) Describe() discovery_kit_api.DiscoveryDescription {
 	return discovery_kit_api.DiscoveryDescription{
 		Id:         targetID,
 		RestrictTo: extutil.Ptr(discovery_kit_api.LEADER),
 		Discover: discovery_kit_api.DescribingEndpointReferenceWithCallInterval{
-			Method:       "GET",
-			Path:         discoveryBasePath + "/discovered-targets",
 			CallInterval: extutil.Ptr(config.Config.DiscoveryCallInterval),
 		},
 	}
 }
 
-func getTargetDescription() discovery_kit_api.TargetDescription {
+func (d *containerDiscovery) DescribeTarget() discovery_kit_api.TargetDescription {
 	return discovery_kit_api.TargetDescription{
 		Id:      targetID,
 		Version: extbuild.GetSemverVersionStringOrUnknown(),
@@ -103,53 +79,52 @@ func getTargetDescription() discovery_kit_api.TargetDescription {
 	}
 }
 
-func getAttributeDescriptions() discovery_kit_api.AttributeDescriptions {
-	return discovery_kit_api.AttributeDescriptions{
-		Attributes: []discovery_kit_api.AttributeDescription{
-			{
-				Attribute: "container.name",
-				Label:     discovery_kit_api.PluralLabel{One: "Container Name", Other: "Container Names"},
-			},
-			{
-				Attribute: "container.host",
-				Label:     discovery_kit_api.PluralLabel{One: "Container Host", Other: "Container Hosts"},
-			},
-			{
-				Attribute: "container.image",
-				Label:     discovery_kit_api.PluralLabel{One: "Container Image", Other: "Container Images"},
-			},
-			{
-				Attribute: "container.image.registry",
-				Label:     discovery_kit_api.PluralLabel{One: "Container Image Registry", Other: "Container Image Registries"},
-			},
-			{
-				Attribute: "container.image.repository",
-				Label:     discovery_kit_api.PluralLabel{One: "Container Image Repository", Other: "Container Image Repositories"},
-			},
-			{
-				Attribute: "container.image.tag",
-				Label:     discovery_kit_api.PluralLabel{One: "Container Image Tag", Other: "Container Image Tags"},
-			},
-			{
-				Attribute: "container.id",
-				Label:     discovery_kit_api.PluralLabel{One: "Container ID", Other: "Container IDs"},
-			},
-			{
-				Attribute: "container.id.stripped",
-				Label:     discovery_kit_api.PluralLabel{One: "Container ID (stripped)", Other: "Container IDs (stripped)"},
-			},
-			{
-				Attribute: "container.engine",
-				Label:     discovery_kit_api.PluralLabel{One: "Container Engine", Other: "Container Engines"},
-			},
-			{
-				Attribute: "container.engine.version",
-				Label:     discovery_kit_api.PluralLabel{One: "Container Engine Version", Other: "Container Engine Versions"},
-			},
+func (d *containerDiscovery) DescribeAttributes() []discovery_kit_api.AttributeDescription {
+	return []discovery_kit_api.AttributeDescription{
+		{
+			Attribute: "container.name",
+			Label:     discovery_kit_api.PluralLabel{One: "Container Name", Other: "Container Names"},
+		},
+		{
+			Attribute: "container.host",
+			Label:     discovery_kit_api.PluralLabel{One: "Container Host", Other: "Container Hosts"},
+		},
+		{
+			Attribute: "container.image",
+			Label:     discovery_kit_api.PluralLabel{One: "Container Image", Other: "Container Images"},
+		},
+		{
+			Attribute: "container.image.registry",
+			Label:     discovery_kit_api.PluralLabel{One: "Container Image Registry", Other: "Container Image Registries"},
+		},
+		{
+			Attribute: "container.image.repository",
+			Label:     discovery_kit_api.PluralLabel{One: "Container Image Repository", Other: "Container Image Repositories"},
+		},
+		{
+			Attribute: "container.image.tag",
+			Label:     discovery_kit_api.PluralLabel{One: "Container Image Tag", Other: "Container Image Tags"},
+		},
+		{
+			Attribute: "container.id",
+			Label:     discovery_kit_api.PluralLabel{One: "Container ID", Other: "Container IDs"},
+		},
+		{
+			Attribute: "container.id.stripped",
+			Label:     discovery_kit_api.PluralLabel{One: "Container ID (stripped)", Other: "Container IDs (stripped)"},
+		},
+		{
+			Attribute: "container.engine",
+			Label:     discovery_kit_api.PluralLabel{One: "Container Engine", Other: "Container Engines"},
+		},
+		{
+			Attribute: "container.engine.version",
+			Label:     discovery_kit_api.PluralLabel{One: "Container Engine Version", Other: "Container Engine Versions"},
 		},
 	}
 }
-func (d *containerDiscovery) getDiscoveredTargets(ctx context.Context) ([]discovery_kit_api.Target, error) {
+
+func (d *containerDiscovery) DiscoverTargets(ctx context.Context) ([]discovery_kit_api.Target, error) {
 	containers, err := d.client.List(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list containers: %w", err)

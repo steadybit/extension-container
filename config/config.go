@@ -18,7 +18,7 @@ type Specification struct {
 	RuncDebug                   bool     `json:"runcDebug" split_words:"true" required:"false"`
 	NsmountPath                 string   `json:"nsmountPath" split_words:"true" default:"nsmount"`
 	DisableDiscoveryExcludes    bool     `required:"false" split_words:"true" default:"false"`
-	DiscoveryCallInterval       string   `json:"discoveryCallInterval" split_words:"true" required:"false" default:"30s"`
+	DiscoveryCallInterval       string   `json:"discoveryCallInterval" split_words:"true" required:"false" default:"15s"`
 	DiscoveryAttributesExcludes []string `json:"discoveryAttributesExcludes" split_words:"true" required:"false"`
 	Port                        uint16   `json:"port" split_words:"true" required:"false" default:"8086"`
 	HealthPort                  uint16   `json:"healthPort" split_words:"true" required:"false" default:"8082"`

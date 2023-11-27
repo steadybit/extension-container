@@ -10,6 +10,7 @@ import (
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
 	"github.com/steadybit/action-kit/go/action_kit_sdk"
 	"github.com/steadybit/discovery-kit/go/discovery_kit_api"
+	"github.com/steadybit/discovery-kit/go/discovery_kit_sdk"
 	"github.com/steadybit/extension-container/config"
 	"github.com/steadybit/extension-container/pkg/container"
 	"github.com/steadybit/extension-container/pkg/container/runc"
@@ -56,7 +57,7 @@ func main() {
 
 	r := runc.NewRunc(client.Runtime())
 
-	extcontainer.RegisterDiscoveryHandlers(client)
+	discovery_kit_sdk.Register(extcontainer.NewContainerDiscovery(client))
 	action_kit_sdk.RegisterAction(extcontainer.NewPauseContainerAction(client))
 	action_kit_sdk.RegisterAction(extcontainer.NewStopContainerAction(client))
 	action_kit_sdk.RegisterAction(extcontainer.NewStressCpuContainerAction(r))
@@ -88,6 +89,6 @@ type ExtensionListResponse struct {
 func getExtensionList() ExtensionListResponse {
 	return ExtensionListResponse{
 		ActionList:    action_kit_sdk.GetActionList(),
-		DiscoveryList: extcontainer.GetDiscoveryList(),
+		DiscoveryList: discovery_kit_sdk.GetDiscoveryList(),
 	}
 }
