@@ -914,8 +914,12 @@ func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	action, err := e.RunAction(fmt.Sprintf("%s.fill_disk", extcontainer.BaseActionID), target, config, executionContext)
 	defer func() { _ = action.Cancel() }()
 	require.NoError(t, err)
-	//e2e.AssertProcessRunningInContainer(t, m, nginx.Pod, "nginx", "dd", false)
+
+	e2e.AssertProcessRunningInContainer(t, m, nginx.Pod, "nginx", "dd", false)
+	AssertFileHasSize(t, m, nginx.Pod, "nginx", "/host-tmp/filldiskng/disk-fill", 1073741824)
+
 	require.NoError(t, action.Cancel())
+
 	e2e.AssertProcessNOTRunningInContainer(t, m, nginx.Pod, "nginx", "dd")
 
 	out, err := m.PodExec(nginx.Pod, "nginx", "ls", "/host-tmp/filldiskng")

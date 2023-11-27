@@ -19,15 +19,14 @@ import (
 
 type DiskFill struct {
 	startBundle runc.ContainerBundle
-	stopBundle runc.ContainerBundle
-	runc   runc.Runc
+	runc        runc.Runc
 
 	ddCond   *sync.Cond
 	rmCond   *sync.Cond
 	ddExited bool
 	rmExited bool
 	err      error
-	args   []string
+	args     []string
 }
 
 var counter = atomic.Int32{}
@@ -51,7 +50,7 @@ func (o *Opts) DDArgs() []string {
 }
 
 func (o *Opts) RmArgs() []string {
-	args := []string{"-rf", o.TempPath+"/disk-fill"}
+	args := []string{"-rf", o.TempPath + "/disk-fill"}
 
 	if log.Trace().Enabled() {
 		args = append(args, "-v")
@@ -60,19 +59,19 @@ func (o *Opts) RmArgs() []string {
 }
 
 func New(ctx context.Context, r runc.Runc, config utils.TargetContainerConfig, opts Opts) (*DiskFill, error) {
-	id := getNextContainerId(config.ContainerID)
+	startId := getNextContainerId(config.ContainerID)
 
 	//create start bundle
 	ddSuccess := false
 
-	startBundle, err := r.Create(ctx, utils.SidecarImagePath(), id)
+	startBundle, err := r.Create(ctx, utils.SidecarImagePath(), startId)
 	if err != nil {
 		return nil, fmt.Errorf("failed to prepare bundle: %w", err)
 	}
 	defer func() {
 		if !ddSuccess {
 			if err := startBundle.Remove(); err != nil {
-				log.Warn().Str("id", id).Err(err).Msg("failed to remove bundle")
+				log.Warn().Str("id", startId).Err(err).Msg("failed to remove bundle")
 			}
 		}
 	}()
@@ -87,7 +86,7 @@ func New(ctx context.Context, r runc.Runc, config utils.TargetContainerConfig, o
 
 	ddProcessArgs := append([]string{"dd"}, opts.DDArgs()...)
 	if err := startBundle.EditSpec(ctx,
-		runc.WithHostname(id),
+		runc.WithHostname(startId),
 		runc.WithAnnotations(map[string]string{
 			"com.steadybit.sidecar": "true",
 		}),
@@ -107,60 +106,11 @@ func New(ctx context.Context, r runc.Runc, config utils.TargetContainerConfig, o
 
 	ddSuccess = true
 
-
-	//create stop bundle
-
-
-	rmSuccess := false
-
-	stopBundle, err := r.Create(ctx, utils.SidecarImagePath(), id)
-	if err != nil {
-		return nil, fmt.Errorf("failed to prepare bundle: %w", err)
-	}
-	defer func() {
-		if !rmSuccess {
-			if err := stopBundle.Remove(); err != nil {
-				log.Warn().Str("id", id).Err(err).Msg("failed to remove bundle")
-			}
-		}
-	}()
-
-	if opts.TempPath != "" {
-		if err := stopBundle.MountFromProcess(ctx, config.Pid, opts.TempPath, "/disk-fill-temp"); err != nil {
-			log.Warn().Err(err).Msgf("failed to mount %s", opts.TempPath)
-		} else {
-			opts.TempPath = "/disk-fill-temp"
-		}
-	}
-
-	rmProcessArgs := append([]string{"rm"}, opts.RmArgs()...)
-	if err := stopBundle.EditSpec(ctx,
-		runc.WithHostname(id),
-		runc.WithAnnotations(map[string]string{
-			"com.steadybit.sidecar": "true",
-		}),
-		runc.WithProcessArgs(rmProcessArgs...),
-		runc.WithProcessCwd("/tmp"),
-		runc.WithCgroupPath(config.CGroupPath, "disk-fill"),
-		runc.WithNamespaces(utils.ToLinuxNamespaces(utils.FilterNamespaces(config.Namespaces, specs.PIDNamespace))),
-		runc.WithCapabilities("CAP_SYS_RESOURCE"),
-		runc.WithMountIfNotPresent(specs.Mount{
-			Destination: "/tmp",
-			Type:        "tmpfs",
-			Options:     []string{"noexec", "nosuid", "nodev", "rprivate"},
-		}),
-	); err != nil {
-		return nil, fmt.Errorf("failed to create config.json: %w", err)
-	}
-
-	rmSuccess = true
-
-
 	return &DiskFill{
 		startBundle: startBundle,
-		stopBundle: stopBundle,
 		runc:        r,
 		ddCond:      sync.NewCond(&sync.Mutex{}),
+		rmCond:      sync.NewCond(&sync.Mutex{}),
 		args:        ddProcessArgs,
 	}, nil
 }
@@ -187,29 +137,85 @@ func (s *DiskFill) Start() error {
 	return nil
 }
 
-func (s *DiskFill) Stop() {
+func (s *DiskFill) Stop(ctx context.Context, r runc.Runc, config utils.TargetContainerConfig, opts Opts) error {
 	log.Info().
 		Str("targetContainer", s.startBundle.ContainerId()).
 		Msg("removing dd file")
 
-	err := runc.RunBundle(context.Background(), s.runc, s.stopBundle, s.rmCond, &s.rmExited, &s.err, "rm")
+	//create stop bundle
+	stopId := getNextContainerId(config.ContainerID)
+	rmSuccess := false
+
+	stopBundle, err := r.Create(ctx, utils.SidecarImagePath(), stopId)
+	if err != nil {
+		return fmt.Errorf("failed to prepare bundle: %w", err)
+	}
+	defer func() {
+		if !rmSuccess {
+			if err := stopBundle.Remove(); err != nil {
+				log.Warn().Str("id", stopId).Err(err).Msg("failed to remove bundle")
+			}
+		}
+	}()
+
+	if opts.TempPath != "" {
+		if err := stopBundle.MountFromProcess(ctx, config.Pid, opts.TempPath, "/disk-fill-temp"); err != nil {
+			log.Warn().Err(err).Msgf("failed to mount %s", opts.TempPath)
+		} else {
+			opts.TempPath = "/disk-fill-temp"
+		}
+	}
+
+	rmProcessArgs := append([]string{"rm"}, opts.RmArgs()...)
+	if err := stopBundle.EditSpec(ctx,
+		runc.WithHostname(stopId),
+		runc.WithAnnotations(map[string]string{
+			"com.steadybit.sidecar": "true",
+		}),
+		runc.WithProcessArgs(rmProcessArgs...),
+		runc.WithProcessCwd("/tmp"),
+		runc.WithCgroupPath(config.CGroupPath, "disk-fill"),
+		runc.WithNamespaces(utils.ToLinuxNamespaces(utils.FilterNamespaces(config.Namespaces, specs.PIDNamespace))),
+		runc.WithCapabilities("CAP_SYS_RESOURCE"),
+		runc.WithMountIfNotPresent(specs.Mount{
+			Destination: "/tmp",
+			Type:        "tmpfs",
+			Options:     []string{"noexec", "nosuid", "nodev", "rprivate"},
+		}),
+	); err != nil {
+		return fmt.Errorf("failed to create config.json: %w", err)
+	}
+
+	rmSuccess = true
+
+	err = runc.RunBundle(context.Background(), s.runc, stopBundle, s.rmCond, &s.rmExited, &s.err, "rm")
 	if err != nil {
 		log.Warn().Err(err).Msg("failed to remove dd file")
 	}
 	s.wait()
-	ctx := context.Background()
 	if err := s.runc.Kill(ctx, s.startBundle.ContainerId(), syscall.SIGINT); err != nil {
 		log.Warn().Str("id", s.startBundle.ContainerId()).Err(err).Msg("failed to send SIGINT to container")
 	}
 
-	timer := time.AfterFunc(10*time.Second, func() {
+	timerStart := time.AfterFunc(10*time.Second, func() {
 		if err := s.runc.Kill(ctx, s.startBundle.ContainerId(), syscall.SIGTERM); err != nil {
 			log.Warn().Str("id", s.startBundle.ContainerId()).Err(err).Msg("failed to send SIGTERM to container")
 		}
 	})
 
+	if err := s.runc.Kill(ctx, stopBundle.ContainerId(), syscall.SIGINT); err != nil {
+		log.Warn().Str("id", stopBundle.ContainerId()).Err(err).Msg("failed to send SIGINT to container")
+	}
+
+	timerStop := time.AfterFunc(10*time.Second, func() {
+		if err := s.runc.Kill(ctx, stopBundle.ContainerId(), syscall.SIGTERM); err != nil {
+			log.Warn().Str("id", stopBundle.ContainerId()).Err(err).Msg("failed to send SIGTERM to container")
+		}
+	})
+
 	s.wait()
-	timer.Stop()
+	timerStart.Stop()
+	timerStop.Stop()
 
 	if err := s.runc.Delete(ctx, s.startBundle.ContainerId(), false); err != nil {
 		log.Warn().Str("id", s.startBundle.ContainerId()).Err(err).Msg("failed to delete container")
@@ -218,6 +224,15 @@ func (s *DiskFill) Stop() {
 	if err := s.startBundle.Remove(); err != nil {
 		log.Warn().Str("id", s.startBundle.ContainerId()).Err(err).Msg("failed to remove bundle")
 	}
+
+	if err := s.runc.Delete(ctx, stopBundle.ContainerId(), false); err != nil {
+		log.Warn().Str("id", stopBundle.ContainerId()).Err(err).Msg("failed to delete container")
+	}
+
+	if err := stopBundle.Remove(); err != nil {
+		log.Warn().Str("id", stopBundle.ContainerId()).Err(err).Msg("failed to remove bundle")
+	}
+	return nil
 }
 
 func (s *DiskFill) wait() {

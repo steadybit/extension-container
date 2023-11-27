@@ -73,7 +73,7 @@ func (a *fillDiskAction) Describe() action_kit_api.ActionDescription {
 				Type:         action_kit_api.Duration,
 				DefaultValue: extutil.Ptr("30s"),
 				Required:     extutil.Ptr(true),
-				Order:        extutil.Ptr(2),
+				Order:        extutil.Ptr(1),
 			},
 			{
 				Name:         "path",
@@ -82,7 +82,7 @@ func (a *fillDiskAction) Describe() action_kit_api.ActionDescription {
 				Type:         action_kit_api.String,
 				DefaultValue: extutil.Ptr("/"),
 				Required:     extutil.Ptr(true),
-				Order:        extutil.Ptr(3),
+				Order:        extutil.Ptr(2),
 			},
 			{
 				Name:         "percentage",
@@ -93,7 +93,7 @@ func (a *fillDiskAction) Describe() action_kit_api.ActionDescription {
 				Required:     extutil.Ptr(true),
 				Order:        extutil.Ptr(3),
 				MinValue:     extutil.Ptr(1),
-				MaxValue:     extutil.Ptr(100),
+				MaxValue:     extutil.Ptr(200),
 			},
 		},
 	}
@@ -106,7 +106,7 @@ func fillDisk(request action_kit_api.PrepareActionRequestBody) (diskfill.Opts, e
 
 	//opts.HddBytes = fmt.Sprintf("%d%%", int(request.Config["percentage"].(float64)))
 	opts.BlockSize = 256 * 1024   // 256 MB
-	opts.SizeToFill = 10 * 1024 * 1024 // 1 GB
+	opts.SizeToFill = 1024 * 1024 // 1 GB
 	return opts, nil
 }
 
@@ -143,7 +143,8 @@ func (a *fillDiskAction) Start(ctx context.Context, state *FillDiskActionState) 
 	trace.Log(ctx, "actionId", ID)
 	trace.Log(ctx, "executionId", state.ExecutionId.String())
 
-	s, err := diskfill.New(ctx, a.runc, state.ContainerConfig, state.FillDiskOpts)
+	copiedOpts := state.FillDiskOpts
+	s, err := diskfill.New(ctx, a.runc, state.ContainerConfig, copiedOpts)
 	if err != nil {
 		return nil, extension_kit.ToError("Failed to fill disk in container", err)
 	}
@@ -172,7 +173,8 @@ func (a *fillDiskAction) Stop(ctx context.Context, state *FillDiskActionState) (
 
 	messages := make([]action_kit_api.Message, 0)
 
-	stopped := a.stopFillDiskContainer(state.ExecutionId)
+	copiedOpts := state.FillDiskOpts
+	stopped := a.stopFillDiskContainer(ctx, state.ExecutionId, a.runc, state.ContainerConfig, copiedOpts)
 	if stopped {
 		messages = append(messages, action_kit_api.Message{
 			Level:   extutil.Ptr(action_kit_api.Info),
@@ -193,11 +195,14 @@ func (a *fillDiskAction) fillDiskExited(executionId uuid.UUID) (bool, error) {
 	return s.(*diskfill.DiskFill).Exited()
 }
 
-func (a *fillDiskAction) stopFillDiskContainer(executionId uuid.UUID) bool {
+func (a *fillDiskAction) stopFillDiskContainer(ctx context.Context, executionId uuid.UUID, r runc.Runc, config utils.TargetContainerConfig, opts diskfill.Opts) bool {
 	s, ok := a.diskfills.LoadAndDelete(executionId)
 	if !ok {
 		return false
 	}
-	s.(*diskfill.DiskFill).Stop()
+	err := s.(*diskfill.DiskFill).Stop(ctx, r, config, opts)
+	if err != nil {
+		return false
+	}
 	return true
 }
