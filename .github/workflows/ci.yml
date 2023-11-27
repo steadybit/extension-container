@@ -101,8 +101,10 @@ jobs:
           minikube config set WantUpdateNotification false
           minikube config set cpus max
           minikube config set memory 8g
+          # we build the sidecar images ahead of the e2e tests. This solved a strange issue where the docker buildx didn't work in the sudo env.
+          make sidecar
           # exec in a new sell for the group change to take effect
-          sudo -u $USER env PATH=$PATH make audit
+          sudo -u $USER env "PATH=$PATH" make audit
 
       - name: Check Sonar Token
         id: check-sonar
