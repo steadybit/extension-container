@@ -106,52 +106,6 @@ func WithNamespace(ns specs.LinuxNamespace) SpecEditor {
 	}
 }
 
-//func CreateBundle(ctx context.Context, r Runc, config *utils.TargetContainerConfig, containerId string, tempPath *string, processArgs []string, cGroupChild string, mountpoint string) (*ContainerBundle, error) {
-//	success := false
-//	bundle, err := r.Create(ctx, utils.SidecarImagePath(), containerId)
-//	if err != nil {
-//		return nil, fmt.Errorf("failed to prepare bundle: %w", err)
-//	}
-//	defer func() {
-//		if !success {
-//			if err := bundle.Remove(); err != nil {
-//				log.Warn().Str("containerId", containerId).Err(err).Msg("failed to remove bundle")
-//			}
-//		}
-//	}()
-//
-//	if *tempPath != "" {
-//		if err := bundle.MountFromProcess(ctx, config.Pid, *tempPath, mountpoint); err != nil {
-//			log.Warn().Err(err).Msgf("failed to mount %s", tempPath)
-//		} else {
-//			*tempPath = mountpoint
-//		}
-//	}
-//
-//	if err := bundle.EditSpec(ctx,
-//		WithHostname(containerId),
-//		WithAnnotations(map[string]string{
-//			"com.steadybit.sidecar": "true",
-//		}),
-//		WithProcessArgs(processArgs...),
-//		WithProcessCwd("/tmp"),
-//		WithCgroupPath(config.CGroupPath, cGroupChild),
-//		WithNamespaces(utils.ToLinuxNamespaces(utils.FilterNamespaces(config.Namespaces, specs.PIDNamespace))),
-//		WithCapabilities("CAP_SYS_RESOURCE"),
-//		WithMountIfNotPresent(specs.Mount{
-//			Destination: "/tmp",
-//			Type:        "tmpfs",
-//			Options:     []string{"noexec", "nosuid", "nodev", "rprivate"},
-//		}),
-//	); err != nil {
-//		return nil, fmt.Errorf("failed to create config.json: %w", err)
-//	}
-//
-//	success = true
-//
-//	return &bundle, nil
-//}
-
 func RunBundle(ctx context.Context, runc Runc, bundle ContainerBundle, cond *sync.Cond, exited *bool, resultError *error, progname string) error {
 
 	var outb bytes.Buffer

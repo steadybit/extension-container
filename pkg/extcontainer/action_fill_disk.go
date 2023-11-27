@@ -159,7 +159,7 @@ func (a *fillDiskAction) Start(ctx context.Context, state *FillDiskActionState) 
 		Messages: extutil.Ptr([]action_kit_api.Message{
 			{
 				Level:   extutil.Ptr(action_kit_api.Info),
-				Message: fmt.Sprintf("Starting fill disk in container %s with args %s", state.ContainerConfig.ContainerID, strings.Join(state.FillDiskOpts.DDArgs(), " ")),
+				Message: fmt.Sprintf("Starting fill disk in container %s with args %s", state.ContainerConfig.ContainerID, strings.Join(state.FillDiskOpts.DDArgs(state.FillDiskOpts.TempPath), " ")),
 			},
 		}),
 	}, nil

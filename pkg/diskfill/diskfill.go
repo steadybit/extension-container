@@ -6,7 +6,6 @@ package diskfill
 import (
 	"context"
 	"fmt"
-	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/rs/zerolog/log"
 	"github.com/steadybit/extension-container/pkg/container/runc"
 	"github.com/steadybit/extension-container/pkg/utils"
@@ -37,9 +36,9 @@ type Opts struct {
 	TempPath   string
 }
 
-func (o *Opts) DDArgs() []string {
+func (o *Opts) DDArgs(tempPath string) []string {
 	args := []string{"if=/dev/urandom"}
-	args = append(args, "of="+o.TempPath+"/disk-fill")
+	args = append(args, "of="+tempPath+"/disk-fill")
 	args = append(args, fmt.Sprintf("bs=%vK", +o.BlockSize))
 	args = append(args, fmt.Sprintf("count=%v", strconv.Itoa(o.SizeToFill/o.BlockSize)))
 
@@ -49,8 +48,8 @@ func (o *Opts) DDArgs() []string {
 	return args
 }
 
-func (o *Opts) RmArgs() []string {
-	args := []string{"-rf", o.TempPath + "/disk-fill"}
+func (o *Opts) RmArgs(tempPath string) []string {
+	args := []string{"-rf", tempPath + "/disk-fill"}
 
 	if log.Trace().Enabled() {
 		args = append(args, "-v")
@@ -62,49 +61,59 @@ func New(ctx context.Context, r runc.Runc, config utils.TargetContainerConfig, o
 	startId := getNextContainerId(config.ContainerID)
 
 	//create start bundle
-	ddSuccess := false
-
-	startBundle, err := r.Create(ctx, utils.SidecarImagePath(), startId)
+	var ddProcessArgs []string
+	startBundle, err := CreateBundle(ctx, r, config, startId, opts.TempPath, func(tempPath string) []string {
+		ddProcessArgs = append([]string{"dd"}, opts.DDArgs(tempPath)...)
+		return ddProcessArgs
+	}, "disk-fill", "/disk-fill-temp")
 	if err != nil {
-		return nil, fmt.Errorf("failed to prepare bundle: %w", err)
-	}
-	defer func() {
-		if !ddSuccess {
-			if err := startBundle.Remove(); err != nil {
-				log.Warn().Str("id", startId).Err(err).Msg("failed to remove bundle")
-			}
-		}
-	}()
-
-	if opts.TempPath != "" {
-		if err := startBundle.MountFromProcess(ctx, config.Pid, opts.TempPath, "/disk-fill-temp"); err != nil {
-			log.Warn().Err(err).Msgf("failed to mount %s", opts.TempPath)
-		} else {
-			opts.TempPath = "/disk-fill-temp"
-		}
+		log.Error().Err(err).Msg("failed to create bundle")
+		return nil, err
 	}
 
-	ddProcessArgs := append([]string{"dd"}, opts.DDArgs()...)
-	if err := startBundle.EditSpec(ctx,
-		runc.WithHostname(startId),
-		runc.WithAnnotations(map[string]string{
-			"com.steadybit.sidecar": "true",
-		}),
-		runc.WithProcessArgs(ddProcessArgs...),
-		runc.WithProcessCwd("/tmp"),
-		runc.WithCgroupPath(config.CGroupPath, "disk-fill"),
-		runc.WithNamespaces(utils.ToLinuxNamespaces(utils.FilterNamespaces(config.Namespaces, specs.PIDNamespace))),
-		runc.WithCapabilities("CAP_SYS_RESOURCE"),
-		runc.WithMountIfNotPresent(specs.Mount{
-			Destination: "/tmp",
-			Type:        "tmpfs",
-			Options:     []string{"noexec", "nosuid", "nodev", "rprivate"},
-		}),
-	); err != nil {
-		return nil, fmt.Errorf("failed to create config.json: %w", err)
-	}
-
-	ddSuccess = true
+	//ddSuccess := false
+	//
+	//startBundle, err := r.Create(ctx, utils.SidecarImagePath(), startId)
+	//if err != nil {
+	//	return nil, fmt.Errorf("failed to prepare bundle: %w", err)
+	//}
+	//defer func() {
+	//	if !ddSuccess {
+	//		if err := startBundle.Remove(); err != nil {
+	//			log.Warn().Str("id", startId).Err(err).Msg("failed to remove bundle")
+	//		}
+	//	}
+	//}()
+	//
+	//if opts.TempPath != "" {
+	//	if err := startBundle.MountFromProcess(ctx, config.Pid, opts.TempPath, "/disk-fill-temp"); err != nil {
+	//		log.Warn().Err(err).Msgf("failed to mount %s", opts.TempPath)
+	//	} else {
+	//		opts.TempPath = "/disk-fill-temp"
+	//	}
+	//}
+	//
+	//ddProcessArgs := append([]string{"dd"}, opts.DDArgs()...)
+	//if err := startBundle.EditSpec(ctx,
+	//	runc.WithHostname(startId),
+	//	runc.WithAnnotations(map[string]string{
+	//		"com.steadybit.sidecar": "true",
+	//	}),
+	//	runc.WithProcessArgs(ddProcessArgs...),
+	//	runc.WithProcessCwd("/tmp"),
+	//	runc.WithCgroupPath(config.CGroupPath, "disk-fill"),
+	//	runc.WithNamespaces(utils.ToLinuxNamespaces(utils.FilterNamespaces(config.Namespaces, specs.PIDNamespace))),
+	//	runc.WithCapabilities("CAP_SYS_RESOURCE"),
+	//	runc.WithMountIfNotPresent(specs.Mount{
+	//		Destination: "/tmp",
+	//		Type:        "tmpfs",
+	//		Options:     []string{"noexec", "nosuid", "nodev", "rprivate"},
+	//	}),
+	//); err != nil {
+	//	return nil, fmt.Errorf("failed to create config.json: %w", err)
+	//}
+	//
+	//ddSuccess = true
 
 	return &DiskFill{
 		startBundle: startBundle,
@@ -144,50 +153,14 @@ func (s *DiskFill) Stop(ctx context.Context, r runc.Runc, config utils.TargetCon
 
 	//create stop bundle
 	stopId := getNextContainerId(config.ContainerID)
-	rmSuccess := false
-
-	stopBundle, err := r.Create(ctx, utils.SidecarImagePath(), stopId)
+	stopBundle, err := CreateBundle(ctx, r, config, stopId, opts.TempPath, func(tempPath string) []string {
+		return append([]string{"rm"}, opts.RmArgs(tempPath)...)
+	}, "disk-fill", "/disk-fill-temp")
 	if err != nil {
-		return fmt.Errorf("failed to prepare bundle: %w", err)
+		log.Error().Err(err).Msg("failed to create bundle")
+		return err
 	}
-	defer func() {
-		if !rmSuccess {
-			if err := stopBundle.Remove(); err != nil {
-				log.Warn().Str("id", stopId).Err(err).Msg("failed to remove bundle")
-			}
-		}
-	}()
-
-	if opts.TempPath != "" {
-		if err := stopBundle.MountFromProcess(ctx, config.Pid, opts.TempPath, "/disk-fill-temp"); err != nil {
-			log.Warn().Err(err).Msgf("failed to mount %s", opts.TempPath)
-		} else {
-			opts.TempPath = "/disk-fill-temp"
-		}
-	}
-
-	rmProcessArgs := append([]string{"rm"}, opts.RmArgs()...)
-	if err := stopBundle.EditSpec(ctx,
-		runc.WithHostname(stopId),
-		runc.WithAnnotations(map[string]string{
-			"com.steadybit.sidecar": "true",
-		}),
-		runc.WithProcessArgs(rmProcessArgs...),
-		runc.WithProcessCwd("/tmp"),
-		runc.WithCgroupPath(config.CGroupPath, "disk-fill"),
-		runc.WithNamespaces(utils.ToLinuxNamespaces(utils.FilterNamespaces(config.Namespaces, specs.PIDNamespace))),
-		runc.WithCapabilities("CAP_SYS_RESOURCE"),
-		runc.WithMountIfNotPresent(specs.Mount{
-			Destination: "/tmp",
-			Type:        "tmpfs",
-			Options:     []string{"noexec", "nosuid", "nodev", "rprivate"},
-		}),
-	); err != nil {
-		return fmt.Errorf("failed to create config.json: %w", err)
-	}
-
-	rmSuccess = true
-
+	// run stop bundle
 	err = runc.RunBundle(context.Background(), s.runc, stopBundle, s.rmCond, &s.rmExited, &s.err, "rm")
 	if err != nil {
 		log.Warn().Err(err).Msg("failed to remove dd file")
