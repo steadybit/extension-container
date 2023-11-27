@@ -7,6 +7,8 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/steadybit/extension-container/pkg/container/runc"
 	"github.com/steadybit/extension-container/pkg/utils"
+	"strconv"
+	"strings"
 )
 
 func CreateBundle(ctx context.Context, r runc.Runc, config utils.TargetContainerConfig, containerId string, tempPath string, processArgs func(tempPath string) []string, cGroupChild string, mountpoint string) (runc.ContainerBundle, error) {
@@ -53,4 +55,52 @@ func CreateBundle(ctx context.Context, r runc.Runc, config utils.TargetContainer
 	success = true
 
 	return bundle, nil
+}
+
+type space struct {
+	capacity  int
+	used      int
+	available int
+}
+
+func calculateSpace(lines []string) (space, error) {
+	log.Debug().Msgf("calculateSpace: %v", lines)
+	var keyValueMap = make(map[string]string)
+	colNames := deleteEmpty(strings.Split(lines[0], " "))
+	log.Debug().Msgf("colNames: %v", colNames)
+	colValues := deleteEmpty(strings.Split(lines[1], " "))
+	log.Debug().Msgf("colValues: %v", colValues)
+	//remove empty string
+	for idx, colValue := range colValues {
+		keyValueMap[strings.ToLower(colNames[idx])] = colValue
+	}
+	log.Debug().Msgf("keyValueMap: %v", keyValueMap)
+	capacity, err := strconv.Atoi(keyValueMap["1k-blocks"])
+	if err != nil {
+		return space{}, err
+	}
+	used, err := strconv.Atoi(keyValueMap["used"])
+	if err != nil {
+		return space{}, err
+	}
+	available, err := strconv.Atoi(keyValueMap["available"])
+	if err != nil {
+		return space{}, err
+	}
+	result := space{
+		capacity:  capacity,
+		used:      used,
+		available: available,
+	}
+	return result, nil
+}
+
+func deleteEmpty(s []string) []string {
+	var r []string
+	for _, str := range s {
+		if str != "" {
+			r = append(r, str)
+		}
+	}
+	return r
 }

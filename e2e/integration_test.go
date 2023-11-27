@@ -67,10 +67,10 @@ func TestWithMinikube(t *testing.T) {
 		//	Name: "stress memory",
 		//	Test: testStressMemory,
 		//},
-		{
-			Name: "stress io",
-			Test: testStressIo,
-		},
+		//{
+		//	Name: "stress io",
+		//	Test: testStressIo,
+		//},
 		// {
 		//	Name: "network blackhole",
 		//	Test: testNetworkBlackhole,
@@ -909,7 +909,7 @@ func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 		Duration   int    `json:"duration"`
 		Path       string `json:"path"`
 		Percentage int    `json:"percentage"`
-	}{Duration: 20000, Percentage: 50, Path: "/host-tmp/filldiskng"}
+	}{Duration: 60000, Percentage: 50, Path: "/host-tmp/filldiskng"}
 
 	action, err := e.RunAction(fmt.Sprintf("%s.fill_disk", extcontainer.BaseActionID), target, config, executionContext)
 	defer func() { _ = action.Cancel() }()

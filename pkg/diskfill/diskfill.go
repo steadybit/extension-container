@@ -60,6 +60,29 @@ func (o *Opts) RmArgs(tempPath string) []string {
 func New(ctx context.Context, r runc.Runc, config utils.TargetContainerConfig, opts Opts) (*DiskFill, error) {
 	startId := getNextContainerId(config.ContainerID)
 
+	//calculate size to fill
+	//create size bundle
+	sizeId := getNextContainerId(config.ContainerID)
+	stopBundle, err := CreateBundle(ctx, r, config, sizeId, opts.TempPath, func(tempPath string) []string {
+		return []string{"df", "-k", tempPath}
+	}, "disk-fill", "/disk-fill-temp")
+	if err != nil {
+		log.Error().Err(err).Msg("failed to create bundle")
+		return nil, err
+	}
+	// run df bundle
+	dfResult, err := runc.RunBundleAndWait(context.Background(), r, stopBundle, "df")
+	if err != nil {
+		log.Warn().Err(err).Msg("failed to measure disk size")
+	}
+	diskspace, err := calculateSpace(dfResult)
+	if err != nil {
+		log.Warn().Err(err).Msg("failed to calculate disk size")
+		return nil, err
+	}
+	log.Info().Msgf("Disk size: %v", diskspace)
+
+
 	//create start bundle
 	var ddProcessArgs []string
 	startBundle, err := CreateBundle(ctx, r, config, startId, opts.TempPath, func(tempPath string) []string {
@@ -70,50 +93,6 @@ func New(ctx context.Context, r runc.Runc, config utils.TargetContainerConfig, o
 		log.Error().Err(err).Msg("failed to create bundle")
 		return nil, err
 	}
-
-	//ddSuccess := false
-	//
-	//startBundle, err := r.Create(ctx, utils.SidecarImagePath(), startId)
-	//if err != nil {
-	//	return nil, fmt.Errorf("failed to prepare bundle: %w", err)
-	//}
-	//defer func() {
-	//	if !ddSuccess {
-	//		if err := startBundle.Remove(); err != nil {
-	//			log.Warn().Str("id", startId).Err(err).Msg("failed to remove bundle")
-	//		}
-	//	}
-	//}()
-	//
-	//if opts.TempPath != "" {
-	//	if err := startBundle.MountFromProcess(ctx, config.Pid, opts.TempPath, "/disk-fill-temp"); err != nil {
-	//		log.Warn().Err(err).Msgf("failed to mount %s", opts.TempPath)
-	//	} else {
-	//		opts.TempPath = "/disk-fill-temp"
-	//	}
-	//}
-	//
-	//ddProcessArgs := append([]string{"dd"}, opts.DDArgs()...)
-	//if err := startBundle.EditSpec(ctx,
-	//	runc.WithHostname(startId),
-	//	runc.WithAnnotations(map[string]string{
-	//		"com.steadybit.sidecar": "true",
-	//	}),
-	//	runc.WithProcessArgs(ddProcessArgs...),
-	//	runc.WithProcessCwd("/tmp"),
-	//	runc.WithCgroupPath(config.CGroupPath, "disk-fill"),
-	//	runc.WithNamespaces(utils.ToLinuxNamespaces(utils.FilterNamespaces(config.Namespaces, specs.PIDNamespace))),
-	//	runc.WithCapabilities("CAP_SYS_RESOURCE"),
-	//	runc.WithMountIfNotPresent(specs.Mount{
-	//		Destination: "/tmp",
-	//		Type:        "tmpfs",
-	//		Options:     []string{"noexec", "nosuid", "nodev", "rprivate"},
-	//	}),
-	//); err != nil {
-	//	return nil, fmt.Errorf("failed to create config.json: %w", err)
-	//}
-	//
-	//ddSuccess = true
 
 	return &DiskFill{
 		startBundle: startBundle,
