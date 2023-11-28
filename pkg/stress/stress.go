@@ -4,17 +4,12 @@
 package stress
 
 import (
-	"bufio"
-	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/rs/zerolog/log"
 	"github.com/steadybit/extension-container/pkg/container/runc"
 	"github.com/steadybit/extension-container/pkg/utils"
-	"io"
-	"os/exec"
 	"strconv"
 	"sync"
 	"sync/atomic"
@@ -72,6 +67,7 @@ func (o *Opts) Args() []string {
 
 func New(ctx context.Context, r runc.Runc, config utils.TargetContainerConfig, opts Opts) (*Stress, error) {
 	id := getNextContainerId(config.ContainerID)
+
 	success := false
 
 	bundle, err := r.Create(ctx, utils.SidecarImagePath(), id)
@@ -115,6 +111,7 @@ func New(ctx context.Context, r runc.Runc, config utils.TargetContainerConfig, o
 	}
 
 	success = true
+
 	return &Stress{
 		bundle: bundle,
 		runc:   r,
@@ -139,54 +136,11 @@ func (s *Stress) Start() error {
 		Strs("args", s.args).
 		Msg("Starting stress-ng")
 
-	var outb bytes.Buffer
-	pr, pw := io.Pipe()
-	writer := io.MultiWriter(&outb, pw)
-
-	cmd, err := s.runc.RunCommand(context.Background(), s.bundle)
-	cmd.Stdout = writer
-	cmd.Stderr = writer
-	if err != nil {
-		return fmt.Errorf("failed to run stress-ng: %w", err)
-	}
-
-	go func() {
-		defer func() { _ = pr.Close() }()
-		bufReader := bufio.NewReader(pr)
-
-		for {
-			if line, err := bufReader.ReadString('\n'); err != nil {
-				break
-			} else {
-				log.Debug().Str("id", s.bundle.ContainerId()).Msg(line)
-			}
-		}
-	}()
-
-	err = cmd.Start()
+	err := runc.RunBundle(context.Background(), s.runc, s.bundle, s.cond, &s.exited, &s.err, "stress-ng")
 	if err != nil {
 		return fmt.Errorf("failed to start stress-ng: %w", err)
 	}
 
-	go func() {
-		defer func() { _ = pw.Close() }()
-		err := cmd.Wait()
-		log.Trace().Str("id", s.bundle.ContainerId()).Int("exitCode", cmd.ProcessState.ExitCode()).Msg("stress-ng exited")
-
-		s.cond.L.Lock()
-		defer s.cond.L.Unlock()
-
-		s.exited = true
-		var exitErr *exec.ExitError
-		if errors.As(err, &exitErr) {
-			exitErr.Stderr = outb.Bytes()
-			s.err = exitErr
-		} else {
-			s.err = err
-		}
-
-		s.cond.Broadcast()
-	}()
 
 	return nil
 }

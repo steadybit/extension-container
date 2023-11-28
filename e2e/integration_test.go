@@ -66,10 +66,12 @@ func TestWithMinikube(t *testing.T) {
 		}, {
 			Name: "stress memory",
 			Test: testStressMemory,
-		}, {
+		},
+		{
 			Name: "stress io",
 			Test: testStressIo,
-		}, {
+		},
+		{
 			Name: "network blackhole",
 			Test: testNetworkBlackhole,
 		}, {
@@ -96,6 +98,9 @@ func TestWithMinikube(t *testing.T) {
 		}, {
 			Name: "network delay two containers on the same network",
 			Test: testNetworkDelayOnTwoContainers,
+		},{
+			Name: "fill disk",
+			Test: testFillDisk,
 		},
 	})
 }
@@ -867,6 +872,75 @@ func testStressIo(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 		})
 	}
 
+	requireAllSidecarsCleanedUp(t, m, e)
+}
+
+func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
+	nginx := e2e.Nginx{Minikube: m}
+	err := nginx.Deploy("nginx-fill-disk", func(c *acorev1.PodApplyConfiguration) {
+		c.Spec.Containers[0].VolumeMounts = []acorev1.VolumeMountApplyConfiguration{
+			{
+				Name:      extutil.Ptr("host-tmp"),
+				MountPath: extutil.Ptr("/host-tmp"),
+			},
+		}
+		c.Spec.Volumes = []acorev1.VolumeApplyConfiguration{
+			{
+				Name: extutil.Ptr("host-tmp"),
+				VolumeSourceApplyConfiguration: acorev1.VolumeSourceApplyConfiguration{
+					HostPath: &acorev1.HostPathVolumeSourceApplyConfiguration{
+						Path: extutil.Ptr("/tmp"),
+					},
+				},
+			},
+		}
+	})
+	require.NoError(t, err, "failed to create pod")
+	defer func() { _ = nginx.Delete() }()
+
+	_, err = m.PodExec(nginx.Pod, "nginx", "mkdir", "-p", "/host-tmp/filldiskng")
+	require.NoError(t, err)
+
+	target, err := nginx.Target()
+	require.NoError(t, err)
+
+	var units = map[string]int{
+		"PERCENTAGE":        50,
+		"KILOBYTES_TO_FILL": 4 * 1024 * 1024, // 4GB
+		"KILOBYTES_LEFT":    4 * 1024 * 1024, // 4GB
+	}
+
+	for unit, size := range units {
+		t.Run(unit, func(t *testing.T) {
+			config := struct {
+				Duration  int    `json:"duration"`
+				Path      string `json:"path"`
+				Size      int    `json:"size"`
+				Unit      string `json:"unit"`
+				BlockSize int    `json:"blocksize"`
+			}{Duration: 60000, Size: size, Unit: unit, BlockSize: 256 * 1024, Path: "/host-tmp/filldiskng"}
+
+			action, err := e.RunAction(fmt.Sprintf("%s.fill_disk", extcontainer.BaseActionID), target, config, executionContext)
+			defer func() { _ = action.Cancel() }()
+			require.NoError(t, err)
+
+			e2e.AssertProcessRunningInContainer(t, m, nginx.Pod, "nginx", "dd", false)
+			if unit == "PERCENTAGE" || unit == "KILOBYTES_LEFT" {
+				AssertFileHasSize(t, m, nginx.Pod, "nginx", "/host-tmp/filldiskng/disk-fill", 3*1024*1024, true)
+				require.NoError(t, action.Cancel())
+			} else {
+				AssertFileHasSize(t, m, nginx.Pod, "nginx", "/host-tmp/filldiskng/disk-fill", 4294967296, false)
+				require.NoError(t, action.Cancel())
+			}
+
+			e2e.AssertProcessNOTRunningInContainer(t, m, nginx.Pod, "nginx", "dd")
+
+			out, err := m.PodExec(nginx.Pod, "nginx", "ls", "/host-tmp/filldiskng")
+			require.NoError(t, err)
+			space := strings.TrimSpace(out)
+			require.Empty(t, space, "no fill disk directories must be present")
+		})
+	}
 	requireAllSidecarsCleanedUp(t, m, e)
 }
 

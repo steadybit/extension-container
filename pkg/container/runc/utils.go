@@ -4,8 +4,17 @@
 package runc
 
 import (
+	"bufio"
+	"bytes"
+	"context"
+	"errors"
+	"fmt"
 	"github.com/opencontainers/runtime-spec/specs-go"
+	"github.com/rs/zerolog/log"
+	"io"
+	"os/exec"
 	"path/filepath"
+	"sync"
 )
 
 func withDefaults(spec *specs.Spec) {
@@ -95,4 +104,94 @@ func WithNamespace(ns specs.LinuxNamespace) SpecEditor {
 		}
 		spec.Linux.Namespaces = append(spec.Linux.Namespaces, ns)
 	}
+}
+
+func RunBundle(ctx context.Context, runc Runc, bundle ContainerBundle, cond *sync.Cond, exited *bool, resultError *error, progname string) error {
+	var outb bytes.Buffer
+	pr, pw := io.Pipe()
+	writer := io.MultiWriter(&outb, pw)
+
+	cmd, err := runc.RunCommand(ctx, bundle)
+	cmd.Stdout = writer
+	cmd.Stderr = writer
+	if err != nil {
+		return fmt.Errorf("failed to run %s: %w", progname, err)
+	}
+
+	go func() {
+		defer func() { _ = pr.Close() }()
+		bufReader := bufio.NewReader(pr)
+
+		for {
+			if line, err := bufReader.ReadString('\n'); err != nil {
+				break
+			} else {
+				log.Debug().Str("id", bundle.ContainerId()).Msg(line)
+			}
+		}
+	}()
+
+	err = cmd.Start()
+	if err != nil {
+		return fmt.Errorf("failed to start %s: %w", progname, err)
+	}
+
+	go func() {
+		defer func() { _ = pw.Close() }()
+		err := cmd.Wait()
+		log.Trace().Str("id", bundle.ContainerId()).Int("exitCode", cmd.ProcessState.ExitCode()).Msg(progname + " exited")
+
+		cond.L.Lock()
+		defer cond.L.Unlock()
+
+		*exited = true
+		var exitErr *exec.ExitError
+		if errors.As(*resultError, &exitErr) {
+			exitErr.Stderr = outb.Bytes()
+			*resultError = exitErr
+		} else {
+			*resultError = err
+		}
+
+		cond.Broadcast()
+	}()
+	return nil
+}
+func RunBundleAndWait(ctx context.Context, runc Runc, bundle ContainerBundle, progname string) ([]string, error) {
+	var result []string
+	var outb bytes.Buffer
+	pr, pw := io.Pipe()
+	writer := io.MultiWriter(&outb, pw)
+
+	cmd, err := runc.RunCommand(ctx, bundle)
+	cmd.Stdout = writer
+	cmd.Stderr = writer
+	if err != nil {
+		return result, fmt.Errorf("failed to run %s: %w", progname, err)
+	}
+
+	go func() {
+		defer func() { _ = pr.Close() }()
+		bufReader := bufio.NewReader(pr)
+
+		for {
+			if line, err := bufReader.ReadString('\n'); err != nil {
+				break
+			} else {
+				result = append(result, line)
+				log.Debug().Str("id", bundle.ContainerId()).Msg(line)
+			}
+		}
+	}()
+
+	err = cmd.Start()
+	if err != nil {
+		return result, fmt.Errorf("failed to start %s: %w", progname, err)
+	}
+
+	defer func() { _ = pw.Close() }()
+	err = cmd.Wait()
+	log.Trace().Str("id", bundle.ContainerId()).Int("exitCode", cmd.ProcessState.ExitCode()).Msg(progname + " exited")
+
+	return result, err
 }

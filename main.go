@@ -69,6 +69,7 @@ func main() {
 	action_kit_sdk.RegisterAction(extcontainer.NewNetworkLimitBandwidthContainerAction(r))
 	action_kit_sdk.RegisterAction(extcontainer.NewNetworkCorruptPackagesContainerAction(r))
 	action_kit_sdk.RegisterAction(extcontainer.NewNetworkPackageLossContainerAction(r))
+	action_kit_sdk.RegisterAction(extcontainer.NewFillDiskContainerAction(client, r))
 
 	action_kit_sdk.InstallSignalHandler()
 

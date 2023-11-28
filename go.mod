@@ -1,6 +1,8 @@
 module github.com/steadybit/extension-container
 
-go 1.21
+go 1.21.3
+
+toolchain go1.21.4
 
 require (
 	github.com/containerd/containerd v1.7.9
