@@ -48,58 +48,57 @@ func TestWithMinikube(t *testing.T) {
 	}
 
 	e2e.WithMinikube(t, getMinikubeOptions(), &extFactory, []e2e.WithMinikubeTestCase{
-		//{
-		//	Name: "validate discovery",
-		//	Test: validateDiscovery,
-		//}, {
-		//	Name: "target discovery",
-		//	Test: testDiscovery,
-		//}, {
-		//	Name: "stop container",
-		//	Test: testStopContainer,
-		//}, {
-		//	Name: "pause container",
-		//	Test: testPauseContainer,
-		//}, {
-		//	Name: "stress cpu",
-		//	Test: testStressCpu,
-		//}, {
-		//	Name: "stress memory",
-		//	Test: testStressMemory,
-		//},
-		//{
-		//	Name: "stress io",
-		//	Test: testStressIo,
-		//},
-		// {
-		//	Name: "network blackhole",
-		//	Test: testNetworkBlackhole,
-		//}, {
-		//	Name: "network blackhole (3 containers in one pod)",
-		//	Test: testNetworkBlackhole3Containers,
-		//}, {
-		//	Name: "network delay",
-		//	Test: testNetworkDelay,
-		//}, {
-		//	Name: "network block dns",
-		//	Test: testNetworkBlockDns,
-		//}, {
-		//	Name: "network limit bandwidth",
-		//	Test: testNetworkLimitBandwidth,
-		//}, {
-		//	Name: "network package loss",
-		//	Test: testNetworkPackageLoss,
-		//}, {
-		//	Name: "network package corruption",
-		//	Test: testNetworkPackageCorruption,
-		//}, {
-		//	Name: "host network detection",
-		//	Test: testHostNetwork,
-		//}, {
-		//	Name: "network delay two containers on the same network",
-		//	Test: testNetworkDelayOnTwoContainers,
-		//},
 		{
+			Name: "validate discovery",
+			Test: validateDiscovery,
+		}, {
+			Name: "target discovery",
+			Test: testDiscovery,
+		}, {
+			Name: "stop container",
+			Test: testStopContainer,
+		}, {
+			Name: "pause container",
+			Test: testPauseContainer,
+		}, {
+			Name: "stress cpu",
+			Test: testStressCpu,
+		}, {
+			Name: "stress memory",
+			Test: testStressMemory,
+		},
+		{
+			Name: "stress io",
+			Test: testStressIo,
+		},
+		{
+			Name: "network blackhole",
+			Test: testNetworkBlackhole,
+		}, {
+			Name: "network blackhole (3 containers in one pod)",
+			Test: testNetworkBlackhole3Containers,
+		}, {
+			Name: "network delay",
+			Test: testNetworkDelay,
+		}, {
+			Name: "network block dns",
+			Test: testNetworkBlockDns,
+		}, {
+			Name: "network limit bandwidth",
+			Test: testNetworkLimitBandwidth,
+		}, {
+			Name: "network package loss",
+			Test: testNetworkPackageLoss,
+		}, {
+			Name: "network package corruption",
+			Test: testNetworkPackageCorruption,
+		}, {
+			Name: "host network detection",
+			Test: testHostNetwork,
+		}, {
+			Name: "network delay two containers on the same network",
+			Test: testNetworkDelayOnTwoContainers,
+		},{
 			Name: "fill disk",
 			Test: testFillDisk,
 		},
