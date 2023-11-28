@@ -193,5 +193,5 @@ func RunBundleAndWait(ctx context.Context, runc Runc, bundle ContainerBundle, pr
 	err = cmd.Wait()
 	log.Trace().Str("id", bundle.ContainerId()).Int("exitCode", cmd.ProcessState.ExitCode()).Msg(progname + " exited")
 
-	return result, nil
+	return result, err
 }

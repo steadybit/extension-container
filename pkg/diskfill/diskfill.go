@@ -129,13 +129,13 @@ func resolveDiskSpace(ctx context.Context, r runc.Runc, config utils.TargetConta
 		log.Error().Err(err).Msg("failed to measure disk size")
 		return nil, nil, err
 	}
-	diskspace, err := calculateSpace(dfResult)
+	diskUsage, err := calculateDiskUsage(dfResult)
 	if err != nil {
-		log.Warn().Err(err).Msg("failed to calculate disk size")
+		log.Warn().Err(err).Msg("failed to calculate disk usage")
 		return nil, nil, err
 	}
-	log.Trace().Msgf("Disk size: %v", diskspace)
-	return extutil.Ptr(diskspace), sizeBundle, nil
+	log.Trace().Msgf("Disk usage: %v", diskUsage)
+	return extutil.Ptr(diskUsage), sizeBundle, nil
 }
 
 func getNextContainerId(targetId string) string {

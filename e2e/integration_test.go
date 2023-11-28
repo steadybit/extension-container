@@ -907,8 +907,8 @@ func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 
 	var units = map[string]int{
 		"PERCENTAGE":        50,
-		"KILOBYTES_TO_FILL": 4 * 1024 * 1024,
-		"KILOBYTES_LEFT":    4 * 1024 * 1024,
+		"KILOBYTES_TO_FILL": 4 * 1024 * 1024, // 4GB
+		"KILOBYTES_LEFT":    4 * 1024 * 1024, // 4GB
 	}
 
 	for unit, size := range units {

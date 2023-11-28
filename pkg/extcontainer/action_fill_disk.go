@@ -100,7 +100,7 @@ func (a *fillDiskAction) Describe() action_kit_api.ActionDescription {
 				Required:     extutil.Ptr(true),
 				Order:        extutil.Ptr(4),
 				DefaultValue: extutil.Ptr("PERCENTAGE"),
-				Type:        action_kit_api.String,
+				Type:         action_kit_api.String,
 				Options: extutil.Ptr([]action_kit_api.ParameterOption{
 					action_kit_api.ExplicitParameterOption{
 						Label: "Percentage of filled disk space",
@@ -124,7 +124,7 @@ func (a *fillDiskAction) Describe() action_kit_api.ActionDescription {
 				DefaultValue: extutil.Ptr(fmt.Sprintf("%d", diskfill.DefaultBlockSize)),
 				Required:     extutil.Ptr(true),
 				Order:        extutil.Ptr(5),
-				Advanced: 	 extutil.Ptr(true),
+				Advanced:     extutil.Ptr(true),
 			},
 		},
 	}
@@ -252,8 +252,8 @@ func (a *fillDiskAction) stopFillDiskContainer(ctx context.Context, executionId 
 		return false
 	}
 	err := s.(*diskfill.DiskFill).Stop(ctx, r, config, opts)
-	if err != nil {
-		return false
+	if err == nil {
+		return true
 	}
-	return true
+	return false
 }

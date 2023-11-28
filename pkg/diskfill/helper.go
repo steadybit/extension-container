@@ -63,8 +63,8 @@ type space struct {
 	available int
 }
 
-func calculateSpace(lines []string) (space, error) {
-	log.Trace().Msgf("calculateSpace: %v", lines)
+func calculateDiskUsage(lines []string) (space, error) {
+	log.Trace().Msgf("calculateDiskUsage: %v", lines)
 	var keyValueMap = make(map[string]string)
 	colNames := deleteEmpty(strings.Split(lines[0], " "))
 	log.Trace().Msgf("colNames: %v", colNames)
