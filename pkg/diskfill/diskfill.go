@@ -32,7 +32,7 @@ type DiskFill struct {
 
 const DefaultBlockSize = 1024 * 1024 //kilobytes (1GB)
 const cGroupChild = "disk-fill"
-const mountpoint = "/disk-fill-temp"
+const mountPoint = "/disk-fill-temp"
 
 var counter = atomic.Int32{}
 
@@ -97,7 +97,7 @@ func New(ctx context.Context, r runc.Runc, config utils.TargetContainerConfig, o
 		startBundle, err = CreateBundle(ctx, r, config, startId, opts.TempPath, func(tempPath string) []string {
 			ddProcessArgs = append([]string{"dd"}, opts.DDArgs(tempPath, opts.BlockSize, neededKiloBytesToWrite)...)
 			return ddProcessArgs
-		}, cGroupChild, mountpoint)
+		}, cGroupChild, mountPoint)
 		if err != nil {
 			log.Error().Err(err).Msg("failed to create start bundle")
 			return nil, err
@@ -118,7 +118,7 @@ func resolveDiskSpace(ctx context.Context, r runc.Runc, config utils.TargetConta
 	sizeId := getNextContainerId(config.ContainerID)
 	sizeBundle, err := CreateBundle(ctx, r, config, sizeId, opts.TempPath, func(tempPath string) []string {
 		return []string{"df", "-k", tempPath}
-	}, cGroupChild, mountpoint)
+	}, cGroupChild, mountPoint)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to create calculate size bundle")
 		return nil, nil, err
@@ -177,7 +177,7 @@ func (df *DiskFill) Stop(ctx context.Context, r runc.Runc, config utils.TargetCo
 	stopId := getNextContainerId(config.ContainerID)
 	stopBundle, err := CreateBundle(ctx, r, config, stopId, opts.TempPath, func(tempPath string) []string {
 		return append([]string{"rm"}, opts.RmArgs(tempPath)...)
-	}, cGroupChild, mountpoint)
+	}, cGroupChild, mountPoint)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to create bundle")
 		return err

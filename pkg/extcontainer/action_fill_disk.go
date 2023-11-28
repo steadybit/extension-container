@@ -252,8 +252,5 @@ func (a *fillDiskAction) stopFillDiskContainer(ctx context.Context, executionId 
 		return false
 	}
 	err := s.(*diskfill.DiskFill).Stop(ctx, r, config, opts)
-	if err == nil {
-		return true
-	}
-	return false
+	return err == nil
 }
