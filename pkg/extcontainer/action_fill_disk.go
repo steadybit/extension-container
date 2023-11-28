@@ -85,28 +85,68 @@ func (a *fillDiskAction) Describe() action_kit_api.ActionDescription {
 				Order:        extutil.Ptr(2),
 			},
 			{
-				Name:         "percentage",
-				Label:        "Disk Usage Percentage",
-				Description:  extutil.Ptr("Percentage of available disk space to use"),
-				Type:         action_kit_api.Percentage,
-				DefaultValue: extutil.Ptr("50"),
+				Name:         "size",
+				Label:        "Required Size",
+				Description:  extutil.Ptr("Overall percentage of available disk space / Size to fill / Size to leave free"),
+				Type:         action_kit_api.Integer,
+				DefaultValue: extutil.Ptr("80"),
 				Required:     extutil.Ptr(true),
 				Order:        extutil.Ptr(3),
-				MinValue:     extutil.Ptr(1),
-				MaxValue:     extutil.Ptr(200),
+			},
+			{
+				Name:         "unit",
+				Label:        "Unit",
+				Description:  extutil.Ptr("Overall percentage of available disk space in percent/ Size to fill in kilo bytes / Size to leave free in kilo bytes"),
+				Required:     extutil.Ptr(true),
+				Order:        extutil.Ptr(4),
+				DefaultValue: extutil.Ptr("PERCENTAGE"),
+				Type:        action_kit_api.String,
+				Options: extutil.Ptr([]action_kit_api.ParameterOption{
+					action_kit_api.ExplicitParameterOption{
+						Label: "Percentage of filled disk space",
+						Value: "PERCENTAGE",
+					},
+					action_kit_api.ExplicitParameterOption{
+						Label: "Kilobytes to write",
+						Value: "KILOBYTES_TO_FILL",
+					},
+					action_kit_api.ExplicitParameterOption{
+						Label: "Kilobytes to leave free",
+						Value: "KILOBYTES_LEFT",
+					},
+				}),
+			},
+			{
+				Name:         "blocksize",
+				Label:        "Block size (in KB) of the file to write",
+				Description:  extutil.Ptr("Percentage of available disk space to use"),
+				Type:         action_kit_api.Integer,
+				DefaultValue: extutil.Ptr(fmt.Sprintf("%d", diskfill.DefaultBlockSize)),
+				Required:     extutil.Ptr(true),
+				Order:        extutil.Ptr(5),
+				Advanced: 	 extutil.Ptr(true),
 			},
 		},
 	}
 }
 
-func fillDisk(request action_kit_api.PrepareActionRequestBody) (diskfill.Opts, error) {
+func fillDiskOpts(request action_kit_api.PrepareActionRequestBody) (diskfill.Opts, error) {
 	opts := diskfill.Opts{
 		TempPath: extutil.ToString(request.Config["path"]),
 	}
 
-	//opts.HddBytes = fmt.Sprintf("%d%%", int(request.Config["percentage"].(float64)))
-	opts.BlockSize = 256 * 1024   // 256 MB
-	opts.SizeToFill = 1024 * 1024 // 1 GB
+	opts.BlockSize = int(request.Config["blocksize"].(float64))
+	opts.Size = int(request.Config["size"].(float64))
+	switch request.Config["unit"] {
+	case "PERCENTAGE":
+		opts.SizeUnit = "PERCENTAGE"
+	case "KILOBYTES_TO_FILL":
+		opts.SizeUnit = "KILOBYTES_TO_FILL"
+	case "KILOBYTES_LEFT":
+		opts.SizeUnit = "KILOBYTES_LEFT"
+	default:
+		return opts, fmt.Errorf("invalid unit %s", request.Config["unit"])
+	}
 	return opts, nil
 }
 
@@ -121,14 +161,14 @@ func (a *fillDiskAction) Prepare(ctx context.Context, state *FillDiskActionState
 		return nil, extension_kit.ToError("Target is missing the 'container.id' attribute.", nil)
 	}
 
-	opts, err := fillDisk(request)
+	opts, err := fillDiskOpts(request)
 	if err != nil {
 		return nil, err
 	}
 
 	cfg, err := GetConfigForContainer(ctx, a.runc, RemovePrefix(containerId[0]))
 	if err != nil {
-		return nil, extension_kit.ToError("Failed to prepare stress settings.", err)
+		return nil, extension_kit.ToError("Failed to prepare fill disk settings.", err)
 	}
 
 	state.ContainerConfig = cfg
@@ -144,14 +184,25 @@ func (a *fillDiskAction) Start(ctx context.Context, state *FillDiskActionState) 
 	trace.Log(ctx, "executionId", state.ExecutionId.String())
 
 	copiedOpts := state.FillDiskOpts
-	s, err := diskfill.New(ctx, a.runc, state.ContainerConfig, copiedOpts)
+	diskFill, err := diskfill.New(ctx, a.runc, state.ContainerConfig, copiedOpts)
 	if err != nil {
 		return nil, extension_kit.ToError("Failed to fill disk in container", err)
 	}
 
-	a.diskfills.Store(state.ExecutionId, s)
+	a.diskfills.Store(state.ExecutionId, diskFill)
 
-	if err := s.Start(); err != nil {
+	if !diskFill.HasSomethingToDo() {
+		return &action_kit_api.StartResult{
+			Messages: extutil.Ptr([]action_kit_api.Message{
+				{
+					Level:   extutil.Ptr(action_kit_api.Warn),
+					Message: fmt.Sprintf("Nothing to do for fill disk in container %s", state.ContainerConfig.ContainerID),
+				},
+			}),
+		}, nil
+	}
+
+	if err := diskFill.Start(); err != nil {
 		return nil, extension_kit.ToError("Failed to  fill disk in container", err)
 	}
 
@@ -159,7 +210,7 @@ func (a *fillDiskAction) Start(ctx context.Context, state *FillDiskActionState) 
 		Messages: extutil.Ptr([]action_kit_api.Message{
 			{
 				Level:   extutil.Ptr(action_kit_api.Info),
-				Message: fmt.Sprintf("Starting fill disk in container %s with args %s", state.ContainerConfig.ContainerID, strings.Join(state.FillDiskOpts.DDArgs(state.FillDiskOpts.TempPath), " ")),
+				Message: fmt.Sprintf("Starting fill disk in container %s with args %s", state.ContainerConfig.ContainerID, strings.Join(diskFill.Args(), " ")),
 			},
 		}),
 	}, nil

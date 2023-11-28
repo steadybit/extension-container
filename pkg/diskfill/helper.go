@@ -64,17 +64,17 @@ type space struct {
 }
 
 func calculateSpace(lines []string) (space, error) {
-	log.Debug().Msgf("calculateSpace: %v", lines)
+	log.Trace().Msgf("calculateSpace: %v", lines)
 	var keyValueMap = make(map[string]string)
 	colNames := deleteEmpty(strings.Split(lines[0], " "))
-	log.Debug().Msgf("colNames: %v", colNames)
+	log.Trace().Msgf("colNames: %v", colNames)
 	colValues := deleteEmpty(strings.Split(lines[1], " "))
-	log.Debug().Msgf("colValues: %v", colValues)
+	log.Trace().Msgf("colValues: %v", colValues)
 	//remove empty string
 	for idx, colValue := range colValues {
 		keyValueMap[strings.ToLower(colNames[idx])] = colValue
 	}
-	log.Debug().Msgf("keyValueMap: %v", keyValueMap)
+	log.Trace().Msgf("keyValueMap: %v", keyValueMap)
 	capacity, err := strconv.Atoi(keyValueMap["1k-blocks"])
 	if err != nil {
 		return space{}, err

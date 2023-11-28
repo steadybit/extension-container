@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-func AssertFileHasSize(t *testing.T, m *e2e.Minikube, pod metav1.Object, containername string, filepath string, size int64) {
+func AssertFileHasSize(t *testing.T, m *e2e.Minikube, pod metav1.Object, containername string, filepath string, size int, atLeastSize bool) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -32,8 +32,8 @@ func AssertFileHasSize(t *testing.T, m *e2e.Minikube, pod metav1.Object, contain
 			require.NoError(t, err, "failed to exec wc -c %s", filepath)
 
 			for _, line := range strings.Split(out, " ") {
-				if _, err := strconv.Atoi(line); err == nil {
-					if line == fmt.Sprint(size) {
+				if lineSize, err := strconv.Atoi(line); err == nil {
+					if lineSize == size || (atLeastSize && lineSize >= size){
 						return
 					} else {
 						log.Trace().Msgf("filesize is %s, expected %s", line, fmt.Sprint(size))

@@ -905,28 +905,43 @@ func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	target, err := nginx.Target()
 	require.NoError(t, err)
 
-	config := struct {
-		Duration   int    `json:"duration"`
-		Path       string `json:"path"`
-		Percentage int    `json:"percentage"`
-	}{Duration: 60000, Percentage: 50, Path: "/host-tmp/filldiskng"}
+	var units = map[string]int{
+		"PERCENTAGE":        50,
+		"KILOBYTES_TO_FILL": 4 * 1024 * 1024,
+		"KILOBYTES_LEFT":    4 * 1024 * 1024,
+	}
 
-	action, err := e.RunAction(fmt.Sprintf("%s.fill_disk", extcontainer.BaseActionID), target, config, executionContext)
-	defer func() { _ = action.Cancel() }()
-	require.NoError(t, err)
+	for unit, size := range units {
+		t.Run(unit, func(t *testing.T) {
+			config := struct {
+				Duration  int    `json:"duration"`
+				Path      string `json:"path"`
+				Size      int    `json:"size"`
+				Unit      string `json:"unit"`
+				BlockSize int    `json:"blocksize"`
+			}{Duration: 60000, Size: size, Unit: unit, BlockSize: 256 * 1024, Path: "/host-tmp/filldiskng"}
 
-	e2e.AssertProcessRunningInContainer(t, m, nginx.Pod, "nginx", "dd", false)
-	AssertFileHasSize(t, m, nginx.Pod, "nginx", "/host-tmp/filldiskng/disk-fill", 1073741824)
+			action, err := e.RunAction(fmt.Sprintf("%s.fill_disk", extcontainer.BaseActionID), target, config, executionContext)
+			defer func() { _ = action.Cancel() }()
+			require.NoError(t, err)
 
-	require.NoError(t, action.Cancel())
+			e2e.AssertProcessRunningInContainer(t, m, nginx.Pod, "nginx", "dd", false)
+			if unit == "PERCENTAGE" || unit == "KILOBYTES_LEFT" {
+				AssertFileHasSize(t, m, nginx.Pod, "nginx", "/host-tmp/filldiskng/disk-fill", 3*1024*1024, true)
+				require.NoError(t, action.Cancel())
+			} else {
+				AssertFileHasSize(t, m, nginx.Pod, "nginx", "/host-tmp/filldiskng/disk-fill", 4294967296, false)
+				require.NoError(t, action.Cancel())
+			}
 
-	e2e.AssertProcessNOTRunningInContainer(t, m, nginx.Pod, "nginx", "dd")
+			e2e.AssertProcessNOTRunningInContainer(t, m, nginx.Pod, "nginx", "dd")
 
-	out, err := m.PodExec(nginx.Pod, "nginx", "ls", "/host-tmp/filldiskng")
-	require.NoError(t, err)
-	space := strings.TrimSpace(out)
-	require.Empty(t, space, "no fill disk directories must be present")
-
+			out, err := m.PodExec(nginx.Pod, "nginx", "ls", "/host-tmp/filldiskng")
+			require.NoError(t, err)
+			space := strings.TrimSpace(out)
+			require.Empty(t, space, "no fill disk directories must be present")
+		})
+	}
 	requireAllSidecarsCleanedUp(t, m, e)
 }
 
