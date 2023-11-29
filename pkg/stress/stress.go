@@ -50,6 +50,9 @@ func (o *Opts) Args() []string {
 	if o.HddWorkers != nil {
 		args = append(args, "--hdd", strconv.Itoa(*o.HddWorkers), "--hdd-bytes", o.HddBytes)
 	}
+	if o.HddBytes != "" {
+		args = append(args, "--hdd-bytes", o.HddBytes)
+	}
 	if o.IoWorkers != nil {
 		args = append(args, "--io", strconv.Itoa(*o.IoWorkers))
 	}
@@ -140,7 +143,6 @@ func (s *Stress) Start() error {
 	if err != nil {
 		return fmt.Errorf("failed to start stress-ng: %w", err)
 	}
-
 
 	return nil
 }

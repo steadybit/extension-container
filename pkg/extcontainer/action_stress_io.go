@@ -121,7 +121,7 @@ func stressIo(request action_kit_api.PrepareActionRequestBody) (stress.Opts, err
 
 	if mode == string(ModeReadWriteAndFlush) || mode == string(ModeReadWrite) {
 		opts.HddWorkers = &workers
-		opts.HddBytes = fmt.Sprintf("%dm", int(request.Config["mbytes_per_worker"].(float64)))
+		opts.HddBytes = fmt.Sprintf("%dm", extutil.ToInt64(request.Config["mbytes_per_worker"]))
 	}
 
 	if mode == string(ModeReadWriteAndFlush) || mode == string(ModeFlush) {

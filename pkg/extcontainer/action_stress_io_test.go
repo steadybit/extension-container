@@ -21,11 +21,11 @@ func Test_stressIo(t *testing.T) {
 				"workers":           1,
 				"duration":          1000,
 				"path":              "/somepath",
-				"mbytes_per_worker": 1024,
+				"mbytes_per_worker": 768,
 			},
 			want: stress.Opts{
 				HddWorkers: extutil.Ptr(1),
-				HddBytes:   "50%",
+				HddBytes:   "768m",
 				IoWorkers:  extutil.Ptr(1),
 				TempPath:   "/somepath",
 				Timeout:    1000000000,
@@ -37,7 +37,7 @@ func Test_stressIo(t *testing.T) {
 				"workers":           1,
 				"duration":          1000,
 				"path":              "/somepath",
-				"mbytes_per_worker": 1024,
+				"mbytes_per_worker": 768,
 				"mode":              "flush",
 			},
 			want: stress.Opts{
@@ -57,7 +57,7 @@ func Test_stressIo(t *testing.T) {
 			},
 			want: stress.Opts{
 				HddWorkers: extutil.Ptr(1),
-				HddBytes:   "50%",
+				HddBytes:   "1024m",
 				TempPath:   "/somepath",
 				Timeout:    1000000000,
 			},
