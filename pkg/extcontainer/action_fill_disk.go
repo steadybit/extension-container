@@ -76,50 +76,50 @@ func (a *fillDiskAction) Describe() action_kit_api.ActionDescription {
 				Order:        extutil.Ptr(1),
 			},
 			{
-				Name:         "path",
-				Label:        "TempPath",
-				Description:  extutil.Ptr("TempPath where the file should be created"),
-				Type:         action_kit_api.String,
-				DefaultValue: extutil.Ptr("/"),
+				Name:         "mode",
+				Label:        "Mode",
+				Description:  extutil.Ptr("How would you like to specify the amount of data to be filled?"),
 				Required:     extutil.Ptr(true),
 				Order:        extutil.Ptr(2),
+				DefaultValue: extutil.Ptr("PERCENTAGE"),
+				Type:         action_kit_api.String,
+				Options: extutil.Ptr([]action_kit_api.ParameterOption{
+					action_kit_api.ExplicitParameterOption{
+						Label: "Overall percentage of filled disk space in percent. Greater than 100% will fill the disk completely.",
+						Value: "PERCENTAGE",
+					},
+					action_kit_api.ExplicitParameterOption{
+						Label: "Megabytes to write",
+						Value: "MB_TO_FILL",
+					},
+					action_kit_api.ExplicitParameterOption{
+						Label: "Megabytes to leave free on disk",
+						Value: "MB_LEFT",
+					},
+				}),
 			},
 			{
 				Name:         "size",
-				Label:        "Required Size",
-				Description:  extutil.Ptr("Overall percentage of available disk space / Size to fill / Size to leave free"),
+				Label:        "Fill Value (depending on Mode)",
+				Description:  extutil.Ptr("Depending on the mode, specify the percentage of filled disk space or the number of megabytes to be written or left free."),
 				Type:         action_kit_api.Integer,
 				DefaultValue: extutil.Ptr("80"),
 				Required:     extutil.Ptr(true),
 				Order:        extutil.Ptr(3),
 			},
 			{
-				Name:         "unit",
-				Label:        "Unit",
-				Description:  extutil.Ptr("Overall percentage of available disk space in percent/ Size to fill in kilo bytes / Size to leave free in kilo bytes"),
+				Name:         "path",
+				Label:        "File Destination",
+				Description:  extutil.Ptr("Where to temporarily write the file for filling the disk. It will be cleaned up afterwards."),
+				Type:         action_kit_api.String,
+				DefaultValue: extutil.Ptr("/tmp"),
 				Required:     extutil.Ptr(true),
 				Order:        extutil.Ptr(4),
-				DefaultValue: extutil.Ptr("PERCENTAGE"),
-				Type:         action_kit_api.String,
-				Options: extutil.Ptr([]action_kit_api.ParameterOption{
-					action_kit_api.ExplicitParameterOption{
-						Label: "Percentage of filled disk space",
-						Value: "PERCENTAGE",
-					},
-					action_kit_api.ExplicitParameterOption{
-						Label: "Kilobytes to write",
-						Value: "KILOBYTES_TO_FILL",
-					},
-					action_kit_api.ExplicitParameterOption{
-						Label: "Kilobytes to leave free",
-						Value: "KILOBYTES_LEFT",
-					},
-				}),
 			},
 			{
 				Name:         "blocksize",
-				Label:        "Block size (in KB) of the file to write",
-				Description:  extutil.Ptr("Percentage of available disk space to use"),
+				Label:        "Block Size (In MB) of the File to Write",
+				Description:  extutil.Ptr("Define the block size for writing the file. Larger block sizes increase the performance. If the block size is larger than the fill value, the fill value will be used as block size."),
 				Type:         action_kit_api.Integer,
 				DefaultValue: extutil.Ptr(fmt.Sprintf("%d", diskfill.DefaultBlockSize)),
 				Required:     extutil.Ptr(true),
@@ -137,15 +137,15 @@ func fillDiskOpts(request action_kit_api.PrepareActionRequestBody) (diskfill.Opt
 
 	opts.BlockSize = int(request.Config["blocksize"].(float64))
 	opts.Size = int(request.Config["size"].(float64))
-	switch request.Config["unit"] {
+	switch request.Config["mode"] {
 	case "PERCENTAGE":
-		opts.SizeUnit = "PERCENTAGE"
-	case "KILOBYTES_TO_FILL":
-		opts.SizeUnit = "KILOBYTES_TO_FILL"
-	case "KILOBYTES_LEFT":
-		opts.SizeUnit = "KILOBYTES_LEFT"
+		opts.Mode = "PERCENTAGE"
+	case "MB_TO_FILL":
+		opts.Mode = "MB_TO_FILL"
+	case "MB_LEFT":
+		opts.Mode = "MB_LEFT"
 	default:
-		return opts, fmt.Errorf("invalid unit %s", request.Config["unit"])
+		return opts, fmt.Errorf("invalid unit %s", request.Config["mode"])
 	}
 	return opts, nil
 }

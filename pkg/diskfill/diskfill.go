@@ -30,16 +30,16 @@ type DiskFill struct {
 	args     []string
 }
 
-const DefaultBlockSize = 1024 * 1024 //kilobytes (1GB)
+const DefaultBlockSize = 1024  //Megabytes (1GB)
 const cGroupChild = "disk-fill"
 const mountPoint = "/disk-fill-temp"
 
 var counter = atomic.Int32{}
 
 type Opts struct {
-	BlockSize int    // in kilobytes
-	Size      int    // in kilobytes
-	SizeUnit  string // PERCENTAGE or KILOBYTES_TO_FILL or KILOBYTES_LEFT
+	BlockSize int    // in megabytes
+	Size      int    // in megabytes or percentage
+	Mode      string // PERCENTAGE or MB_TO_FILL or MB_LEFT
 	TempPath  string
 }
 
@@ -68,9 +68,10 @@ func New(ctx context.Context, r runc.Runc, config utils.TargetContainerConfig, o
 	//calculate size to fill
 	neededKiloBytesToWrite := 0
 	var sizeBundle runc.ContainerBundle
-	if opts.SizeUnit == "KILOBYTES_TO_FILL" {
-		neededKiloBytesToWrite = opts.Size
-	} else if opts.SizeUnit == "PERCENTAGE" || opts.SizeUnit == "KILOBYTES_LEFT" {
+	sizeInKB := opts.Size * 1024
+	if opts.Mode == "MB_TO_FILL" {
+		neededKiloBytesToWrite = sizeInKB
+	} else if opts.Mode == "PERCENTAGE" || opts.Mode == "MB_LEFT" {
 		var space *space
 		var err error
 		space, sizeBundle, err = resolveDiskSpace(ctx, r, config, opts)
@@ -78,24 +79,29 @@ func New(ctx context.Context, r runc.Runc, config utils.TargetContainerConfig, o
 			log.Error().Err(err).Msg("failed to resolve disk space")
 			return nil, err
 		}
-		if opts.SizeUnit == "PERCENTAGE" {
-			neededKiloBytesToWrite = space.capacity * opts.Size / 100
-		} else { // KILOBYTES_LEFT
-			neededKiloBytesToWrite = space.available - opts.Size
+		if opts.Mode == "PERCENTAGE" {
+			neededKiloBytesToWrite = space.capacity * sizeInKB / 100
+		} else { // MB_LEFT
+			neededKiloBytesToWrite = space.available - sizeInKB
 		}
 	} else {
-		log.Error().Msgf("Invalid size unit %s", opts.SizeUnit)
-		return nil, fmt.Errorf("invalid size unit %s", opts.SizeUnit)
+		log.Error().Msgf("Invalid size unit %s", opts.Mode)
+		return nil, fmt.Errorf("invalid size unit %s", opts.Mode)
 	}
 
 	var startBundle runc.ContainerBundle
 	var ddProcessArgs []string
 	var err error
+	blockSizeInKB := opts.BlockSize * 1024
 	if neededKiloBytesToWrite > 0 {
+		if blockSizeInKB > neededKiloBytesToWrite {
+			blockSizeInKB = neededKiloBytesToWrite
+		}
+
 		//create start bundle
 		startId := getNextContainerId(config.ContainerID)
 		startBundle, err = CreateBundle(ctx, r, config, startId, opts.TempPath, func(tempPath string) []string {
-			ddProcessArgs = append([]string{"dd"}, opts.DDArgs(tempPath, opts.BlockSize, neededKiloBytesToWrite)...)
+			ddProcessArgs = append([]string{"dd"}, opts.DDArgs(tempPath, blockSizeInKB, neededKiloBytesToWrite)...)
 			return ddProcessArgs
 		}, cGroupChild, mountPoint)
 		if err != nil {

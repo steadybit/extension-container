@@ -98,7 +98,7 @@ func TestWithMinikube(t *testing.T) {
 		}, {
 			Name: "network delay two containers on the same network",
 			Test: testNetworkDelayOnTwoContainers,
-		}, {
+		},{
 			Name: "fill disk",
 			Test: testFillDisk,
 		},
@@ -904,34 +904,66 @@ func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	target, err := nginx.Target()
 	require.NoError(t, err)
 
-	var units = map[string]int{
-		"PERCENTAGE":        50,
-		"KILOBYTES_TO_FILL": 4 * 1024 * 1024, // 4GB
-		"KILOBYTES_LEFT":    4 * 1024 * 1024, // 4GB
+	type testCase struct {
+		name            string
+		mode            string
+		size            int
+		checkFileSize   int
+		atLeastFileSize bool
+		blockSize       int
+	}
+	testCases := []testCase{
+		{
+			name:            "fill disk with percentage",
+			mode:            "PERCENTAGE",
+			size:            50,
+			checkFileSize:   3 * 1024,
+			atLeastFileSize: true,
+			blockSize:       1024,
+		},
+		{
+			name:            "fill disk with megabytes to fill",
+			mode:            "MB_TO_FILL",
+			size:            4 * 1024, // 4GB
+			checkFileSize:   4 * 1024,
+			atLeastFileSize: false,
+			blockSize:       1024,
+		},
+		{
+			name:            "fill disk with megabytes left",
+			mode:            "MB_LEFT",
+			size:            4 * 1024, // 4GB
+			checkFileSize:   3 * 1024,
+			atLeastFileSize: true,
+			blockSize:       1024,
+		},
+		{
+			name:            "fill disk with bigger blocksize",
+			mode:            "MB_TO_FILL",
+			size:            1024, // 4GB
+			checkFileSize:   1024, // 4GB
+			atLeastFileSize: false,
+			blockSize:       2 * 1024, // 2GB
+		},
 	}
 
-	for unit, size := range units {
-		t.Run(unit, func(t *testing.T) {
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
 			config := struct {
 				Duration  int    `json:"duration"`
 				Path      string `json:"path"`
 				Size      int    `json:"size"`
-				Unit      string `json:"unit"`
+				Mode      string `json:"mode"`
 				BlockSize int    `json:"blocksize"`
-			}{Duration: 60000, Size: size, Unit: unit, BlockSize: 256 * 1024, Path: "/host-tmp/filldiskng"}
+			}{Duration: 60000, Size: testCase.size, Mode: testCase.mode, BlockSize: testCase.blockSize, Path: "/host-tmp/filldiskng"}
 
 			action, err := e.RunAction(fmt.Sprintf("%s.fill_disk", extcontainer.BaseActionID), target, config, executionContext)
 			defer func() { _ = action.Cancel() }()
 			require.NoError(t, err)
 
 			e2e.AssertProcessRunningInContainer(t, m, nginx.Pod, "nginx", "dd", false)
-			if unit == "PERCENTAGE" || unit == "KILOBYTES_LEFT" {
-				AssertFileHasSize(t, m, nginx.Pod, "nginx", "/host-tmp/filldiskng/disk-fill", 3*1024*1024, true)
-				require.NoError(t, action.Cancel())
-			} else {
-				AssertFileHasSize(t, m, nginx.Pod, "nginx", "/host-tmp/filldiskng/disk-fill", 4294967296, false)
-				require.NoError(t, action.Cancel())
-			}
+			AssertFileHasSize(t, m, nginx.Pod, "nginx", "/host-tmp/filldiskng/disk-fill", testCase.checkFileSize, testCase.atLeastFileSize)
+			require.NoError(t, action.Cancel())
 
 			e2e.AssertProcessNOTRunningInContainer(t, m, nginx.Pod, "nginx", "dd")
 

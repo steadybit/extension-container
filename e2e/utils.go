@@ -14,10 +14,10 @@ import (
 	"time"
 )
 
-func AssertFileHasSize(t *testing.T, m *e2e.Minikube, pod metav1.Object, containername string, filepath string, size int, atLeastSize bool) {
+func AssertFileHasSize(t *testing.T, m *e2e.Minikube, pod metav1.Object, containername string, filepath string, sizeInMb int, atLeastSize bool) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-
+	var sizeInBytes = sizeInMb * 1024 * 1024
 	lastOutput := ""
 	for {
 		select {
@@ -33,10 +33,10 @@ func AssertFileHasSize(t *testing.T, m *e2e.Minikube, pod metav1.Object, contain
 
 			for _, line := range strings.Split(out, " ") {
 				if lineSize, err := strconv.Atoi(line); err == nil {
-					if lineSize == size || (atLeastSize && lineSize >= size){
+					if lineSize == sizeInBytes || (atLeastSize && lineSize >= sizeInBytes){
 						return
 					} else {
-						log.Trace().Msgf("filesize is %s, expected %s", line, fmt.Sprint(size))
+						log.Trace().Msgf("filesize is %s, expected %s", line, fmt.Sprint(sizeInBytes))
 					}
 				}
 			}
