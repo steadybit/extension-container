@@ -94,15 +94,14 @@ func getStressIoDescription() action_kit_api.ActionDescription {
 				Order:        extutil.Ptr(3),
 			},
 			{
-				Name:         "percentage",
-				Label:        "Disk Usage Percentage",
-				Description:  extutil.Ptr("Percentage of available disk space to use"),
-				Type:         action_kit_api.Percentage,
-				DefaultValue: extutil.Ptr("50"),
+				Name:         "mbytes_per_worker",
+				Label:        "MBytes to write",
+				Description:  extutil.Ptr("How many megabytes should be written per worker?"),
+				Type:         action_kit_api.Integer,
+				DefaultValue: extutil.Ptr("1024"),
 				Required:     extutil.Ptr(true),
 				Order:        extutil.Ptr(3),
 				MinValue:     extutil.Ptr(1),
-				MaxValue:     extutil.Ptr(100),
 			},
 		},
 	}
@@ -122,7 +121,7 @@ func stressIo(request action_kit_api.PrepareActionRequestBody) (stress.Opts, err
 
 	if mode == string(ModeReadWriteAndFlush) || mode == string(ModeReadWrite) {
 		opts.HddWorkers = &workers
-		opts.HddBytes = fmt.Sprintf("%d%%", int(request.Config["percentage"].(float64)))
+		opts.HddBytes = fmt.Sprintf("%dm", int(request.Config["mbytes_per_worker"].(float64)))
 	}
 
 	if mode == string(ModeReadWriteAndFlush) || mode == string(ModeFlush) {

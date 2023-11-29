@@ -18,10 +18,10 @@ func Test_stressIo(t *testing.T) {
 		{
 			name: "default mode",
 			config: map[string]interface{}{
-				"workers":    1,
-				"duration":   1000,
-				"path":       "/somepath",
-				"percentage": 50.0,
+				"workers":           1,
+				"duration":          1000,
+				"path":              "/somepath",
+				"mbytes_per_worker": 1024,
 			},
 			want: stress.Opts{
 				HddWorkers: extutil.Ptr(1),
@@ -34,11 +34,11 @@ func Test_stressIo(t *testing.T) {
 		{
 			name: "flush only",
 			config: map[string]interface{}{
-				"workers":    1,
-				"duration":   1000,
-				"path":       "/somepath",
-				"percentage": 50.0,
-				"mode":       "flush",
+				"workers":           1,
+				"duration":          1000,
+				"path":              "/somepath",
+				"mbytes_per_worker": 1024,
+				"mode":              "flush",
 			},
 			want: stress.Opts{
 				IoWorkers: extutil.Ptr(1),
@@ -49,11 +49,11 @@ func Test_stressIo(t *testing.T) {
 		{
 			name: "read/write only",
 			config: map[string]interface{}{
-				"workers":    1,
-				"duration":   1000,
-				"path":       "/somepath",
-				"percentage": 50.0,
-				"mode":       "read_write",
+				"workers":           1,
+				"duration":          1000,
+				"path":              "/somepath",
+				"mbytes_per_worker": 1024,
+				"mode":              "read_write",
 			},
 			want: stress.Opts{
 				HddWorkers: extutil.Ptr(1),
