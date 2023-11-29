@@ -95,7 +95,13 @@ func New(ctx context.Context, r runc.Runc, config utils.TargetContainerConfig, o
 	blockSizeInKB := opts.BlockSize * 1024
 	if neededKiloBytesToWrite > 0 {
 		if blockSizeInKB > neededKiloBytesToWrite {
-			blockSizeInKB = neededKiloBytesToWrite
+			log.Debug().Msgf("block size %v is bigger than needed size %v", blockSizeInKB, neededKiloBytesToWrite)
+			if neededKiloBytesToWrite > (1024 * 1024) {
+				blockSizeInKB = 1024 * 1024
+			} else {
+				blockSizeInKB = neededKiloBytesToWrite
+			}
+			log.Debug().Msgf("setting block size to %v", blockSizeInKB)
 		}
 
 		//create start bundle

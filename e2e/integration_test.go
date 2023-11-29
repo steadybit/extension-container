@@ -940,10 +940,10 @@ func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 		{
 			name:            "fill disk with bigger blocksize",
 			mode:            "MB_TO_FILL",
-			size:            1024, // 4GB
-			checkFileSize:   1024, // 4GB
+			size:            4 * 1024, // 4GB
+			checkFileSize:   4 * 1024, // 4GB
 			atLeastFileSize: false,
-			blockSize:       2 * 1024, // 2GB
+			blockSize:       6 * 1024, // 2GB
 		},
 	}
 
