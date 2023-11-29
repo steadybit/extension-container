@@ -98,7 +98,7 @@ func TestWithMinikube(t *testing.T) {
 		}, {
 			Name: "network delay two containers on the same network",
 			Test: testNetworkDelayOnTwoContainers,
-		},{
+		}, {
 			Name: "fill disk",
 			Test: testFillDisk,
 		},
@@ -851,12 +851,12 @@ func testStressIo(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	for _, mode := range []string{"read_write_and_flush", "read_write", "flush"} {
 		t.Run(mode, func(t *testing.T) {
 			config := struct {
-				Duration   int    `json:"duration"`
-				Path       string `json:"path"`
-				Percentage int    `json:"percentage"`
-				Workers    int    `json:"workers"`
-				Mode       string `json:"mode"`
-			}{Duration: 20000, Workers: 1, Percentage: 50, Path: "/host-tmp/stressng", Mode: mode}
+				Duration        int    `json:"duration"`
+				Path            string `json:"path"`
+				MbytesPerWorker int    `json:"mbytes_per_worker"`
+				Workers         int    `json:"workers"`
+				Mode            string `json:"mode"`
+			}{Duration: 20000, Workers: 1, MbytesPerWorker: 50, Path: "/host-tmp/stressng", Mode: mode}
 
 			action, err := e.RunAction(fmt.Sprintf("%s.stress_io", extcontainer.BaseActionID), target, config, executionContext)
 			defer func() { _ = action.Cancel() }()
