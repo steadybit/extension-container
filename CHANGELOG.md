@@ -1,9 +1,14 @@
 # Changelog
 
+## next
+
+- Add disk fill attack
+- Add timeout and recovery for container discovery
+- Rework stress-io "Disk Usage" parameter to "MBytes written"
+
 ## v1.1.30
 
 - Update dependencies
-
 
 ## v1.1.29
 
