@@ -186,7 +186,7 @@ func (a *fillDiskAction) Start(ctx context.Context, state *FillDiskActionState) 
 	copiedOpts := state.FillDiskOpts
 	diskFill, err := diskfill.New(ctx, a.runc, state.ContainerConfig, copiedOpts)
 	if err != nil {
-		return nil, extension_kit.ToError("Failed to fill disk in container", err)
+		return nil, extension_kit.ToError("Failed to prepare fill disk in container", err)
 	}
 
 	a.diskfills.Store(state.ExecutionId, diskFill)

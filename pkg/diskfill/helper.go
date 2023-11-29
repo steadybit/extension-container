@@ -72,9 +72,23 @@ func calculateDiskUsage(lines []string) (space, error) {
 	log.Trace().Msgf("colValues: %v", colValues)
 	//remove empty string
 	for idx, colValue := range colValues {
-		keyValueMap[strings.ToLower(colNames[idx])] = colValue
+		if colValue != "" && idx < len(colNames){
+			keyValueMap[strings.ToLower(colNames[idx])] = colValue
+		}
 	}
 	log.Trace().Msgf("keyValueMap: %v", keyValueMap)
+	if len(keyValueMap) == 0 {
+		return space{}, fmt.Errorf("failed to parse df output: %v", lines)
+	}
+	if _, ok := keyValueMap["1k-blocks"]; !ok {
+		return space{}, fmt.Errorf("failed to parse 1k-blocks of df output: %v", lines)
+	}
+	if _, ok := keyValueMap["used"]; !ok {
+		return space{}, fmt.Errorf("failed to parse used of df output: %v", lines)
+	}
+	if _, ok := keyValueMap["available"]; !ok {
+		return space{}, fmt.Errorf("failed to parse available of df output: %v", lines)
+	}
 	capacity, err := strconv.Atoi(keyValueMap["1k-blocks"])
 	if err != nil {
 		return space{}, err
