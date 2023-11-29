@@ -30,7 +30,7 @@ type DiskFill struct {
 	args     []string
 }
 
-const DefaultBlockSize = 1024  //Megabytes (1GB)
+const MaxBlockSize = 1024 //Megabytes (1GB)
 const cGroupChild = "disk-fill"
 const mountPoint = "/disk-fill-temp"
 
@@ -94,6 +94,11 @@ func New(ctx context.Context, r runc.Runc, config utils.TargetContainerConfig, o
 	var err error
 	blockSizeInKB := opts.BlockSize * 1024
 	if neededKiloBytesToWrite > 0 {
+		if blockSizeInKB > (MaxBlockSize * 1024) {
+			log.Debug().Msgf("block size %v is bigger than max block size %v", blockSizeInKB, MaxBlockSize*1024)
+			blockSizeInKB = MaxBlockSize * 1024
+			log.Debug().Msgf("setting block size to %v", blockSizeInKB)
+		}
 		if blockSizeInKB > neededKiloBytesToWrite {
 			log.Debug().Msgf("block size %v is bigger than needed size %v", blockSizeInKB, neededKiloBytesToWrite)
 			if neededKiloBytesToWrite > (1024 * 1024) {
