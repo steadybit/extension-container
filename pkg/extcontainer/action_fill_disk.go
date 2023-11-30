@@ -124,6 +124,7 @@ func (a *fillDiskAction) Describe() action_kit_api.ActionDescription {
 				Order:        extutil.Ptr(5),
 				DefaultValue: extutil.Ptr("AT_ONCE"),
 				Type:         action_kit_api.String,
+				Advanced:     extutil.Ptr(true),
 				Options: extutil.Ptr([]action_kit_api.ParameterOption{
 					action_kit_api.ExplicitParameterOption{
 						Label: "At once (fallocate)",
