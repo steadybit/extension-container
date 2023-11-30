@@ -12,7 +12,6 @@ import (
 	"github.com/steadybit/extension-kit/extutil"
 	"strconv"
 	"sync"
-	"sync/atomic"
 	"syscall"
 	"time"
 )
@@ -21,21 +20,19 @@ type DiskFill struct {
 	startBundle runc.ContainerBundle
 	sizeBundle  runc.ContainerBundle
 	runc        runc.Runc
-	method 		string
-	ddCond   *sync.Cond
-	rmCond   *sync.Cond
-	ddExited bool
-	rmExited bool
-	err      error
-	args     []string
+	method      string
+	ddCond      *sync.Cond
+	rmCond      *sync.Cond
+	ddExited    bool
+	rmExited    bool
+	err         error
+	args        []string
 }
 
-const MaxBlockSize = 1024 //Megabytes (1GB)
+const MaxBlockSize = 1024  //Megabytes (1GB)
 const DefaultBlockSize = 5 //Megabytes (5MB)
 const cGroupChild = "disk-fill"
 const mountPoint = "/disk-fill-temp"
-
-var counter = atomic.Int32{}
 
 type Opts struct {
 	BlockSize int    // in megabytes
@@ -177,7 +174,7 @@ func resolveDiskSpace(ctx context.Context, r runc.Runc, config utils.TargetConta
 }
 
 func getNextContainerId(targetId string) string {
-	return fmt.Sprintf("sb-disk-fill-%d-%s", counter.Add(1), targetId[:8])
+	return fmt.Sprintf("sb-disk-fill-%d-%s", time.Now().Unix(), targetId[:8])
 }
 
 func (df *DiskFill) Exited() (bool, error) {

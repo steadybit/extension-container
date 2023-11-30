@@ -12,7 +12,6 @@ import (
 	"github.com/steadybit/extension-container/pkg/utils"
 	"strconv"
 	"sync"
-	"sync/atomic"
 	"syscall"
 	"time"
 )
@@ -26,8 +25,6 @@ type Stress struct {
 	err    error
 	args   []string
 }
-
-var counter = atomic.Int32{}
 
 type Opts struct {
 	CpuWorkers *int
@@ -124,7 +121,7 @@ func New(ctx context.Context, r runc.Runc, config utils.TargetContainerConfig, o
 }
 
 func getNextContainerId(targetId string) string {
-	return fmt.Sprintf("sb-stress-%d-%s", counter.Add(1), targetId[:8])
+	return fmt.Sprintf("sb-stress-%d-%s", time.Now().Unix(), targetId[:8])
 }
 
 func (s *Stress) Exited() (bool, error) {

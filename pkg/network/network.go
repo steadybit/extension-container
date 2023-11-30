@@ -17,13 +17,11 @@ import (
 	"github.com/steadybit/extension-kit/extutil"
 	"runtime/trace"
 	"strconv"
-	"sync/atomic"
+	"time"
 )
 
 var (
-	counter = atomic.Int32{}
-	runLock = utils.NewHashedKeyMutex(10)
-
+	runLock          = utils.NewHashedKeyMutex(10)
 	sidecarImagePath = utils.SidecarImagePath
 )
 
@@ -123,7 +121,7 @@ func getNextContainerId(targedId string) string {
 	if len(targedId) < l {
 		l = len(targedId)
 	}
-	return fmt.Sprintf("sb-network-%d-%s", counter.Add(1), targedId[:l])
+	return fmt.Sprintf("sb-network-%d-%s", time.Now().Unix(), targedId[:l])
 }
 
 func executeIpCommands(ctx context.Context, r runc.Runc, config utils.TargetContainerConfig, family networkutils.Family, cmds []string) error {
