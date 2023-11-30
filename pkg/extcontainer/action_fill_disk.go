@@ -101,7 +101,7 @@ func (a *fillDiskAction) Describe() action_kit_api.ActionDescription {
 			{
 				Name:         "size",
 				Label:        "Fill Value (depending on Mode)",
-				Description:  extutil.Ptr("Depending on the mode, specify the percentage of filled disk space or the number of megabytes to be written or left free."),
+				Description:  extutil.Ptr("Depending on the mode, specify the percentage of filled disk space or the number of Megabytes to be written or left free."),
 				Type:         action_kit_api.Integer,
 				DefaultValue: extutil.Ptr("80"),
 				Required:     extutil.Ptr(true),
@@ -118,7 +118,7 @@ func (a *fillDiskAction) Describe() action_kit_api.ActionDescription {
 			},
 			{
 				Name:         "blocksize",
-				Label:        "Block Size (in MB) of the File to Write",
+				Label:        "Block Size (in MBytes) of the File to Write",
 				Description:  extutil.Ptr("Define the block size for writing the file. Larger block sizes increase the performance. If the block size is larger than the fill value, the fill value will be used as block size."),
 				Type:         action_kit_api.Integer,
 				DefaultValue: extutil.Ptr(fmt.Sprintf("%d", diskfill.MaxBlockSize)),
