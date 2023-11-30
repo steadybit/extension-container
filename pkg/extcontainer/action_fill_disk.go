@@ -126,11 +126,11 @@ func (a *fillDiskAction) Describe() action_kit_api.ActionDescription {
 				Type:         action_kit_api.String,
 				Options: extutil.Ptr([]action_kit_api.ParameterOption{
 					action_kit_api.ExplicitParameterOption{
-						Label: "At once: The disk will be filled at once with the fallocate command",
+						Label: "At once (fallocate)",
 						Value: "AT_ONCE",
 					},
 					action_kit_api.ExplicitParameterOption{
-						Label: "Over time: The disk will be filled over time with the dd command",
+						Label: "Over time (dd)",
 						Value: "OVER_TIME",
 					},
 				}),
