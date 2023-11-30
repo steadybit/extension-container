@@ -85,7 +85,7 @@ func (a *fillDiskAction) Describe() action_kit_api.ActionDescription {
 				Type:         action_kit_api.String,
 				Options: extutil.Ptr([]action_kit_api.ParameterOption{
 					action_kit_api.ExplicitParameterOption{
-						Label: "Overall percentage of filled disk space in percent. Greater than 100% will fill the disk completely.",
+						Label: "Overall percentage of filled disk space in percent.",
 						Value: "PERCENTAGE",
 					},
 					action_kit_api.ExplicitParameterOption{
