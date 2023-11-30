@@ -21,7 +21,7 @@ type DiskFill struct {
 	startBundle runc.ContainerBundle
 	sizeBundle  runc.ContainerBundle
 	runc        runc.Runc
-
+	method 		string
 	ddCond   *sync.Cond
 	rmCond   *sync.Cond
 	ddExited bool
@@ -31,6 +31,7 @@ type DiskFill struct {
 }
 
 const MaxBlockSize = 1024 //Megabytes (1GB)
+const DefaultBlockSize = 5 //Megabytes (5MB)
 const cGroupChild = "disk-fill"
 const mountPoint = "/disk-fill-temp"
 
@@ -41,6 +42,7 @@ type Opts struct {
 	Size      int    // in megabytes or percentage
 	Mode      string // PERCENTAGE or MB_TO_FILL or MB_LEFT
 	TempPath  string
+	Method    string // AT_ONCE or OVER_TIME
 }
 
 func (o *Opts) DDArgs(tempPath string, blockSize int, writeKBytes int) []string {
@@ -52,6 +54,14 @@ func (o *Opts) DDArgs(tempPath string, blockSize int, writeKBytes int) []string 
 	if log.Trace().Enabled() {
 		args = append(args, "status=progress")
 	}
+	return args
+}
+
+func (o *Opts) FallocateArgs(tempPath string, writeKBytes int) []string {
+	args := []string{}
+	args = append(args, "-l", fmt.Sprintf("%vKiB", +writeKBytes))
+	args = append(args, tempPath+"/disk-fill")
+
 	return args
 }
 
@@ -68,8 +78,8 @@ func New(ctx context.Context, r runc.Runc, config utils.TargetContainerConfig, o
 	//calculate size to fill
 	neededKiloBytesToWrite := 0
 	var sizeBundle runc.ContainerBundle
-	sizeInKB := opts.Size * 1024
 	if opts.Mode == "MB_TO_FILL" {
+		sizeInKB := opts.Size * 1024
 		neededKiloBytesToWrite = sizeInKB
 	} else if opts.Mode == "PERCENTAGE" || opts.Mode == "MB_LEFT" {
 		var space *space
@@ -80,8 +90,9 @@ func New(ctx context.Context, r runc.Runc, config utils.TargetContainerConfig, o
 			return nil, err
 		}
 		if opts.Mode == "PERCENTAGE" {
-			neededKiloBytesToWrite = space.capacity * sizeInKB / 100
+			neededKiloBytesToWrite = space.capacity * opts.Size / 100
 		} else { // MB_LEFT
+			sizeInKB := opts.Size * 1024
 			neededKiloBytesToWrite = space.available - sizeInKB
 		}
 	} else {
@@ -90,10 +101,15 @@ func New(ctx context.Context, r runc.Runc, config utils.TargetContainerConfig, o
 	}
 
 	var startBundle runc.ContainerBundle
-	var ddProcessArgs []string
+	var processArgs []string
 	var err error
 	blockSizeInKB := opts.BlockSize * 1024
 	if neededKiloBytesToWrite > 0 {
+		if blockSizeInKB < 1 {
+			log.Debug().Msgf("block size %v is smaller than 1", blockSizeInKB)
+			blockSizeInKB = DefaultBlockSize * 1024
+			log.Debug().Msgf("setting block size to %v", blockSizeInKB)
+		}
 		if blockSizeInKB > (MaxBlockSize * 1024) {
 			log.Debug().Msgf("block size %v is bigger than max block size %v", blockSizeInKB, MaxBlockSize*1024)
 			blockSizeInKB = MaxBlockSize * 1024
@@ -112,8 +128,12 @@ func New(ctx context.Context, r runc.Runc, config utils.TargetContainerConfig, o
 		//create start bundle
 		startId := getNextContainerId(config.ContainerID)
 		startBundle, err = CreateBundle(ctx, r, config, startId, opts.TempPath, func(tempPath string) []string {
-			ddProcessArgs = append([]string{"dd"}, opts.DDArgs(tempPath, blockSizeInKB, neededKiloBytesToWrite)...)
-			return ddProcessArgs
+			if opts.Method == "AT_ONCE" {
+				processArgs = append([]string{"fallocate"}, opts.FallocateArgs(tempPath, neededKiloBytesToWrite)...)
+			} else {
+				processArgs = append([]string{"dd"}, opts.DDArgs(tempPath, blockSizeInKB, neededKiloBytesToWrite)...)
+			}
+			return processArgs
 		}, cGroupChild, mountPoint)
 		if err != nil {
 			log.Error().Err(err).Msg("failed to create start bundle")
@@ -127,7 +147,8 @@ func New(ctx context.Context, r runc.Runc, config utils.TargetContainerConfig, o
 		runc:        r,
 		ddCond:      sync.NewCond(&sync.Mutex{}),
 		rmCond:      sync.NewCond(&sync.Mutex{}),
-		args:        ddProcessArgs,
+		args:        processArgs,
+		method:      opts.Mode,
 	}, nil
 }
 

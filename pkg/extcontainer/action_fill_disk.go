@@ -117,17 +117,37 @@ func (a *fillDiskAction) Describe() action_kit_api.ActionDescription {
 				Order:        extutil.Ptr(4),
 			},
 			{
-				Name:         "blocksize",
-				Label:        "Block Size (in MBytes) of the File to Write",
-				Description:  extutil.Ptr("Define the block size for writing the file. Larger block sizes increase the performance. If the block size is larger than the fill value, the fill value will be used as block size."),
-				Type:         action_kit_api.Integer,
-				DefaultValue: extutil.Ptr(fmt.Sprintf("%d", diskfill.MaxBlockSize)),
+				Name:         "method",
+				Label:        "Method used to fill disk",
+				Description:  extutil.Ptr("Should the disk filled at once or over time?"),
 				Required:     extutil.Ptr(true),
 				Order:        extutil.Ptr(5),
+				DefaultValue: extutil.Ptr("AT_ONCE"),
+				Type:         action_kit_api.String,
+				Options: extutil.Ptr([]action_kit_api.ParameterOption{
+					action_kit_api.ExplicitParameterOption{
+						Label: "At once: The disk will be filled at once with the fallocate command",
+						Value: "AT_ONCE",
+					},
+					action_kit_api.ExplicitParameterOption{
+						Label: "Over time: The disk will be filled over time with the dd command",
+						Value: "OVER_TIME",
+					},
+				}),
+			},
+			{
+				Name:         "blocksize",
+				Label:        "Block Size (in MBytes) of the File to Write for method `At Once`",
+				Description:  extutil.Ptr("Define the block size for writing the file with the dd command. If the block size is larger than the fill value, the fill value will be used as block size."),
+				Type:         action_kit_api.Integer,
+				DefaultValue: extutil.Ptr(fmt.Sprintf("%d", diskfill.DefaultBlockSize)),
+				Required:     extutil.Ptr(true),
+				Order:        extutil.Ptr(6),
 				MinValue: 	 extutil.Ptr(1),
 				MaxValue: 	 extutil.Ptr(1024),
 				Advanced:     extutil.Ptr(true),
 			},
+
 		},
 	}
 }
@@ -147,8 +167,18 @@ func fillDiskOpts(request action_kit_api.PrepareActionRequestBody) (diskfill.Opt
 	case "MB_LEFT":
 		opts.Mode = "MB_LEFT"
 	default:
-		return opts, fmt.Errorf("invalid unit %s", request.Config["mode"])
+		return opts, fmt.Errorf("invalid mode %s", request.Config["mode"])
 	}
+
+	switch request.Config["method"] {
+	case "OVER_TIME":
+		opts.Method = "OVER_TIME"
+	case "AT_ONCE":
+		opts.Method = "AT_ONCE"
+	default:
+		return opts, fmt.Errorf("invalid method %s", request.Config["method"])
+	}
+
 	return opts, nil
 }
 
