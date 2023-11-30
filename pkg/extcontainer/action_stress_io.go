@@ -30,7 +30,7 @@ func getStressIoDescription() action_kit_api.ActionDescription {
 	return action_kit_api.ActionDescription{
 		Id:          fmt.Sprintf("%s.stress_io", BaseActionID),
 		Label:       "Stress Container IO",
-		Description: "Stresses memory in the container cgroup for the given duration.",
+		Description: "Stresses IO in the container using read/write/flush operations for the given duration.",
 		Version:     extbuild.GetSemverVersionStringOrUnknown(),
 		Icon:        extutil.Ptr(stressIOIcon),
 		TargetSelection: &action_kit_api.TargetSelection{
@@ -96,7 +96,7 @@ func getStressIoDescription() action_kit_api.ActionDescription {
 			{
 				Name:         "mbytes_per_worker",
 				Label:        "MBytes to write",
-				Description:  extutil.Ptr("How many megabytes should be written per worker?"),
+				Description:  extutil.Ptr("How many megabytes should be written per stress operation?"),
 				Type:         action_kit_api.Integer,
 				DefaultValue: extutil.Ptr("1024"),
 				Required:     extutil.Ptr(true),
