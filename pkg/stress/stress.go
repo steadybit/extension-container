@@ -48,7 +48,7 @@ func (o *Opts) Args() []string {
 		args = append(args, "--cpu", strconv.Itoa(*o.CpuWorkers), "--cpu-load", strconv.Itoa(o.CpuLoad))
 	}
 	if o.HddWorkers != nil {
-		args = append(args, "--hdd", strconv.Itoa(*o.HddWorkers), "--hdd-bytes", o.HddBytes)
+		args = append(args, "--hdd", strconv.Itoa(*o.HddWorkers))
 	}
 	if o.HddBytes != "" {
 		args = append(args, "--hdd-bytes", o.HddBytes)
