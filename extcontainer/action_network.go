@@ -15,7 +15,6 @@ import (
 	"github.com/steadybit/action-kit/go/action_kit_commons/runc"
 	"github.com/steadybit/action-kit/go/action_kit_sdk"
 	"github.com/steadybit/extension-container/config"
-	"github.com/steadybit/extension-container/extcontainer/utils"
 	"github.com/steadybit/extension-kit"
 	"github.com/steadybit/extension-kit/extutil"
 	"net"
@@ -119,7 +118,7 @@ func (a *networkAction) Prepare(ctx context.Context, state *NetworkActionState, 
 
 	state.Sidecar = network.SidecarOpts{
 		TargetProcess: processInfo,
-		ImagePath:     utils.SidecarImagePath(),
+		ImagePath:     "/",
 		IdSuffix:      RemovePrefix(state.ContainerID)[:8],
 	}
 

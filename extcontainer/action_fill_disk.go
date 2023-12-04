@@ -12,7 +12,6 @@ import (
 	"github.com/steadybit/action-kit/go/action_kit_commons/runc"
 	"github.com/steadybit/action-kit/go/action_kit_sdk"
 	"github.com/steadybit/extension-container/extcontainer/container/types"
-	"github.com/steadybit/extension-container/extcontainer/utils"
 	"github.com/steadybit/extension-kit"
 	"github.com/steadybit/extension-kit/extbuild"
 	"github.com/steadybit/extension-kit/extutil"
@@ -206,7 +205,7 @@ func (a *fillDiskAction) Prepare(ctx context.Context, state *FillDiskActionState
 
 	state.Sidecar = diskfill.SidecarOpts{
 		TargetProcess: processInfo,
-		ImagePath:     utils.SidecarImagePath(),
+		ImagePath:     "/",
 		IdSuffix:      RemovePrefix(state.ContainerID)[:8],
 	}
 	state.FillDiskOpts = opts

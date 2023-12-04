@@ -12,7 +12,6 @@ import (
 	"github.com/steadybit/action-kit/go/action_kit_commons/runc"
 	"github.com/steadybit/action-kit/go/action_kit_commons/stress"
 	"github.com/steadybit/action-kit/go/action_kit_sdk"
-	"github.com/steadybit/extension-container/extcontainer/utils"
 	"github.com/steadybit/extension-kit"
 	"github.com/steadybit/extension-kit/extutil"
 	"golang.org/x/sync/syncmap"
@@ -83,7 +82,7 @@ func (a *stressAction) Prepare(ctx context.Context, state *StressActionState, re
 
 	state.Sidecar = stress.SidecarOpts{
 		TargetProcess: processInfo,
-		ImagePath:     utils.SidecarImagePath(),
+		ImagePath:     "/",
 		IdSuffix:      RemovePrefix(state.ContainerID)[:8],
 	}
 

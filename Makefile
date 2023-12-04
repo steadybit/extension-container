@@ -1,7 +1,6 @@
 # ==================================================================================== #
 # HELPERS
 # ==================================================================================== #
-export PATH := $(HOME)/.cargo/bin:$(PATH)
 
 ## help: print this help message
 .PHONY: help
@@ -63,27 +62,13 @@ build:
 run: tidy build
 	./extension
 
-## sidecar: build the tar files containing the sidecar image
-.PHONY: sidecar
-sidecar:
-	docker buildx build --platform="linux/amd64" -f Dockerfile.sidecar --output type=tar,dest=sidecar_linux_amd64.tar .
-	docker buildx build --platform="linux/arm64" -f Dockerfile.sidecar --output type=tar,dest=sidecar_linux_arm64.tar .
-
-## nsmount: build the nsmount binary
-.PHONY: nsmount
-nsmount:
-	cd nsmount && cross build --release --target x86_64-unknown-linux-gnu
-	cd ./nsmount/target/ && rm -f amd64-unknown-linux-gnu && ln -s x86_64-unknown-linux-gnu amd64-unknown-linux-gnu
-	cd nsmount && cross build --release --target aarch64-unknown-linux-gnu
-	cd ./nsmount/target/ && rm -f arm64-unknown-linux-gnu && ln -s aarch64-unknown-linux-gnu arm64-unknown-linux-gnu
-
 ## container: build the container image
 .PHONY: container
-container: sidecar nsmount
+container:
 	docker buildx build --build-arg BUILD_WITH_COVERAGE="true" -t extension-container:latest --output=type=docker .
 
 ## container: build the linux packages
 .PHONY: linuxpkg
-linuxpkg: sidecar nsmount
+linuxpkg:
 	goreleaser release --clean --snapshot --skip=sign
 

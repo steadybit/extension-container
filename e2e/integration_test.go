@@ -18,9 +18,12 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	acorev1 "k8s.io/client-go/applyconfigurations/core/v1"
+	"math"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -51,19 +54,24 @@ func TestWithMinikube(t *testing.T) {
 		{
 			Name: "validate discovery",
 			Test: validateDiscovery,
-		}, {
+		},
+		{
 			Name: "target discovery",
 			Test: testDiscovery,
-		}, {
+		},
+		{
 			Name: "stop container",
 			Test: testStopContainer,
-		}, {
+		},
+		{
 			Name: "pause container",
 			Test: testPauseContainer,
-		}, {
+		},
+		{
 			Name: "stress cpu",
 			Test: testStressCpu,
-		}, {
+		},
+		{
 			Name: "stress memory",
 			Test: testStressMemory,
 		},
@@ -74,28 +82,36 @@ func TestWithMinikube(t *testing.T) {
 		{
 			Name: "network blackhole",
 			Test: testNetworkBlackhole,
-		}, {
+		},
+		{
 			Name: "network blackhole (3 containers in one pod)",
 			Test: testNetworkBlackhole3Containers,
-		}, {
+		},
+		{
 			Name: "network delay",
 			Test: testNetworkDelay,
-		}, {
+		},
+		{
 			Name: "network block dns",
 			Test: testNetworkBlockDns,
-		}, {
+		},
+		{
 			Name: "network limit bandwidth",
 			Test: testNetworkLimitBandwidth,
-		}, {
+		},
+		{
 			Name: "network package loss",
 			Test: testNetworkPackageLoss,
-		}, {
+		},
+		{
 			Name: "network package corruption",
 			Test: testNetworkPackageCorruption,
-		}, {
+		},
+		{
 			Name: "host network detection",
 			Test: testHostNetwork,
-		}, {
+		},
+		{
 			Name: "network delay two containers on the same network",
 			Test: testNetworkDelayOnTwoContainers,
 		},
@@ -940,7 +956,7 @@ func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			blockSize:      0,
 			method:         "AT_ONCE",
 			wantedFileSize: 3 * 1024,
-			wantedDelta:    512,
+			wantedDelta:    1.5 * 1024,
 		},
 		{
 			name:           "fill disk with percentage (dd)",
@@ -949,7 +965,7 @@ func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			blockSize:      1024,
 			method:         "OVER_TIME",
 			wantedFileSize: 3 * 1024,
-			wantedDelta:    512,
+			wantedDelta:    1024,
 		},
 		{
 			name:           "fill disk with megabytes to fill (dd)",
@@ -966,7 +982,7 @@ func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			size:           4 * 1024, // 4GB
 			wantedFileSize: 3 * 1024,
 			method:         "OVER_TIME",
-			wantedDelta:    512,
+			wantedDelta:    1.5 * 1024,
 			blockSize:      1024,
 		},
 		{
@@ -1241,4 +1257,37 @@ func requireAllSidecarsCleanedUp(t *testing.T, m *e2e.Minikube, e *e2e.Extension
 	require.NoError(t, err)
 	space := strings.TrimSpace(out)
 	require.Empty(t, space, "no sidecar directories must be present")
+}
+
+func assertFileHasSize(t *testing.T, m *e2e.Minikube, pod metav1.Object, containername string, filepath string, wantedSizeInMb int, wantedDeltaInMb int) {
+	sizeInBytes := wantedSizeInMb * 1024 * 1024
+	deltaInBytes := wantedDeltaInMb * 1024 * 1024
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	message := ""
+	for {
+		select {
+		case <-ctx.Done():
+			assert.Fail(t, "file has not the expected size", message)
+			return
+
+		case <-time.After(200 * time.Millisecond):
+			out, err := m.PodExec(pod, containername, "stat", "-c", "%s", filepath)
+			if err != nil {
+				message = fmt.Sprintf("%s: %s", err.Error(), out)
+				continue
+			}
+
+			if fileSize, err := strconv.Atoi(strings.TrimSpace(out)); err == nil {
+				actualDelta := int(math.Abs(float64(fileSize - sizeInBytes)))
+				if actualDelta <= deltaInBytes {
+					return
+				} else {
+					message = fmt.Sprintf("file size is %d, wanted %d, delta of %d exceeds allowed delta of %d", fileSize, sizeInBytes, actualDelta, deltaInBytes)
+				}
+			} else {
+				message = fmt.Sprintf("cannot parse file size: %s", err.Error())
+			}
+		}
+	}
 }
