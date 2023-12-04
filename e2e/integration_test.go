@@ -12,7 +12,7 @@ import (
 	"github.com/steadybit/action-kit/go/action_kit_test/e2e"
 	"github.com/steadybit/discovery-kit/go/discovery_kit_api"
 	"github.com/steadybit/discovery-kit/go/discovery_kit_test/validate"
-	"github.com/steadybit/extension-container/pkg/extcontainer"
+	"github.com/steadybit/extension-container/extcontainer"
 	"github.com/steadybit/extension-kit/extutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -899,84 +899,84 @@ func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	require.NoError(t, err, "failed to create pod")
 	defer func() { _ = nginx.Delete() }()
 
-	_, err = m.PodExec(nginx.Pod, "nginx", "mkdir", "-p", "/host-tmp/filldiskng")
+	_, err = m.PodExec(nginx.Pod, "nginx", "mkdir", "-p", "/host-tmp/filldisk")
 	require.NoError(t, err)
 
 	target, err := nginx.Target()
 	require.NoError(t, err)
 
 	type testCase struct {
-		name            string
-		mode            string
-		size            int
-		checkFileSize   int
-		atLeastFileSize bool
-		blockSize       int
-		method          string
+		name           string
+		mode           string
+		size           int
+		blockSize      int
+		method         string
+		wantedFileSize int
+		wantedDelta    int
 	}
 	testCases := []testCase{
 		{
-			name:            "fill disk with percentage (fallocate)",
-			mode:            "PERCENTAGE",
-			size:            50,
-			checkFileSize:   3 * 1024,
-			atLeastFileSize: true,
-			blockSize:       0,
-			method:          "AT_ONCE",
+			name:           "fill disk with percentage (fallocate)",
+			mode:           "PERCENTAGE",
+			size:           50,
+			blockSize:      0,
+			method:         "AT_ONCE",
+			wantedFileSize: 3 * 1024,
+			wantedDelta:    512,
 		},
 		{
-			name:            "fill disk with megabytes to fill (fallocate)",
-			mode:            "MB_TO_FILL",
-			size:            4 * 1024, // 4GB
-			checkFileSize:   4 * 1024,
-			atLeastFileSize: false,
-			blockSize:       0,
-			method:          "AT_ONCE",
+			name:           "fill disk with megabytes to fill (fallocate)",
+			mode:           "MB_TO_FILL",
+			size:           4 * 1024, // 4GB
+			blockSize:      0,
+			method:         "AT_ONCE",
+			wantedFileSize: 4 * 1024,
+			wantedDelta:    0,
 		},
 		{
-			name:            "fill disk with megabytes left (fallocate)",
-			mode:            "MB_LEFT",
-			size:            4 * 1024, // 4GB
-			checkFileSize:   3 * 1024,
-			atLeastFileSize: true,
-			blockSize:       0,
-			method:          "AT_ONCE",
+			name:           "fill disk with megabytes left (fallocate)",
+			mode:           "MB_LEFT",
+			size:           4 * 1024, // 4GB
+			blockSize:      0,
+			method:         "AT_ONCE",
+			wantedFileSize: 3 * 1024,
+			wantedDelta:    512,
 		},
 		{
-			name:            "fill disk with percentage (dd)",
-			mode:            "PERCENTAGE",
-			size:            50,
-			checkFileSize:   3 * 1024,
-			atLeastFileSize: true,
-			blockSize:       1024,
-			method:          "OVER_TIME",
+			name:           "fill disk with percentage (dd)",
+			mode:           "PERCENTAGE",
+			size:           50,
+			blockSize:      1024,
+			method:         "OVER_TIME",
+			wantedFileSize: 3 * 1024,
+			wantedDelta:    512,
 		},
 		{
-			name:            "fill disk with megabytes to fill (dd)",
-			mode:            "MB_TO_FILL",
-			size:            4 * 1024, // 4GB
-			checkFileSize:   4 * 1024,
-			atLeastFileSize: false,
-			blockSize:       1024,
-			method:          "OVER_TIME",
+			name:           "fill disk with megabytes to fill (dd)",
+			mode:           "MB_TO_FILL",
+			size:           4 * 1024, // 4GB
+			blockSize:      1024,
+			method:         "OVER_TIME",
+			wantedFileSize: 4 * 1024,
+			wantedDelta:    0,
 		},
 		{
-			name:            "fill disk with megabytes left (dd)",
-			mode:            "MB_LEFT",
-			size:            4 * 1024, // 4GB
-			checkFileSize:   3 * 1024,
-			atLeastFileSize: true,
-			blockSize:       1024,
-			method:          "OVER_TIME",
+			name:           "fill disk with megabytes left (dd)",
+			mode:           "MB_LEFT",
+			size:           4 * 1024, // 4GB
+			wantedFileSize: 3 * 1024,
+			method:         "OVER_TIME",
+			wantedDelta:    512,
+			blockSize:      1024,
 		},
 		{
-			name:            "fill disk with bigger blocksize (dd)",
-			mode:            "MB_TO_FILL",
-			size:            4 * 1024, // 4GB
-			checkFileSize:   4 * 1024, // 4GB
-			atLeastFileSize: false,
-			blockSize:       6 * 1024, // 2GB
-			method:          "OVER_TIME",
+			name:           "fill disk with bigger blocksize (dd)",
+			mode:           "MB_TO_FILL",
+			size:           4 * 1024, // 4GB
+			blockSize:      6 * 1024, // 2GB
+			method:         "OVER_TIME",
+			wantedFileSize: 4 * 1024, // 4GB
+			wantedDelta:    0,
 		},
 	}
 
@@ -989,7 +989,7 @@ func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 				Mode      string `json:"mode"`
 				BlockSize int    `json:"blocksize"`
 				Method    string `json:"method"`
-			}{Duration: 60000, Size: testCase.size, Mode: testCase.mode, Method: testCase.method, BlockSize: testCase.blockSize, Path: "/host-tmp/filldiskng"}
+			}{Duration: 60000, Size: testCase.size, Mode: testCase.mode, Method: testCase.method, BlockSize: testCase.blockSize, Path: "/host-tmp/filldisk"}
 
 			action, err := e.RunAction(fmt.Sprintf("%s.fill_disk", extcontainer.BaseActionID), target, config, executionContext)
 			defer func() { _ = action.Cancel() }()
@@ -998,7 +998,7 @@ func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			if testCase.method == "OVER_TIME" {
 				e2e.AssertProcessRunningInContainer(t, m, nginx.Pod, "nginx", "dd", false)
 			}
-			AssertFileHasSize(t, m, nginx.Pod, "nginx", "/host-tmp/filldiskng/disk-fill", testCase.checkFileSize, testCase.atLeastFileSize)
+			assertFileHasSize(t, m, nginx.Pod, "nginx", "/host-tmp/filldisk/disk-fill", testCase.wantedFileSize, testCase.wantedDelta)
 			require.NoError(t, action.Cancel())
 
 			if testCase.method == "OVER_TIME" {
@@ -1007,10 +1007,8 @@ func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 				e2e.AssertProcessNOTRunningInContainer(t, m, nginx.Pod, "nginx", "fallocate")
 			}
 
-			out, err := m.PodExec(nginx.Pod, "nginx", "ls", "/host-tmp/filldiskng")
-			require.NoError(t, err)
-			space := strings.TrimSpace(out)
-			require.Empty(t, space, "no fill disk directories must be present")
+			out, _ := m.PodExec(nginx.Pod, "nginx", "ls", "/host-tmp/filldisk/disk-fill")
+			assert.Contains(t, string(out), "No such file or directory")
 		})
 	}
 	requireAllSidecarsCleanedUp(t, m, e)

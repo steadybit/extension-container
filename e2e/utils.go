@@ -3,44 +3,45 @@ package e2e
 import (
 	"context"
 	"fmt"
-	"github.com/rs/zerolog/log"
 	"github.com/steadybit/action-kit/go/action_kit_test/e2e"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"math"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
 )
 
-func AssertFileHasSize(t *testing.T, m *e2e.Minikube, pod metav1.Object, containername string, filepath string, sizeInMb int, atLeastSize bool) {
+func assertFileHasSize(t *testing.T, m *e2e.Minikube, pod metav1.Object, containername string, filepath string, wantedSizeInMb int, wantedDeltaInMb int) {
+	sizeInBytes := wantedSizeInMb * 1024 * 1024
+	deltaInBytes := wantedDeltaInMb * 1024 * 1024
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	var sizeInBytes = sizeInMb * 1024 * 1024
-	lastOutput := ""
+	message := ""
 	for {
 		select {
 		case <-ctx.Done():
-			assert.Failf(t, "file not found", "file %s not found in container %s/%s.\n%s", filepath, pod.GetName(), containername, lastOutput)
+			assert.Fail(t, "file has not the expected size", message)
 			return
 
 		case <-time.After(200 * time.Millisecond):
-			var out string
-			var err error
-			out, err = m.PodExec(pod, containername, "wc", "-c", filepath)
-			require.NoError(t, err, "failed to exec wc -c %s", filepath)
-
-			for _, line := range strings.Split(out, " ") {
-				if lineSize, err := strconv.Atoi(line); err == nil {
-					if lineSize == sizeInBytes || (atLeastSize && lineSize >= sizeInBytes){
-						return
-					} else {
-						log.Trace().Msgf("filesize is %s, expected %s", line, fmt.Sprint(sizeInBytes))
-					}
-				}
+			out, err := m.PodExec(pod, containername, "stat", "-c", "%s", filepath)
+			if err != nil {
+				message = fmt.Sprintf("%s: %s", err.Error(), out)
+				continue
 			}
-			lastOutput = out
+
+			if fileSize, err := strconv.Atoi(strings.TrimSpace(out)); err == nil {
+				actualDelta := int(math.Abs(float64(fileSize - sizeInBytes)))
+				if actualDelta <= deltaInBytes {
+					return
+				} else {
+					message = fmt.Sprintf("file size is %d, wanted %d, delta of %d exceeds allowed delta of %d", fileSize, sizeInBytes, actualDelta, deltaInBytes)
+				}
+			} else {
+				message = fmt.Sprintf("cannot parse file size: %s", err.Error())
+			}
 		}
 	}
 }
