@@ -148,7 +148,7 @@ func getMinikubeOptions() e2e.MinikubeOpts {
 		mOpts = mOpts.WithDriver("docker")
 	} else {
 		log.Info().Msg("KVM is available, using kvm driver")
-		mOpts = mOpts.WithDriver("kvm")
+		mOpts = mOpts.WithDriver("kvm2")
 	}
 
 	return mOpts
