@@ -32,6 +32,13 @@ tidy:
 	go fmt ./...
 	go mod tidy -v
 
+## prepare_audit: prepare minikube for audit
+.PHONY: prepare_audit
+prepare_audit:
+	minikube config set WantUpdateNotification false
+	minikube config set cpus max
+	minikube config set memory 8g
+
 ## audit: run quality control checks
 .PHONY: audit
 audit:
