@@ -8,6 +8,7 @@ FROM --platform=$BUILDPLATFORM golang:1.21-bookworm AS build
 ARG TARGETOS TARGETARCH
 ARG BUILD_WITH_COVERAGE
 ARG BUILD_SNAPSHOT=true
+ARG SKIP_LICENSES_REPORT=false
 
 WORKDIR /app
 
@@ -31,13 +32,13 @@ ARG USER_UID=10000
 ARG USER_GID=$USER_UID
 ARG TARGETARCH
 
-ENV STEADYBIT_EXTENSION_NSMOUNT_PATH="/nsmount"
+ENV STEADYBIT_EXTENSION_RUNC_NSMOUNT_PATH="/nsmount"
 
 RUN groupadd --gid $USER_GID $USERNAME \
     && useradd --uid $USER_UID --gid $USER_GID -m $USERNAME
 
 RUN apt-get -qq update \
-    && apt-get -qq install -y --no-install-recommends runc libcap2-bin \
+    && apt-get -qq install -y --no-install-recommends procps stress-ng iptables iproute2 dnsutils runc libcap2-bin util-linux \
     && apt-get -y autoremove \
     && rm -rf /var/lib/apt/lists/* \
     && mkdir -p /run/systemd/system /sidecar
@@ -46,8 +47,7 @@ USER $USERNAME
 
 WORKDIR /
 
-ADD  ./sidecar_linux_$TARGETARCH.tar /sidecar
-COPY ./nsmount/target/${TARGETARCH}-unknown-linux-gnu/release/nsmount /nsmount
+COPY --from=build /app/dist/nsmount.${TARGETARCH} /nsmount
 COPY --from=build /app/extension /extension
 COPY --from=build /app/licenses /licenses
 

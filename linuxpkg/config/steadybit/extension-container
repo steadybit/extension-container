@@ -1,4 +1,4 @@
 STEADYBIT_LOG_LEVEL=info
 STEADYBIT_LOG_FORMAT=text
 STEADYBIT_EXTENSION_UNIX_SOCKET=/run/steadybit/extension-container.sock
-STEADYBIT_EXTENSION_NSMOUNT_PATH=/opt/steadybit/extension-container/nsmount
+STEADYBIT_EXTENSION_RUNC_NSMOUNT_PATH=/opt/steadybit/extension-container/nsmount

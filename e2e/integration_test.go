@@ -4,23 +4,28 @@
 package e2e
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"github.com/rs/zerolog/log"
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
+	"github.com/steadybit/action-kit/go/action_kit_commons/diskfill"
 	"github.com/steadybit/action-kit/go/action_kit_test/client"
 	"github.com/steadybit/action-kit/go/action_kit_test/e2e"
 	"github.com/steadybit/discovery-kit/go/discovery_kit_api"
 	"github.com/steadybit/discovery-kit/go/discovery_kit_test/validate"
-	"github.com/steadybit/extension-container/pkg/extcontainer"
+	"github.com/steadybit/extension-container/extcontainer"
 	"github.com/steadybit/extension-kit/extutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	acorev1 "k8s.io/client-go/applyconfigurations/core/v1"
+	"math"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -51,19 +56,24 @@ func TestWithMinikube(t *testing.T) {
 		{
 			Name: "validate discovery",
 			Test: validateDiscovery,
-		}, {
+		},
+		{
 			Name: "target discovery",
 			Test: testDiscovery,
-		}, {
+		},
+		{
 			Name: "stop container",
 			Test: testStopContainer,
-		}, {
+		},
+		{
 			Name: "pause container",
 			Test: testPauseContainer,
-		}, {
+		},
+		{
 			Name: "stress cpu",
 			Test: testStressCpu,
-		}, {
+		},
+		{
 			Name: "stress memory",
 			Test: testStressMemory,
 		},
@@ -74,28 +84,36 @@ func TestWithMinikube(t *testing.T) {
 		{
 			Name: "network blackhole",
 			Test: testNetworkBlackhole,
-		}, {
+		},
+		{
 			Name: "network blackhole (3 containers in one pod)",
 			Test: testNetworkBlackhole3Containers,
-		}, {
+		},
+		{
 			Name: "network delay",
 			Test: testNetworkDelay,
-		}, {
+		},
+		{
 			Name: "network block dns",
 			Test: testNetworkBlockDns,
-		}, {
+		},
+		{
 			Name: "network limit bandwidth",
 			Test: testNetworkLimitBandwidth,
-		}, {
+		},
+		{
 			Name: "network package loss",
 			Test: testNetworkPackageLoss,
-		}, {
+		},
+		{
 			Name: "network package corruption",
 			Test: testNetworkPackageCorruption,
-		}, {
+		},
+		{
 			Name: "host network detection",
 			Test: testHostNetwork,
-		}, {
+		},
+		{
 			Name: "network delay two containers on the same network",
 			Test: testNetworkDelayOnTwoContainers,
 		},
@@ -129,10 +147,10 @@ func getMinikubeOptions() e2e.MinikubeOpts {
 
 	if exec.Command("kvm-ok").Run() != nil {
 		log.Info().Msg("KVM is not available, using docker driver")
-		mOpts.WithDriver("docker")
+		mOpts = mOpts.WithDriver("docker")
 	} else {
-		log.Info().Msg("KVM is available, using kvm2 driver")
-		mOpts.WithDriver("kvm2")
+		log.Info().Msg("KVM is available, using kvm driver")
+		mOpts = mOpts.WithDriver("kvm2")
 	}
 
 	return mOpts
@@ -899,84 +917,115 @@ func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	require.NoError(t, err, "failed to create pod")
 	defer func() { _ = nginx.Delete() }()
 
-	_, err = m.PodExec(nginx.Pod, "nginx", "mkdir", "-p", "/host-tmp/filldiskng")
+	pathToFill := "/host-tmp/filldisk"
+	_, err = m.PodExec(nginx.Pod, "nginx", "mkdir", "-p",pathToFill)
 	require.NoError(t, err)
 
 	target, err := nginx.Target()
 	require.NoError(t, err)
 
+
+	var getDiskSpace = func(m *e2e.Minikube) diskfill.DiskUsage {
+		dfOutput, err := m.PodExec(nginx.Pod, "nginx", "df", "-Pk", pathToFill)
+		require.NoError(t, err)
+
+		diskSpace, err := diskfill.CalculateDiskUsage(bytes.NewReader([]byte(dfOutput)))
+		require.NoError(t, err)
+
+		log.Debug().Msgf("Disk usage on Host: %+v", diskSpace)
+		return diskSpace
+	}
+
 	type testCase struct {
-		name            string
-		mode            string
-		size            int
-		checkFileSize   int
-		atLeastFileSize bool
-		blockSize       int
-		method          string
+		name           string
+		mode           diskfill.Mode
+		size           int
+		blockSize      int
+		method         diskfill.Method
+		wantedFileSize func(m *e2e.Minikube) int
+		wantedDelta    int
 	}
 	testCases := []testCase{
 		{
-			name:            "fill disk with percentage (fallocate)",
-			mode:            "PERCENTAGE",
-			size:            50,
-			checkFileSize:   3 * 1024,
-			atLeastFileSize: true,
-			blockSize:       0,
-			method:          "AT_ONCE",
+			name:           "fill disk with percentage (fallocate)",
+			mode:           diskfill.Percentage,
+			size:           80,
+			blockSize:      0,
+			method:         diskfill.AtOnce,
+			wantedFileSize: func(m *e2e.Minikube) int {
+				diskSpace := getDiskSpace(m)
+				return int(((diskSpace.Capacity * 80 / 100) - diskSpace.Used) / 1024)
+			},
+			wantedDelta:    512,
 		},
 		{
-			name:            "fill disk with megabytes to fill (fallocate)",
-			mode:            "MB_TO_FILL",
-			size:            4 * 1024, // 4GB
-			checkFileSize:   4 * 1024,
-			atLeastFileSize: false,
-			blockSize:       0,
-			method:          "AT_ONCE",
+			name:      "fill disk with megabytes to fill (fallocate)",
+			mode:      diskfill.MBToFill,
+			size:      1 * 1024, // 1GB
+			blockSize: 0,
+			method:    diskfill.AtOnce,
+			wantedFileSize: func(_ *e2e.Minikube) int {
+				return 1 * 1024
+			},
+			wantedDelta: 0,
 		},
 		{
-			name:            "fill disk with megabytes left (fallocate)",
-			mode:            "MB_LEFT",
-			size:            4 * 1024, // 4GB
-			checkFileSize:   3 * 1024,
-			atLeastFileSize: true,
-			blockSize:       0,
-			method:          "AT_ONCE",
+			name:      "fill disk with megabytes left (fallocate)",
+			mode:      diskfill.MBLeft,
+			size:      2 * 1024, // 2GB
+			blockSize: 0,
+			method:    diskfill.AtOnce,
+			wantedFileSize: func(m *e2e.Minikube) int {
+				diskSpace := getDiskSpace(m)
+				return int(diskSpace.Available-(int64(2*1024*1024))) / 1024
+			},
+			wantedDelta: 512,
 		},
 		{
-			name:            "fill disk with percentage (dd)",
-			mode:            "PERCENTAGE",
-			size:            50,
-			checkFileSize:   3 * 1024,
-			atLeastFileSize: true,
-			blockSize:       1024,
-			method:          "OVER_TIME",
+			name:      "fill disk with percentage (dd)",
+			mode:      diskfill.Percentage,
+			size:      80,
+			blockSize: 5,
+			method:    diskfill.OverTime,
+			wantedFileSize: func(m *e2e.Minikube) int {
+				diskSpace := getDiskSpace(m)
+				return int(((diskSpace.Capacity * 80 / 100) - diskSpace.Used) / 1024)
+			},
+			wantedDelta: 512,
 		},
 		{
-			name:            "fill disk with megabytes to fill (dd)",
-			mode:            "MB_TO_FILL",
-			size:            4 * 1024, // 4GB
-			checkFileSize:   4 * 1024,
-			atLeastFileSize: false,
-			blockSize:       1024,
-			method:          "OVER_TIME",
+			name:      "fill disk with megabytes to fill (dd)",
+			mode:      diskfill.MBToFill,
+			size:      3 * 1024, // 1GB
+			blockSize: 1,
+			method:    diskfill.OverTime,
+			wantedFileSize: func(_ *e2e.Minikube) int {
+				return 3 * 1024
+			},
+			wantedDelta: 0,
 		},
 		{
-			name:            "fill disk with megabytes left (dd)",
-			mode:            "MB_LEFT",
-			size:            4 * 1024, // 4GB
-			checkFileSize:   3 * 1024,
-			atLeastFileSize: true,
-			blockSize:       1024,
-			method:          "OVER_TIME",
+			name:      "fill disk with megabytes left (dd)",
+			mode:      diskfill.MBLeft,
+			size:      1 * 1024,
+			blockSize: 5,
+			method:    diskfill.OverTime,
+			wantedFileSize: func(m *e2e.Minikube) int {
+				diskSpace := getDiskSpace(m)
+				return int(diskSpace.Available-(int64(1*1024*1024))) / 1024
+			},
+			wantedDelta: 512,
 		},
 		{
-			name:            "fill disk with bigger blocksize (dd)",
-			mode:            "MB_TO_FILL",
-			size:            4 * 1024, // 4GB
-			checkFileSize:   4 * 1024, // 4GB
-			atLeastFileSize: false,
-			blockSize:       6 * 1024, // 2GB
-			method:          "OVER_TIME",
+			name:      "fill disk with bigger blocksize (dd)",
+			mode:      diskfill.MBToFill,
+			size:      3 * 1024, // 3GB
+			blockSize: 2 * 1024, // 2GB
+			method:    diskfill.OverTime,
+			wantedFileSize: func(_ *e2e.Minikube) int {
+				return 3 * 1024 // 4GB
+			},
+			wantedDelta: 512,
 		},
 	}
 
@@ -989,28 +1038,26 @@ func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 				Mode      string `json:"mode"`
 				BlockSize int    `json:"blocksize"`
 				Method    string `json:"method"`
-			}{Duration: 60000, Size: testCase.size, Mode: testCase.mode, Method: testCase.method, BlockSize: testCase.blockSize, Path: "/host-tmp/filldiskng"}
-
+			}{Duration: 60000, Size: testCase.size, Mode: string(testCase.mode), Method: string(testCase.method), BlockSize: testCase.blockSize, Path: pathToFill}
+			wantedFileSize := testCase.wantedFileSize(m)
 			action, err := e.RunAction(fmt.Sprintf("%s.fill_disk", extcontainer.BaseActionID), target, config, executionContext)
 			defer func() { _ = action.Cancel() }()
 			require.NoError(t, err)
 
-			if testCase.method == "OVER_TIME" {
-				e2e.AssertProcessRunningInContainer(t, m, nginx.Pod, "nginx", "dd", false)
+			if testCase.method == diskfill.OverTime {
+				e2e.AssertProcessRunningInContainer(t, m, nginx.Pod, "nginx", "dd", true)
 			}
-			AssertFileHasSize(t, m, nginx.Pod, "nginx", "/host-tmp/filldiskng/disk-fill", testCase.checkFileSize, testCase.atLeastFileSize)
+			assertFileHasSize(t, m, nginx.Pod, "nginx", pathToFill + "/disk-fill", wantedFileSize, testCase.wantedDelta)
 			require.NoError(t, action.Cancel())
 
-			if testCase.method == "OVER_TIME" {
+			if testCase.method == diskfill.OverTime {
 				e2e.AssertProcessNOTRunningInContainer(t, m, nginx.Pod, "nginx", "dd")
 			} else {
 				e2e.AssertProcessNOTRunningInContainer(t, m, nginx.Pod, "nginx", "fallocate")
 			}
 
-			out, err := m.PodExec(nginx.Pod, "nginx", "ls", "/host-tmp/filldiskng")
-			require.NoError(t, err)
-			space := strings.TrimSpace(out)
-			require.Empty(t, space, "no fill disk directories must be present")
+			out, _ := m.PodExec(nginx.Pod, "nginx", "ls", pathToFill + "/disk-fill")
+			assert.Contains(t, string(out), "No such file or directory")
 		})
 	}
 	requireAllSidecarsCleanedUp(t, m, e)
@@ -1243,4 +1290,37 @@ func requireAllSidecarsCleanedUp(t *testing.T, m *e2e.Minikube, e *e2e.Extension
 	require.NoError(t, err)
 	space := strings.TrimSpace(out)
 	require.Empty(t, space, "no sidecar directories must be present")
+}
+
+func assertFileHasSize(t *testing.T, m *e2e.Minikube, pod metav1.Object, containername string, filepath string, wantedSizeInMb int, wantedDeltaInMb int) {
+	sizeInBytes := wantedSizeInMb * 1024 * 1024
+	deltaInBytes := wantedDeltaInMb * 1024 * 1024
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	message := ""
+	for {
+		select {
+		case <-ctx.Done():
+			assert.Fail(t, "file has not the expected size", message)
+			return
+
+		case <-time.After(200 * time.Millisecond):
+			out, err := m.PodExec(pod, containername, "stat", "-c", "%s", filepath)
+			if err != nil {
+				message = fmt.Sprintf("%s: %s", err.Error(), out)
+				continue
+			}
+
+			if fileSize, err := strconv.Atoi(strings.TrimSpace(out)); err == nil {
+				actualDelta := int(math.Abs(float64(fileSize - sizeInBytes)))
+				if actualDelta <= deltaInBytes {
+					return
+				} else {
+					message = fmt.Sprintf("file size is %d, wanted %d, delta of %d exceeds allowed delta of %d", fileSize, sizeInBytes, actualDelta, deltaInBytes)
+				}
+			} else {
+				message = fmt.Sprintf("cannot parse file size: %s", err.Error())
+			}
+		}
+	}
 }

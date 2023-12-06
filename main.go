@@ -8,14 +8,14 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
+	"github.com/steadybit/action-kit/go/action_kit_commons/runc"
 	"github.com/steadybit/action-kit/go/action_kit_sdk"
 	"github.com/steadybit/discovery-kit/go/discovery_kit_api"
 	"github.com/steadybit/discovery-kit/go/discovery_kit_sdk"
 	"github.com/steadybit/extension-container/config"
-	"github.com/steadybit/extension-container/pkg/container"
-	"github.com/steadybit/extension-container/pkg/container/runc"
-	"github.com/steadybit/extension-container/pkg/container/types"
-	"github.com/steadybit/extension-container/pkg/extcontainer"
+	"github.com/steadybit/extension-container/extcontainer"
+	"github.com/steadybit/extension-container/extcontainer/container"
+	"github.com/steadybit/extension-container/extcontainer/container/types"
 	"github.com/steadybit/extension-kit/extbuild"
 	"github.com/steadybit/extension-kit/exthealth"
 	"github.com/steadybit/extension-kit/exthttp"
@@ -55,7 +55,11 @@ func main() {
 		Str("socket", client.Socket()).
 		Msg("Container runtime client initialized.")
 
-	r := runc.NewRunc(client.Runtime())
+	runcCfg := runc.ConfigFromEnvironment()
+	if runcCfg.Root == "" {
+		runcCfg.Root = client.Runtime().DefaultRuncRoot()
+	}
+	r := runc.NewRunc(runcCfg)
 
 	discovery_kit_sdk.Register(extcontainer.NewContainerDiscovery(client))
 	action_kit_sdk.RegisterAction(extcontainer.NewPauseContainerAction(client))
@@ -69,7 +73,7 @@ func main() {
 	action_kit_sdk.RegisterAction(extcontainer.NewNetworkLimitBandwidthContainerAction(r))
 	action_kit_sdk.RegisterAction(extcontainer.NewNetworkCorruptPackagesContainerAction(r))
 	action_kit_sdk.RegisterAction(extcontainer.NewNetworkPackageLossContainerAction(r))
-	action_kit_sdk.RegisterAction(extcontainer.NewFillDiskContainerAction(client, r))
+	action_kit_sdk.RegisterAction(extcontainer.NewFillDiskContainerAction(r))
 
 	action_kit_sdk.InstallSignalHandler()
 
