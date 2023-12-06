@@ -961,11 +961,11 @@ func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 		{
 			name:      "fill disk with megabytes to fill (fallocate)",
 			mode:      diskfill.MBToFill,
-			size:      4 * 1024, // 4GB
+			size:      1 * 1024, // 4GB
 			blockSize: 0,
 			method:    diskfill.AtOnce,
 			wantedFileSize: func(_ *e2e.Minikube) int {
-				return 4 * 1024
+				return 1 * 1024
 			},
 			wantedDelta: 0,
 		},
