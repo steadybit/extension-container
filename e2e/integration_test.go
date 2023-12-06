@@ -996,34 +996,34 @@ func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 		{
 			name:      "fill disk with megabytes to fill (dd)",
 			mode:      diskfill.MBToFill,
-			size:      4 * 1024, // 4GB
+			size:      1 * 1024, // 1GB
 			blockSize: 1,
 			method:    diskfill.OverTime,
 			wantedFileSize: func(_ *e2e.Minikube) int {
-				return 4 * 1024
+				return 1 * 1024
 			},
 			wantedDelta: 0,
 		},
 		{
 			name:      "fill disk with megabytes left (dd)",
 			mode:      diskfill.MBLeft,
-			size:      4 * 1024,
+			size:      2 * 1024,
 			blockSize: 5,
 			method:    diskfill.OverTime,
 			wantedFileSize: func(m *e2e.Minikube) int {
 				diskSpace := getDiskSpace(m)
-				return int(diskSpace.Available-(int64(4*1024*1024))) / 1024
+				return int(diskSpace.Available-(int64(2*1024*1024))) / 1024
 			},
 			wantedDelta: 512,
 		},
 		{
 			name:      "fill disk with bigger blocksize (dd)",
 			mode:      diskfill.MBToFill,
-			size:      4 * 1024, // 4GB
+			size:      3 * 1024, // 3GB
 			blockSize: 2 * 1024, // 2GB
 			method:    diskfill.OverTime,
 			wantedFileSize: func(_ *e2e.Minikube) int {
-				return 4 * 1024 // 4GB
+				return 3 * 1024 // 4GB
 			},
 			wantedDelta: 512,
 		},
