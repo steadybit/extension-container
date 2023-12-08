@@ -132,7 +132,6 @@ func readAndAdaptToCpuContainerLimits(ctx context.Context, cGroupPath string, op
 	if cpuLimitInMilliCpu != nil {
 		adaptToCpuContainerLimits(*cpuLimitInMilliCpu, runtime.NumCPU(), opts)
 	}
-	return
 }
 
 func supportsCGroupV2(ctx context.Context) bool {
