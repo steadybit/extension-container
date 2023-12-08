@@ -39,7 +39,7 @@ start() {
     export $(grep -v "^#" "$ENVFILE" | xargs)
   fi
 
-  su -s capsh "--addamb=$CAPS" "--user=$RUNAS" -- -c "$SCRIPT > \"$LOGFILE\" 2>&1 & echo \$!" >"$PIDFILE"
+  su -s capsh -- "--addamb=$CAPS" "--user=$RUNAS" -c "$SCRIPT > \"$LOGFILE\" 2>&1 & echo \$!" >"$PIDFILE"
   PID=$(cat "$PIDFILE")
   sleep 1
 

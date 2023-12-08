@@ -1,6 +1,6 @@
 # Changelog
 
-## next
+## v1.2.0
 
 - Add disk fill attack
 - Add timeout and recovery for container discovery
