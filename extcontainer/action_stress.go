@@ -123,7 +123,7 @@ func readAndAdaptToCpuContainerLimits(ctx context.Context, cGroupPath string, op
 	cmd.Stdout = &out
 	cmd.Stderr = &out
 	if err := cmd.Run(); err != nil {
-		log.Warn().Msgf("failed to read cpu.max cgroup: %s. skip adapting cpu load to container limits.", cpuMaxCgroupPath)
+		log.Warn().Err(err).Msgf("failed to read cpu.max cgroup: %s. skip adapting cpu load to container limits.", cpuMaxCgroupPath)
 		return
 	}
 
