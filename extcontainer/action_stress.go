@@ -119,7 +119,7 @@ func readAndAdaptToCpuContainerLimits(ctx context.Context, cGroupPath string, op
 
 	var out bytes.Buffer
 	cpuMaxCgroupPath := filepath.Join("/sys/fs/cgroup", cGroupPath, "cpu.max")
-	cmd := exec.CommandContext(ctx, "cat", cpuMaxCgroupPath)
+	cmd := runc.RootCommandContext(ctx, "cat", cpuMaxCgroupPath)
 	cmd.Stdout = &out
 	cmd.Stderr = &out
 	if err := cmd.Run(); err != nil {
@@ -127,7 +127,7 @@ func readAndAdaptToCpuContainerLimits(ctx context.Context, cGroupPath string, op
 
 		containerCGroupPath := filepath.Join("/sys/fs/cgroup", cGroupPath)
 		var lsOut bytes.Buffer
-		lsCmd := exec.CommandContext(ctx, "ls", containerCGroupPath)
+		lsCmd := runc.RootCommandContext(ctx, "ls", containerCGroupPath)
 		lsCmd.Stdout = &lsOut
 		lsCmd.Stderr = &lsOut
 		lsErr := lsCmd.Run()
