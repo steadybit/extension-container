@@ -4,10 +4,13 @@
 package extcontainer
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"github.com/google/uuid"
+	"github.com/kataras/iris/v12/x/mathx"
+	"github.com/rs/zerolog/log"
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
 	"github.com/steadybit/action-kit/go/action_kit_commons/runc"
 	"github.com/steadybit/action-kit/go/action_kit_commons/stress"
@@ -15,8 +18,12 @@ import (
 	"github.com/steadybit/extension-kit"
 	"github.com/steadybit/extension-kit/extutil"
 	"golang.org/x/sync/syncmap"
+	"math"
 	"os/exec"
+	"path/filepath"
+	"runtime"
 	"runtime/trace"
+	"strconv"
 	"strings"
 )
 
@@ -91,12 +98,98 @@ func (a *stressAction) Prepare(ctx context.Context, state *StressActionState, re
 		return nil, err
 	}
 
+	readAndAdaptToCpuContainerLimits(ctx, processInfo.CGroupPath, &opts)
+
 	state.StressOpts = opts
 	state.ExecutionId = request.ExecutionId
 	if !extutil.ToBool(request.Config["failOnOomKill"]) {
 		state.IgnoreExitCodes = []int{137}
 	}
 	return nil, nil
+}
+
+func readAndAdaptToCpuContainerLimits(ctx context.Context, cGroupPath string, opts *stress.Opts) {
+	if opts.CpuWorkers == nil {
+		return
+	}
+	if !supportsCGroupV2(ctx) {
+		log.Warn().Msgf("cgroup v2 is not supported. skip adapting cpu load to container limits.")
+		return
+	}
+
+	var out bytes.Buffer
+	cpuMaxCgroupPath := filepath.Join("/sys/fs/cgroup", cGroupPath, "cpu.max")
+	cmd := exec.CommandContext(ctx, "cat", cpuMaxCgroupPath)
+	cmd.Stdout = &out
+	cmd.Stderr = &out
+	if err := cmd.Run(); err != nil {
+		log.Warn().Msgf("failed to read cpu.max cgroup: %s. skip adapting cpu load to container limits.", cpuMaxCgroupPath)
+		return
+	}
+
+	log.Debug().Msgf("parsing cpu.max cgroup file %s: %s", cpuMaxCgroupPath, out.String())
+	cpuLimitInMilliCpu := parseCGroupCpuMax(out.String())
+	if cpuLimitInMilliCpu != nil {
+		adaptToCpuContainerLimits(*cpuLimitInMilliCpu, runtime.NumCPU(), opts)
+	}
+	return
+}
+
+func supportsCGroupV2(ctx context.Context) bool {
+	var out bytes.Buffer
+	cmd := exec.CommandContext(ctx, "grep", "cgroup2", "/proc/filesystems")
+	cmd.Stdout = &out
+	cmd.Stderr = &out
+	if err := cmd.Run(); err != nil {
+		return false
+	}
+	return true
+}
+
+func parseCGroupCpuMax(input string) *float64 {
+	cpuMaxCgroup := strings.Split(strings.TrimSpace(input), " ")
+	if len(cpuMaxCgroup) != 2 {
+		log.Warn().Msgf("failed to parse cpu.max: %s. skip adapting cpu load to container limits.", input)
+		return nil
+	} else if cpuMaxCgroup[0] == "max" {
+		log.Info().Msgf("container cpu is unlimited. skip adapting cpu load to container limits.")
+		return nil
+	}
+	cpuLimitInMicroseconds, err := strconv.Atoi(cpuMaxCgroup[0])
+	if err != nil {
+		log.Warn().Err(err).Msgf("failed to parse cpuLimitInMicroseconds: %s. skip adapting cpu load to container limits.", cpuMaxCgroup[0])
+		return nil
+	}
+	cpuLimitPeriod, err := strconv.Atoi(cpuMaxCgroup[1])
+	if err != nil {
+		log.Warn().Err(err).Msgf("failed to parse cpuLimitPeriod: %s. skip adapting cpu load to container limits.", cpuMaxCgroup[1])
+		return nil
+	}
+	cpuLimitInMilliCpu := float64(cpuLimitInMicroseconds) / float64(cpuLimitPeriod) * 1000
+	log.Debug().Msgf("container cpu limit is %.0fm", cpuLimitInMilliCpu)
+	return extutil.Ptr(cpuLimitInMilliCpu)
+}
+
+func adaptToCpuContainerLimits(cpuLimitInMilliCpu float64, cpuCount int, opts *stress.Opts) {
+	desiredCpuConsumptionInMilliCpu := cpuLimitInMilliCpu * float64(opts.CpuLoad) / 100
+	log.Debug().Msgf("desiredCpuConsumption is %.0fm - (%d%%)", desiredCpuConsumptionInMilliCpu, opts.CpuLoad)
+
+	log.Debug().Msgf("cpu count is %d", cpuCount)
+	if *opts.CpuWorkers == 0 {
+		// user didn't specify the number of workers. we start as many workers as we need to reach the desired cpu consumption
+		cpuWorkers := int(mathx.RoundUp(float64(desiredCpuConsumptionInMilliCpu)/1000, 0))
+		desiredCpuConsumptionPerWorkerInMilliCpu := desiredCpuConsumptionInMilliCpu / float64(cpuWorkers)
+		desiredCpuConsumptionPerWorkerInPercent := int(math.Round(desiredCpuConsumptionPerWorkerInMilliCpu / 10))
+		log.Info().Msgf("container cpu limit is %.0fm. Starting %d workers with %d%% load.", cpuLimitInMilliCpu, cpuWorkers, desiredCpuConsumptionPerWorkerInPercent)
+		opts.CpuWorkers = extutil.Ptr(cpuWorkers)
+		opts.CpuLoad = desiredCpuConsumptionPerWorkerInPercent
+	} else {
+		// use the given number of workers
+		desiredCpuConsumptionPerWorkerInMilliCpu := desiredCpuConsumptionInMilliCpu / float64(*opts.CpuWorkers)
+		desiredCpuConsumptionPerWorkerInPercent := int(math.Round(desiredCpuConsumptionPerWorkerInMilliCpu / 10))
+		log.Info().Msgf("container cpu limit is %.0fm. Starting %d workers with %d%% load.", cpuLimitInMilliCpu, *opts.CpuWorkers, desiredCpuConsumptionPerWorkerInPercent)
+		opts.CpuLoad = desiredCpuConsumptionPerWorkerInPercent
+	}
 }
 
 func (a *stressAction) Start(ctx context.Context, state *StressActionState) (*action_kit_api.StartResult, error) {
