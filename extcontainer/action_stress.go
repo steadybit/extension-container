@@ -142,6 +142,13 @@ func readAndAdaptToCpuContainerLimits(ctx context.Context, cGroupPath string, op
 }
 
 func supportsCGroupV2(ctx context.Context) bool {
+	var lsOut bytes.Buffer
+	lsCmd := runc.RootCommandContext(ctx, "cat", "/proc/filesystems")
+	lsCmd.Stdout = &lsOut
+	lsCmd.Stderr = &lsOut
+	lsErr := lsCmd.Run()
+	log.Debug().Err(lsErr).Msgf("/proc/filesystems: %s", lsOut.String())
+
 	var out bytes.Buffer
 	cmd := exec.CommandContext(ctx, "grep", "cgroup2", "/proc/filesystems")
 	cmd.Stdout = &out
