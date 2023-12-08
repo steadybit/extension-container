@@ -130,7 +130,8 @@ func readAndAdaptToCpuContainerLimits(ctx context.Context, cGroupPath string, op
 		lsCmd := exec.CommandContext(ctx, "ls", containerCGroupPath)
 		lsCmd.Stdout = &lsOut
 		lsCmd.Stderr = &lsOut
-		log.Debug().Msgf("ls %s: %s", cpuMaxCgroupPath, lsOut.String())
+		lsErr := cmd.Run()
+		log.Debug().Err(lsErr).Msgf("ls %s: %s", containerCGroupPath, lsOut.String())
 		return
 	}
 
