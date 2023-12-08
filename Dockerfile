@@ -38,7 +38,7 @@ RUN groupadd --gid $USER_GID $USERNAME \
     && useradd --uid $USER_UID --gid $USER_GID -m $USERNAME
 
 RUN apt-get -qq update \
-    && apt-get -qq install -y --no-install-recommends procps stress-ng iptables iproute2 dnsutils runc libcap2-bin util-linux \
+    && apt-get -qq install -y --no-install-recommends procps stress-ng iptables iproute2 dnsutils runc libcap2-bin util-linux tree \
     && apt-get -y autoremove \
     && rm -rf /var/lib/apt/lists/* \
     && mkdir -p /run/systemd/system /sidecar

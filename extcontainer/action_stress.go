@@ -125,13 +125,12 @@ func readAndAdaptToCpuContainerLimits(ctx context.Context, cGroupPath string, op
 	if err := cmd.Run(); err != nil {
 		log.Warn().Err(err).Msgf("failed to read cpu.max cgroup '%s' : %s. skip adapting cpu load to container limits.", cpuMaxCgroupPath, out.String())
 
-		containerCGroupPath := filepath.Join("/sys/fs/cgroup", cGroupPath)
 		var lsOut bytes.Buffer
-		lsCmd := runc.RootCommandContext(ctx, "ls", containerCGroupPath)
+		lsCmd := runc.RootCommandContext(ctx, "tree", "/sys/fs/cgroup", "-L", "4")
 		lsCmd.Stdout = &lsOut
 		lsCmd.Stderr = &lsOut
 		lsErr := lsCmd.Run()
-		log.Debug().Err(lsErr).Msgf("ls %s: %s", containerCGroupPath, lsOut.String())
+		log.Debug().Err(lsErr).Msgf("tree %s", lsOut.String())
 		return
 	}
 
