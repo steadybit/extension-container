@@ -146,7 +146,7 @@ func supportsCGroupV2(ctx context.Context) bool {
 }
 
 func parseCGroupCpuMax(input string) *float64 {
-	cpuMaxCgroup := strings.Split(strings.TrimSpace(input), " ")
+	cpuMaxCgroup := strings.Fields(input)
 	if len(cpuMaxCgroup) != 2 {
 		log.Warn().Msgf("failed to parse cpu.max: %s. skip adapting cpu load to container limits.", input)
 		return nil
