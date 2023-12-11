@@ -738,7 +738,13 @@ func testNetworkBlockDns(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 
 func testStressCpu(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	nginx := e2e.Nginx{Minikube: m}
-	err := nginx.Deploy("nginx-stress-cpu")
+	err := nginx.Deploy("nginx-stress-cpu", func(p *acorev1.PodApplyConfiguration) {
+		p.Spec.Containers[0].Resources = &acorev1.ResourceRequirementsApplyConfiguration{
+			Limits: &corev1.ResourceList{
+				"cpu": resource.MustParse("200m"),
+			},
+		}
+	})
 	require.NoError(t, err, "failed to create pod")
 	defer func() { _ = nginx.Delete() }()
 
@@ -758,6 +764,7 @@ func testStressCpu(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	defer func() { _ = action.Cancel() }()
 	require.NoError(t, err)
 	e2e.AssertProcessRunningInContainer(t, m, nginx.Pod, "nginx", "stress-ng", false)
+	e2e.AssertLogContains(t, m, e.Pod, "container cpu limit is 200m")
 	require.NoError(t, action.Cancel())
 	e2e.AssertProcessNOTRunningInContainer(t, m, nginx.Pod, "nginx", "stress-ng")
 
@@ -918,12 +925,11 @@ func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	defer func() { _ = nginx.Delete() }()
 
 	pathToFill := "/host-tmp/filldisk"
-	_, err = m.PodExec(nginx.Pod, "nginx", "mkdir", "-p",pathToFill)
+	_, err = m.PodExec(nginx.Pod, "nginx", "mkdir", "-p", pathToFill)
 	require.NoError(t, err)
 
 	target, err := nginx.Target()
 	require.NoError(t, err)
-
 
 	var getDiskSpace = func(m *e2e.Minikube) diskfill.DiskUsage {
 		dfOutput, err := m.PodExec(nginx.Pod, "nginx", "df", "-Pk", pathToFill)
@@ -947,16 +953,16 @@ func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	}
 	testCases := []testCase{
 		{
-			name:           "fill disk with percentage (fallocate)",
-			mode:           diskfill.Percentage,
-			size:           80,
-			blockSize:      0,
-			method:         diskfill.AtOnce,
+			name:      "fill disk with percentage (fallocate)",
+			mode:      diskfill.Percentage,
+			size:      80,
+			blockSize: 0,
+			method:    diskfill.AtOnce,
 			wantedFileSize: func(m *e2e.Minikube) int {
 				diskSpace := getDiskSpace(m)
 				return int(((diskSpace.Capacity * 80 / 100) - diskSpace.Used) / 1024)
 			},
-			wantedDelta:    512,
+			wantedDelta: 512,
 		},
 		{
 			name:      "fill disk with megabytes to fill (fallocate)",
@@ -1047,7 +1053,7 @@ func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			if testCase.method == diskfill.OverTime {
 				e2e.AssertProcessRunningInContainer(t, m, nginx.Pod, "nginx", "dd", true)
 			}
-			assertFileHasSize(t, m, nginx.Pod, "nginx", pathToFill + "/disk-fill", wantedFileSize, testCase.wantedDelta)
+			assertFileHasSize(t, m, nginx.Pod, "nginx", pathToFill+"/disk-fill", wantedFileSize, testCase.wantedDelta)
 			require.NoError(t, action.Cancel())
 
 			if testCase.method == diskfill.OverTime {
@@ -1056,7 +1062,7 @@ func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 				e2e.AssertProcessNOTRunningInContainer(t, m, nginx.Pod, "nginx", "fallocate")
 			}
 
-			out, _ := m.PodExec(nginx.Pod, "nginx", "ls", pathToFill + "/disk-fill")
+			out, _ := m.PodExec(nginx.Pod, "nginx", "ls", pathToFill+"/disk-fill")
 			assert.Contains(t, string(out), "No such file or directory")
 		})
 	}
