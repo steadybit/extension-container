@@ -107,12 +107,12 @@ func Test_readCGroupV2CpuLimit(t *testing.T) {
 		},
 		{
 			name: "unlimited cpu",
-			arg:  "max 100000",
+			arg:  "max 100000\n",
 			want: nil,
 		},
 		{
 			name: "limited cpu",
-			arg:  "50000 100000",
+			arg:  "50000 100000\n",
 			want: extutil.Ptr(float64(500)),
 		},
 	}
@@ -154,13 +154,13 @@ func Test_readCGroupV1CpuLimit(t *testing.T) {
 		{
 			name:   "unlimited cpu",
 			quota:  "-1",
-			period: "100000",
+			period: "100000\n",
 			want:   nil,
 		},
 		{
 			name:   "limited cpu",
-			quota:  "50000",
-			period: "100000",
+			quota:  "50000\n",
+			period: "100000\n",
 			want:   extutil.Ptr(float64(500)),
 		},
 	}
