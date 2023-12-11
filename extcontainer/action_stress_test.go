@@ -89,7 +89,7 @@ func Test_adaptToCpuContainerLimits(t *testing.T) {
 	}
 }
 
-func Test_parseCGroupCpuMax(t *testing.T) {
+func Test_readCGroupV2CpuLimit(t *testing.T) {
 	tests := []struct {
 		name string
 		arg  string
@@ -118,12 +118,73 @@ func Test_parseCGroupCpuMax(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cpuMax := parseCGroupCpuMax(tt.arg)
+			cpuMax := readCGroupV2CpuLimitInternal("kubepods/besteffort/pod_xyz/container_xyz", mockFilesystem{
+				values: map[string]string{
+					"/sys/fs/cgroup/kubepods/besteffort/pod_xyz/container_xyz/cpu.max": tt.arg,
+				},
+			})
 			if tt.want == nil {
-				assert.Nil(t, cpuMax, "parseCGroupCpuMax(%v)", tt.arg)
+				assert.Nil(t, cpuMax, "readCGroupV2CpuLimit with file content (%v)", tt.arg)
 			} else {
-				assert.Equalf(t, *tt.want, *cpuMax, "parseCGroupCpuMax(%v)", tt.arg)
+				assert.Equalf(t, *tt.want, *cpuMax, "readCGroupV2CpuLimit with file content (%v)", tt.arg)
 			}
 		})
 	}
+}
+
+func Test_readCGroupV1CpuLimit(t *testing.T) {
+	tests := []struct {
+		name   string
+		quota  string
+		period string
+		want   *float64
+	}{
+		{
+			name:   "empty input",
+			quota:  "",
+			period: "",
+			want:   nil,
+		},
+		{
+			name:   "broken input",
+			quota:  "x",
+			period: "x",
+			want:   nil,
+		},
+		{
+			name:   "unlimited cpu",
+			quota:  "-1",
+			period: "100000",
+			want:   nil,
+		},
+		{
+			name:   "limited cpu",
+			quota:  "50000",
+			period: "100000",
+			want:   extutil.Ptr(float64(500)),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cpuMax := readCGroupV1CpuLimitInternal("kubepods/besteffort/pod_xyz/container_xyz", mockFilesystem{
+				values: map[string]string{
+					"/sys/fs/cgroup/cpu,cpuacct/kubepods/besteffort/pod_xyz/container_xyz/cpu.cfs_quota_us":  tt.quota,
+					"/sys/fs/cgroup/cpu,cpuacct/kubepods/besteffort/pod_xyz/container_xyz/cpu.cfs_period_us": tt.period,
+				},
+			})
+			if tt.want == nil {
+				assert.Nil(t, cpuMax, "Test_readCGroupV1CpuLimit() with file content (%v) (%v)", tt.quota, tt.period)
+			} else {
+				assert.Equalf(t, *tt.want, *cpuMax, "Test_readCGroupV1CpuLimit() with file content (%v) (%v)", tt.quota, tt.period)
+			}
+		})
+	}
+}
+
+type mockFilesystem struct {
+	values map[string]string
+}
+
+func (m mockFilesystem) ReadFile(name string) ([]byte, error) {
+	return []byte(m.values[name]), nil
 }

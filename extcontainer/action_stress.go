@@ -4,7 +4,6 @@
 package extcontainer
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -19,6 +18,7 @@ import (
 	"github.com/steadybit/extension-kit/extutil"
 	"golang.org/x/sync/syncmap"
 	"math"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
@@ -112,60 +112,94 @@ func readAndAdaptToCpuContainerLimits(ctx context.Context, cGroupPath string, op
 	if opts.CpuWorkers == nil {
 		return
 	}
-	if !supportsCGroupV2(ctx) {
-		log.Warn().Msgf("cgroup v2 is not supported. skip adapting cpu load to container limits.")
-		return
+
+	var cpuLimitInMilliCpu *float64
+	if isCGroupV1() {
+		cpuLimitInMilliCpu = readCGroupV1CpuLimit(cGroupPath)
+	} else {
+		cpuLimitInMilliCpu = readCGroupV2CpuLimit(cGroupPath)
 	}
 
-	var out bytes.Buffer
-	cpuMaxCgroupPath := filepath.Join("/sys/fs/cgroup", cGroupPath, "cpu.max")
-	cmd := runc.RootCommandContext(ctx, "cat", cpuMaxCgroupPath)
-	cmd.Stdout = &out
-	cmd.Stderr = &out
-	if err := cmd.Run(); err != nil {
-		log.Warn().Err(err).Msgf("failed to read cpu.max cgroup '%s' : %s. skip adapting cpu load to container limits.", cpuMaxCgroupPath, out.String())
-
-		var lsOut bytes.Buffer
-		lsCmd := runc.RootCommandContext(ctx, "tree", "/sys/fs/cgroup", "-L", "4")
-		lsCmd.Stdout = &lsOut
-		lsCmd.Stderr = &lsOut
-		lsErr := lsCmd.Run()
-		log.Debug().Err(lsErr).Msgf("tree %s", lsOut.String())
-		return
-	}
-
-	log.Debug().Msgf("parsing cpu.max cgroup file %s: %s", cpuMaxCgroupPath, out.String())
-	cpuLimitInMilliCpu := parseCGroupCpuMax(out.String())
 	if cpuLimitInMilliCpu != nil {
 		adaptToCpuContainerLimits(*cpuLimitInMilliCpu, runtime.NumCPU(), opts)
 	}
 }
 
-func supportsCGroupV2(ctx context.Context) bool {
-	var lsOut bytes.Buffer
-	lsCmd := runc.RootCommandContext(ctx, "cat", "/proc/filesystems")
-	lsCmd.Stdout = &lsOut
-	lsCmd.Stderr = &lsOut
-	lsErr := lsCmd.Run()
-	log.Debug().Err(lsErr).Msgf("/proc/filesystems: %s", lsOut.String())
-
-	var out bytes.Buffer
-	cmd := exec.CommandContext(ctx, "grep", "cgroup2", "/proc/filesystems")
-	cmd.Stdout = &out
-	cmd.Stderr = &out
-	if err := cmd.Run(); err != nil {
-		return false
-	}
-	return true
+func isCGroupV1() bool {
+	_, err := os.Open("/sys/fs/cgroup/cpu,cpuacct")
+	return err == nil
 }
 
-func parseCGroupCpuMax(input string) *float64 {
-	cpuMaxCgroup := strings.Fields(input)
+type osFileSystem struct{}
+
+func (osFileSystem) ReadFile(name string) ([]byte, error) {
+	return os.ReadFile(name)
+}
+
+type fileSystem interface {
+	ReadFile(name string) ([]byte, error)
+}
+
+func readCGroupV1CpuLimit(cGroupPath string) *float64 {
+	return readCGroupV1CpuLimitInternal(cGroupPath, osFileSystem{})
+}
+
+func readCGroupV1CpuLimitInternal(cGroupPath string, fs fileSystem) *float64 {
+	cpuCfsQuotaPath := filepath.Join("/sys/fs/cgroup/cpu,cpuacct", cGroupPath, "cpu.cfs_quota_us")
+	cpuCfsQuotaRaw, err := fs.ReadFile(cpuCfsQuotaPath)
+	if err != nil {
+		log.Warn().Err(err).Msgf("failed to read cpu.cfs_quota_us '%s. skip adapting cpu load to container limits.", cpuCfsQuotaPath)
+		return nil
+	}
+	log.Debug().Msgf("parsing cpu.cfs_quota_us content %s", cpuCfsQuotaRaw)
+	cpuCfsQuota, err := strconv.Atoi(string(cpuCfsQuotaRaw))
+	if err != nil {
+		log.Warn().Err(err).Msgf("failed to parse cpu.cfs_quota_us: %s. skip adapting cpu load to container limits.", cpuCfsQuotaRaw)
+		return nil
+	}
+
+	if cpuCfsQuota == -1 {
+		log.Info().Msgf("container cpu is unlimited. skip adapting cpu load to container limits. (cpu.cfs_quota_us=-1)")
+		return nil
+	}
+
+	cpuCfsPeriodPath := filepath.Join("/sys/fs/cgroup/cpu,cpuacct", cGroupPath, "cpu.cfs_period_us")
+	cpuCfsPeriodRaw, err := fs.ReadFile(cpuCfsPeriodPath)
+	if err != nil {
+		log.Warn().Err(err).Msgf("failed to read cpu.cfs_period_us '%s. skip adapting cpu load to container limits.", cpuCfsPeriodPath)
+		return nil
+	}
+	log.Debug().Msgf("parsing cpu.cfs_period_us content %s", cpuCfsPeriodRaw)
+	cpuCfsPeriod, err := strconv.Atoi(string(cpuCfsPeriodRaw))
+	if err != nil {
+		log.Warn().Err(err).Msgf("failed to parse cpu.cfs_period_us: %s. skip adapting cpu load to container limits.", cpuCfsPeriodRaw)
+		return nil
+	}
+
+	cpuLimitInMilliCpu := float64(cpuCfsQuota) / float64(cpuCfsPeriod) * 1000
+	log.Debug().Msgf("container cpu limit is %.0fm", cpuLimitInMilliCpu)
+	return extutil.Ptr(cpuLimitInMilliCpu)
+}
+
+func readCGroupV2CpuLimit(cGroupPath string) *float64 {
+	return readCGroupV2CpuLimitInternal(cGroupPath, osFileSystem{})
+}
+
+func readCGroupV2CpuLimitInternal(cGroupPath string, fs fileSystem) *float64 {
+	cpuMaxCGroupPath := filepath.Join("/sys/fs/cgroup", cGroupPath, "cpu.max")
+	content, err := fs.ReadFile(cpuMaxCGroupPath)
+	if err != nil {
+		log.Warn().Err(err).Msgf("failed to read cpu.max '%s. skip adapting cpu load to container limits.", cpuMaxCGroupPath)
+		return nil
+	}
+
+	log.Debug().Msgf("parsing cpu.max content %s", content)
+	cpuMaxCgroup := strings.Fields(string(content))
 	if len(cpuMaxCgroup) != 2 {
-		log.Warn().Msgf("failed to parse cpu.max: %s. skip adapting cpu load to container limits.", input)
+		log.Warn().Msgf("failed to parse cpu.max: %s. skip adapting cpu load to container limits.", content)
 		return nil
 	} else if cpuMaxCgroup[0] == "max" {
-		log.Info().Msgf("container cpu is unlimited. skip adapting cpu load to container limits.")
+		log.Info().Msgf("container cpu is unlimited (cpu.max=max ....). skip adapting cpu load to container limits.")
 		return nil
 	}
 	cpuLimitInMicroseconds, err := strconv.Atoi(cpuMaxCgroup[0])
