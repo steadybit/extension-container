@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.3.0
+
+- Stress CPU attack: cpu load percentage is based on the container limit
+
 ## v1.2.0
 
 - Add disk fill attack
