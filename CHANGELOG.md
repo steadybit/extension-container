@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.3.1
+
+- Fix: don't use ipv6 when kernel module was disabled
+
 ## v1.3.0
 
 - Stress CPU attack: cpu load percentage is based on the container limit
