@@ -6,7 +6,6 @@ package docker
 import (
 	"context"
 	"fmt"
-	dtypes "github.com/docker/docker/api/types"
 	dcontainer "github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
 	dclient "github.com/docker/docker/client"
@@ -45,7 +44,7 @@ func (c *client) List(ctx context.Context) ([]types.Container, error) {
 	listFilters.Add("status", "running")
 	listFilters.Add("status", "paused")
 
-	containers, err := c.docker.ContainerList(ctx, dtypes.ContainerListOptions{Filters: listFilters})
+	containers, err := c.docker.ContainerList(ctx, dcontainer.ListOptions{Filters: listFilters})
 	if err != nil {
 		return nil, fmt.Errorf("failed to list containers: %w", err)
 	}
