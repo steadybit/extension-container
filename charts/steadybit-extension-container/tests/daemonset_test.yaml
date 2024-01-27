@@ -1,5 +1,7 @@
 templates:
   - daemonset.yaml
+chart:
+  appVersion: v0.0.0
 tests:
   - it: manifest should match snapshot using docker
     set:

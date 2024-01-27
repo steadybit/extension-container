@@ -50,7 +50,7 @@ spec:
       hostPID: true
       dnsPolicy: ClusterFirstWithHostNet
       containers:
-        - image: {{ .Values.image.name }}:{{ .Values.image.tag }}
+        - image: {{ .Values.image.name }}:{{ default .Chart.AppVersion .Values.image.tag }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           resources:
             requests:
