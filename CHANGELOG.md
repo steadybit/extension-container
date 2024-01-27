@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.3.2
+
+- update depencendies
+
 ## v1.3.1
 
 - Fix: don't use ipv6 when kernel module was disabled
