@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.3.3
+
+- update depencendies
+
 ## v1.3.2
 
 - update depencendies
