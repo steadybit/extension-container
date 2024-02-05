@@ -3,7 +3,7 @@ module github.com/steadybit/extension-container
 go 1.21
 
 require (
-	github.com/containerd/containerd v1.7.12
+	github.com/containerd/containerd v1.7.13
 	github.com/docker/docker v25.0.1+incompatible
 	github.com/google/uuid v1.6.0
 	github.com/kataras/iris/v12 v12.2.10
