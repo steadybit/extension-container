@@ -43,8 +43,7 @@ func NewContainerDiscovery(client types.Client) discovery_kit_sdk.TargetDiscover
 
 func (d *containerDiscovery) Describe() discovery_kit_api.DiscoveryDescription {
 	return discovery_kit_api.DiscoveryDescription{
-		Id:         targetID,
-		RestrictTo: extutil.Ptr(discovery_kit_api.LEADER),
+		Id: targetID,
 		Discover: discovery_kit_api.DescribingEndpointReferenceWithCallInterval{
 			CallInterval: extutil.Ptr(config.Config.DiscoveryCallInterval),
 		},
