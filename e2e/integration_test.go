@@ -820,7 +820,7 @@ func testStressMemory(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 				Duration      int  `json:"duration"`
 				Percentage    int  `json:"percentage"`
 				FailOnOomKill bool `json:"failOnOomKill"`
-			}{Duration: 10000, Percentage: 10, FailOnOomKill: tt.failOnOomKill}
+			}{Duration: 10000, Percentage: 1, FailOnOomKill: tt.failOnOomKill}
 
 			action, err := e.RunAction(fmt.Sprintf("%s.stress_mem", extcontainer.BaseActionID), target, config, executionContext)
 			defer func() { _ = action.Cancel() }()
