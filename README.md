@@ -61,7 +61,7 @@ helm upgrade steadybit-extension-container \
 ### Using Docker
 
 This extension is by default deployed using
-our [outpost.sh docker compose script](https://docs.steadybit.com/install-and-configure/install-outpost-agent-preview/install-as-docker-container).
+our [agent.sh docker compose script](https://docs.steadybit.com/install-and-configure/install-agent/install-as-docker-container).
 
 Or you can run it manually:
 
@@ -80,7 +80,7 @@ docker run \
 
 ### Linux Package
 
-Please use our [outpost-linux.sh script](https://docs.steadybit.com/install-and-configure/install-outpost-agent-preview/install-on-linux-hosts) to install the
+Please use our [agent-linux.sh script](https://docs.steadybit.com/install-and-configure/install-agent/install-on-linux-hosts) to install the
 extension on your Linux machine.
 The script will download the latest version of the extension and install it using the package manager.
 
