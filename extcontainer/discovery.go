@@ -165,6 +165,10 @@ func ignoreContainer(container types.Container) bool {
 		return true
 	}
 
+	if label := container.Labels()["steadybit.com/discovery-disabled"]; label == "true" {
+		return true
+	}
+
 	if label := container.Labels()["com.steadybit.agent"]; label == "true" {
 		return true
 	}
