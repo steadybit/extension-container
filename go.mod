@@ -9,7 +9,7 @@ require (
 	github.com/kataras/iris/v12 v12.2.10
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/novln/docker-parser v1.0.0
-	github.com/opencontainers/runtime-spec v1.1.0
+	github.com/opencontainers/runtime-spec v1.2.0
 	github.com/rs/zerolog v1.32.0
 	github.com/steadybit/action-kit/go/action_kit_api/v2 v2.9.0
 	github.com/steadybit/action-kit/go/action_kit_commons v1.1.4
