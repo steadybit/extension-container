@@ -82,6 +82,10 @@ func TestWithMinikube(t *testing.T) {
 			Test: testStressIo,
 		},
 		{
+			Name: "stress combine cpu and memory on same container",
+			Test: testStressCombined,
+		},
+		{
 			Name: "network blackhole",
 			Test: testNetworkBlackhole,
 		},
@@ -820,7 +824,7 @@ func testStressMemory(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 				Duration      int  `json:"duration"`
 				Percentage    int  `json:"percentage"`
 				FailOnOomKill bool `json:"failOnOomKill"`
-			}{Duration: 10000, Percentage: 10, FailOnOomKill: tt.failOnOomKill}
+			}{Duration: 10000, Percentage: 1, FailOnOomKill: tt.failOnOomKill}
 
 			action, err := e.RunAction(fmt.Sprintf("%s.stress_mem", extcontainer.BaseActionID), target, config, executionContext)
 			defer func() { _ = action.Cancel() }()
@@ -1287,6 +1291,49 @@ func testNetworkDelayOnTwoContainers(t *testing.T, m *e2e.Minikube, e *e2e.Exten
 	action2, err2 := e.RunAction(fmt.Sprintf("%s.network_delay", extcontainer.BaseActionID), target2, config, executionContext)
 	defer func() { _ = action2.Cancel() }()
 	require.NoError(t, err2)
+
+	requireAllSidecarsCleanedUp(t, m, e)
+}
+
+func testStressCombined(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
+	nginx := e2e.Nginx{Minikube: m}
+	err := nginx.Deploy("nginx-stress-combined", func(p *acorev1.PodApplyConfiguration) {
+		p.Spec.Containers[0].Resources = &acorev1.ResourceRequirementsApplyConfiguration{
+			Limits: &corev1.ResourceList{
+				"memory": resource.MustParse("50Mi"),
+			},
+		}
+	})
+	require.NoError(t, err, "failed to create pod")
+	defer func() { _ = nginx.Delete() }()
+
+	target, err := nginx.Target()
+	require.NoError(t, err)
+
+	memConfig := struct {
+		Duration      int  `json:"duration"`
+		Percentage    int  `json:"percentage"`
+		FailOnOomKill bool `json:"failOnOomKill"`
+	}{Duration: 10_000, Percentage: 1}
+	memAction, err := e.RunAction(fmt.Sprintf("%s.stress_mem", extcontainer.BaseActionID), target, memConfig, executionContext)
+	defer func() { _ = memAction.Cancel() }()
+	require.NoError(t, err)
+
+	cpuConfig := struct {
+		Duration int `json:"duration"`
+		CpuLoad  int `json:"cpuLoad"`
+		Workers  int `json:"workers"`
+	}{Duration: 10_000, Workers: 1, CpuLoad: 10}
+	cpuAction, err := e.RunAction(fmt.Sprintf("%s.stress_cpu", extcontainer.BaseActionID), target, cpuConfig, executionContext)
+	defer func() { _ = cpuAction.Cancel() }()
+	require.NoError(t, err)
+
+	e2e.AssertProcessRunningInContainer(t, m, nginx.Pod, "nginx", "stress-ng", false)
+
+	require.NoError(t, memAction.Wait())
+	require.NoError(t, cpuAction.Wait())
+
+	e2e.AssertProcessNOTRunningInContainer(t, m, nginx.Pod, "nginx", "stress-ng")
 
 	requireAllSidecarsCleanedUp(t, m, e)
 }
