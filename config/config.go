@@ -14,7 +14,7 @@ type Specification struct {
 	ContainerdNamespace         string   `json:"containerdNamespace" split_words:"true" required:"true" default:"k8s.io"`
 	DisableDiscoveryExcludes    bool     `required:"false" split_words:"true" default:"false"`
 	DiscoveryCallInterval       string   `json:"discoveryCallInterval" split_words:"true" required:"false" default:"15s"`
-	DiscoveryAttributesExcludes []string `json:"discoveryAttributesExcludes" split_words:"true" required:"false"`
+	DiscoveryAttributesExcludes []string `json:"discoveryAttributesExcludes" split_words:"true" required:"false" default:"container.label.io.buildpacks.lifecycle.metadata,container.label.io.buildpacks.build.metadata"`
 	Port                        uint16   `json:"port" split_words:"true" required:"false" default:"8086"`
 	HealthPort                  uint16   `json:"healthPort" split_words:"true" required:"false" default:"8082"`
 }
