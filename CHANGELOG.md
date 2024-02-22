@@ -1,5 +1,10 @@
 # Changelog
 
+## next
+
+- by default ignore labels for buildpack build and lifecycle metadata
+- update depencendies
+
 ## v1.3.6
 
 - update depencendies
