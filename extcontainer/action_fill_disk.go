@@ -39,7 +39,7 @@ var _ action_kit_sdk.ActionWithStop[FillDiskActionState] = (*fillDiskAction)(nil
 
 func NewFillDiskContainerAction(r runc.Runc) action_kit_sdk.Action[FillDiskActionState] {
 	return &fillDiskAction{
-		runc:   r,
+		runc: r,
 	}
 }
 
@@ -195,9 +195,9 @@ func (a *fillDiskAction) Prepare(ctx context.Context, state *FillDiskActionState
 		return nil, err
 	}
 
-	processInfo, err := getProcessInforForContainer(ctx, a.runc, RemovePrefix(state.ContainerID))
+	processInfo, err := getProcessInfoForContainer(ctx, a.runc, RemovePrefix(state.ContainerID))
 	if err != nil {
-		return nil, extension_kit.ToError("Failed to prepare fill disk settings.", err)
+		return nil, extension_kit.ToError("Failed to read container infos.", err)
 	}
 
 	state.Sidecar = diskfill.SidecarOpts{

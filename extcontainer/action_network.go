@@ -111,9 +111,9 @@ func (a *networkAction) Prepare(ctx context.Context, state *NetworkActionState, 
 	}
 	state.ContainerID = containerId[0]
 
-	processInfo, err := getProcessInforForContainer(ctx, a.runc, RemovePrefix(state.ContainerID))
+	processInfo, err := getProcessInfoForContainer(ctx, a.runc, RemovePrefix(state.ContainerID))
 	if err != nil {
-		return nil, extension_kit.ToError("Failed to prepare network settings.", err)
+		return nil, extension_kit.ToError("Failed to read container infos.", err)
 	}
 
 	state.Sidecar = network.SidecarOpts{

@@ -72,8 +72,8 @@ func getRestrictedEndpoints(request action_kit_api.PrepareActionRequestBody) []a
 	return restrictedEndpoints
 }
 
-func getProcessInforForContainer(ctx context.Context, r runc.Runc, containerId string) (runc.LinuxProcessInfo, error) {
-	defer trace.StartRegion(ctx, "network.getProcessInforForContainer").End()
+func getProcessInfoForContainer(ctx context.Context, r runc.Runc, containerId string) (runc.LinuxProcessInfo, error) {
+	defer trace.StartRegion(ctx, "network.getProcessInfoForContainer").End()
 
 	state, err := r.State(ctx, containerId)
 	if err != nil {
