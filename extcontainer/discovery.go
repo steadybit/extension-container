@@ -127,8 +127,8 @@ func (d *containerDiscovery) DescribeAttributes() []discovery_kit_api.AttributeD
 }
 
 func (d *containerDiscovery) DiscoverTargets(ctx context.Context) ([]discovery_kit_api.Target, error) {
-	log.Info().Msg("Memory usage before DiscoverTargets")
-	PrintMemUsage()
+	//log.Info().Msg("Memory usage before DiscoverTargets")
+	//PrintMemUsage()
 	containers, err := d.client.List(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list containers: %w", err)
@@ -146,8 +146,8 @@ func (d *containerDiscovery) DiscoverTargets(ctx context.Context) ([]discovery_k
 		targets = append(targets, d.mapTarget(container, hostname, version))
 	}
 	result := discovery_kit_commons.ApplyAttributeExcludes(targets, config.Config.DiscoveryAttributesExcludes)
-	log.Info().Msg("Memory usage after DiscoverTargets")
-	PrintMemUsage()
+	//log.Info().Msg("Memory usage after DiscoverTargets")
+	//PrintMemUsage()
 	return result, nil
 
 }
