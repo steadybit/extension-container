@@ -4,6 +4,7 @@
 
 - by default ignore labels for buildpack build and lifecycle metadata
 - update depencendies
+- Automatically set the `GOMEMLIMIT` (90% of cgroup limit) and `GOMAXPROCS`
 
 ## v1.3.6
 
