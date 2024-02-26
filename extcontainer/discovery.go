@@ -7,7 +7,6 @@ import (
 	"context"
 	"fmt"
 	dockerparser "github.com/novln/docker-parser"
-	"github.com/rs/zerolog/log"
 	"github.com/steadybit/discovery-kit/go/discovery_kit_api"
 	"github.com/steadybit/discovery-kit/go/discovery_kit_commons"
 	"github.com/steadybit/discovery-kit/go/discovery_kit_sdk"
@@ -16,7 +15,6 @@ import (
 	"github.com/steadybit/extension-kit/extbuild"
 	"github.com/steadybit/extension-kit/extutil"
 	"os"
-	"runtime"
 	"strings"
 	"time"
 )
@@ -127,8 +125,6 @@ func (d *containerDiscovery) DescribeAttributes() []discovery_kit_api.AttributeD
 }
 
 func (d *containerDiscovery) DiscoverTargets(ctx context.Context) ([]discovery_kit_api.Target, error) {
-	//log.Info().Msg("Memory usage before DiscoverTargets")
-	//PrintMemUsage()
 	containers, err := d.client.List(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list containers: %w", err)
@@ -146,19 +142,8 @@ func (d *containerDiscovery) DiscoverTargets(ctx context.Context) ([]discovery_k
 		targets = append(targets, d.mapTarget(container, hostname, version))
 	}
 	result := discovery_kit_commons.ApplyAttributeExcludes(targets, config.Config.DiscoveryAttributesExcludes)
-	//log.Info().Msg("Memory usage after DiscoverTargets")
-	//PrintMemUsage()
 	return result, nil
 
-}
-
-func PrintMemUsage() {
-	var m runtime.MemStats
-	runtime.ReadMemStats(&m)
-	log.Info().Msgf("\tAlloc = %v MiB", m.Alloc / 1024 / 1024)
-	log.Info().Msgf("\tTotalAlloc = %v MiB", m.TotalAlloc / 1024 / 1024)
-	log.Info().Msgf("\tSys = %v MiB", m.Sys / 1024 / 1024)
-	log.Info().Msgf("\tNumGC = %v\n", m.NumGC)
 }
 
 func ignoreContainer(container types.Container) bool {
