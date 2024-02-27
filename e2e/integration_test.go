@@ -122,6 +122,10 @@ func TestWithMinikube(t *testing.T) {
 			Test: testNetworkDelayOnTwoContainers,
 		},
 		{
+			Name: "network delay and bandwidth on the same container should error",
+			Test: testNetworkDelayAndBandwidthOnSameContainer,
+		},
+		{
 			Name: "fill disk",
 			Test: testFillDisk,
 		},
@@ -1291,6 +1295,44 @@ func testNetworkDelayOnTwoContainers(t *testing.T, m *e2e.Minikube, e *e2e.Exten
 	action2, err2 := e.RunAction(fmt.Sprintf("%s.network_delay", extcontainer.BaseActionID), target2, config, executionContext)
 	defer func() { _ = action2.Cancel() }()
 	require.NoError(t, err2)
+
+	requireAllSidecarsCleanedUp(t, m, e)
+}
+
+func testNetworkDelayAndBandwidthOnSameContainer(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
+	if m.Runtime == "cri-o" && m.Driver == "docker" {
+		t.Skip("Due to https://github.com/kubernetes/minikube/issues/16371 this test is skipped for cri-o")
+	}
+
+	nginx := e2e.Nginx{Minikube: m}
+	err := nginx.Deploy("nginx")
+	require.NoError(t, err, "failed to create pod")
+	defer func() { _ = nginx.Delete() }()
+
+	target, err := nginx.Target()
+	require.NoError(t, err)
+
+	configDelay := struct {
+		Duration int `json:"duration"`
+		Delay    int `json:"networkDelay"`
+	}{
+		Duration: 10000,
+		Delay:    200,
+	}
+	actionDelay, err := e.RunAction(fmt.Sprintf("%s.network_delay", extcontainer.BaseActionID), target, configDelay, executionContext)
+	defer func() { _ = actionDelay.Cancel() }()
+	require.NoError(t, err)
+
+	configLimit := struct {
+		Duration  int    `json:"duration"`
+		Bandwidth string `json:"bandwidth"`
+	}{
+		Duration:  10000,
+		Bandwidth: "200mbit",
+	}
+	actionLimit, err2 := e.RunAction(fmt.Sprintf("%s.network_bandwidth", extcontainer.BaseActionID), target, configLimit, executionContext)
+	defer func() { _ = actionLimit.Cancel() }()
+	require.ErrorContains(t, err2, "running multiple tc configs at the same time on the same namespace is not supported")
 
 	requireAllSidecarsCleanedUp(t, m, e)
 }
