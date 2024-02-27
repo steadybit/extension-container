@@ -141,9 +141,7 @@ func (d *containerDiscovery) DiscoverTargets(ctx context.Context) ([]discovery_k
 
 		targets = append(targets, d.mapTarget(container, hostname, version))
 	}
-	result := discovery_kit_commons.ApplyAttributeExcludes(targets, config.Config.DiscoveryAttributesExcludes)
-	return result, nil
-
+	return discovery_kit_commons.ApplyAttributeExcludes(targets, config.Config.DiscoveryAttributesExcludes), nil
 }
 
 func ignoreContainer(container types.Container) bool {

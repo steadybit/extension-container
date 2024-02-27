@@ -197,7 +197,7 @@ func (a *fillDiskAction) Prepare(ctx context.Context, state *FillDiskActionState
 
 	processInfo, err := getProcessInfoForContainer(ctx, a.runc, RemovePrefix(state.ContainerID))
 	if err != nil {
-		return nil, extension_kit.ToError("Failed to read container infos.", err)
+		return nil, extension_kit.ToError("Failed to prepare fill disk settings.", err)
 	}
 
 	state.Sidecar = diskfill.SidecarOpts{
