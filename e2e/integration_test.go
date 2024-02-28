@@ -1332,7 +1332,7 @@ func testNetworkDelayAndBandwidthOnSameContainer(t *testing.T, m *e2e.Minikube, 
 	}
 	actionLimit, err2 := e.RunAction(fmt.Sprintf("%s.network_bandwidth", extcontainer.BaseActionID), target, configLimit, executionContext)
 	defer func() { _ = actionLimit.Cancel() }()
-	require.ErrorContains(t, err2, "running multiple tc configs at the same time on the same namespace is not supported")
+	require.ErrorContains(t, err2, "running multiple network attacks at the same time on the same network namespace is not supported")
 
 	requireAllSidecarsCleanedUp(t, m, e)
 }

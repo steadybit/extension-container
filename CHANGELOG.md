@@ -1,6 +1,6 @@
 # Changelog
 
-## next
+## 1.3.8
 
 - Automatically set the `GOMEMLIMIT` (90% of cgroup limit) and `GOMAXPROCS`
 - Disallow running mutliple tc configs on the same container
