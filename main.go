@@ -24,7 +24,7 @@ import (
 	_ "go.uber.org/automaxprocs" // Importing automaxprocs automatically adjusts GOMAXPROCS.
 	// You can find more details of its behavior from the doc comment of memlimit.SetGoMemLimitWithEnv.
 	_ "github.com/KimMachineGun/automemlimit" // By default, it sets `GOMEMLIMIT` to 90% of cgroup's memory limit.
-	_ "net/http/pprof"           //allow pprof
+	_ "net/http/pprof"                        //allow pprof
 )
 
 func main() {
