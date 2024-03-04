@@ -2,8 +2,6 @@ module github.com/steadybit/extension-container
 
 go 1.21.0
 
-toolchain go1.22.0
-
 require (
 	github.com/KimMachineGun/automemlimit v0.5.0
 	github.com/containerd/containerd v1.7.13
@@ -120,8 +118,8 @@ require (
 	golang.org/x/time v0.5.0 // indirect
 	golang.org/x/tools v0.18.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
-	google.golang.org/genproto v0.0.0-20240228224816-df926f6c8641 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20240228224816-df926f6c8641 // indirect
+	google.golang.org/genproto v0.0.0-20240304161311-37d4d3c04a78 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20240304161311-37d4d3c04a78 // indirect
 	google.golang.org/protobuf v1.32.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
