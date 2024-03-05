@@ -61,6 +61,9 @@ func (a *pauseAction) Describe() action_kit_api.ActionDescription {
 				Order:        extutil.Ptr(0),
 			},
 		},
+		Status: extutil.Ptr(action_kit_api.MutatingEndpointReferenceWithCallInterval{
+			CallInterval: extutil.Ptr("5s"),
+		}),
 		Stop: extutil.Ptr(action_kit_api.MutatingEndpointReference{}),
 	}
 }
@@ -87,6 +90,22 @@ func (a *pauseAction) Start(ctx context.Context, state *PauseActionState) (*acti
 				Message: fmt.Sprintf("Pausing container %s", state.ContainerId),
 			},
 		}),
+	}, nil
+}
+
+func (a *pauseAction) Status(ctx context.Context, state *PauseActionState) (*action_kit_api.StatusResult, error) {
+	_, err := a.client.GetPid(ctx, RemovePrefix(state.ContainerId))
+	if err != nil {
+		return &action_kit_api.StatusResult{
+			Completed: true,
+			Error: &action_kit_api.ActionKitError{
+				Status: extutil.Ptr(action_kit_api.Failed),
+				Title:  fmt.Sprintf("Container is not running anymore: %s", err.Error()),
+			},
+		}, nil
+	}
+	return &action_kit_api.StatusResult{
+		Completed: false,
 	}, nil
 }
 
