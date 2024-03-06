@@ -98,10 +98,12 @@ func (a *pauseAction) Status(ctx context.Context, state *PauseActionState) (*act
 	if err != nil {
 		return &action_kit_api.StatusResult{
 			Completed: true,
-			Error: &action_kit_api.ActionKitError{
-				Status: extutil.Ptr(action_kit_api.Failed),
-				Title:  fmt.Sprintf("Container is not running anymore: %s", err.Error()),
-			},
+			Messages: extutil.Ptr([]action_kit_api.Message{
+				{
+					Level:   extutil.Ptr(action_kit_api.Warn),
+					Message: fmt.Sprintf("Container %s is not running anymore", state.ContainerId),
+				},
+			}),
 		}, nil
 	}
 	return &action_kit_api.StatusResult{
