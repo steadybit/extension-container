@@ -19,7 +19,8 @@ type pauseAction struct {
 }
 
 type PauseActionState struct {
-	ContainerId string
+	ContainerId                string
+	containerNotRunningAnymore bool
 }
 
 // Make sure pauseAction implements all required interfaces
@@ -96,6 +97,7 @@ func (a *pauseAction) Start(ctx context.Context, state *PauseActionState) (*acti
 func (a *pauseAction) Status(ctx context.Context, state *PauseActionState) (*action_kit_api.StatusResult, error) {
 	_, err := a.client.GetPid(ctx, RemovePrefix(state.ContainerId))
 	if err != nil {
+		state.containerNotRunningAnymore = true
 		return &action_kit_api.StatusResult{
 			Completed: true,
 			Messages: extutil.Ptr([]action_kit_api.Message{
@@ -112,6 +114,10 @@ func (a *pauseAction) Status(ctx context.Context, state *PauseActionState) (*act
 }
 
 func (a *pauseAction) Stop(ctx context.Context, state *PauseActionState) (*action_kit_api.StopResult, error) {
+	if state.containerNotRunningAnymore {
+		return &action_kit_api.StopResult{}, nil
+	}
+	
 	err := a.client.Unpause(ctx, RemovePrefix(state.ContainerId))
 	if err != nil {
 		return nil, extension_kit.ToError("Failed to unpause container", err)
