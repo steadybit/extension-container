@@ -2,6 +2,7 @@
 
 ## 1.3.9
 
+- Update dependencies
 - Pause container: action will stop if container is restarted
 
 ## 1.3.8
