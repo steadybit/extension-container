@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.9
+
+- Pause container: action will stop if container is restarted
+
 ## 1.3.8
 
 - Update dependencies
