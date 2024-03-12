@@ -25,7 +25,7 @@ our [Reliability Hub](https://hub.steadybit.com/extension/com.steadybit.extensio
 
 The extension supports all environment variables provided by [steadybit/extension-kit](https://github.com/steadybit/extension-kit#environment-variables).
 
-When installed as linux package this configuration is done in the file `/etc/steadybit/extension-container`.
+When installed as linux package this configuration is in`/etc/steadybit/extension-container`.
 
 ## Needed capabilities
 
