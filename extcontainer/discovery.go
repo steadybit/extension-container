@@ -13,8 +13,8 @@ import (
 	"github.com/steadybit/extension-container/config"
 	"github.com/steadybit/extension-container/extcontainer/container/types"
 	"github.com/steadybit/extension-kit/extbuild"
+	"github.com/steadybit/extension-kit/extruntime"
 	"github.com/steadybit/extension-kit/extutil"
-	"os"
 	"strings"
 	"time"
 )
@@ -130,7 +130,7 @@ func (d *containerDiscovery) DiscoverTargets(ctx context.Context) ([]discovery_k
 		return nil, fmt.Errorf("failed to list containers: %w", err)
 	}
 
-	hostname, _ := os.Hostname()
+	hostname, fqdn, _ := extruntime.GetHostname()
 	version, _ := d.client.Version(ctx)
 
 	targets := make([]discovery_kit_api.Target, 0, len(containers))
@@ -139,7 +139,7 @@ func (d *containerDiscovery) DiscoverTargets(ctx context.Context) ([]discovery_k
 			continue
 		}
 
-		targets = append(targets, d.mapTarget(container, hostname, version))
+		targets = append(targets, d.mapTarget(container, hostname, fqdn, version))
 	}
 	return discovery_kit_commons.ApplyAttributeExcludes(targets, config.Config.DiscoveryAttributesExcludes), nil
 }
@@ -176,7 +176,7 @@ func ignoreContainer(container types.Container) bool {
 	return false
 }
 
-func (d *containerDiscovery) mapTarget(container types.Container, hostname string, version string) discovery_kit_api.Target {
+func (d *containerDiscovery) mapTarget(container types.Container, hostname, fqdn string, version string) discovery_kit_api.Target {
 	attributes := make(map[string][]string)
 
 	name := strings.TrimPrefix(container.Name(), "/")
@@ -184,6 +184,7 @@ func (d *containerDiscovery) mapTarget(container types.Container, hostname strin
 	if hostname != "" {
 		attributes["container.host"] = []string{hostname}
 		attributes["host.hostname"] = []string{hostname}
+		attributes["host.domainname"] = []string{fqdn}
 		attributes["container.host/name"] = []string{fmt.Sprintf("%s/%s", hostname, name)}
 	}
 	attributes["container.image"] = []string{container.ImageName()}
