@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3.11
+
+- Update dependencies
+- feat: add `host.domainname` attribute containing the host FQDN
+
 ## 1.3.10
 
 - Update dependencies
