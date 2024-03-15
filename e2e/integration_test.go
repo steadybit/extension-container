@@ -1191,6 +1191,9 @@ func testDiscovery(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	require.NoError(t, err)
 	assert.Equal(t, target.TargetType, "com.steadybit.extension_container.container")
 	assert.NotContains(t, target.Attributes, "container.label.maintainer")
+	assert.Equal(t, []string{m.Profile}, target.Attributes["host.hostname"])
+	assert.Equal(t, []string{m.Profile}, target.Attributes["host.domainname"])
+
 	targets, err := e.DiscoverTargets("com.steadybit.extension_container.container")
 	require.NoError(t, err)
 	for _, target := range targets {
