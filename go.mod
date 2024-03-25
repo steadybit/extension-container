@@ -5,7 +5,7 @@ go 1.21.0
 require (
 	github.com/KimMachineGun/automemlimit v0.5.0
 	github.com/containerd/containerd v1.7.14
-	github.com/docker/docker v25.0.4+incompatible
+	github.com/docker/docker v26.0.0+incompatible
 	github.com/google/uuid v1.6.0
 	github.com/kataras/iris/v12 v12.2.10
 	github.com/kelseyhightower/envconfig v1.4.0
@@ -80,6 +80,7 @@ require (
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
+	github.com/moby/docker-image-spec v1.3.1 // indirect
 	github.com/moby/locker v1.0.1 // indirect
 	github.com/moby/spdystream v0.2.0 // indirect
 	github.com/moby/sys/mountinfo v0.7.1 // indirect
