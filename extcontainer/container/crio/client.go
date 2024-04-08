@@ -39,7 +39,10 @@ func New(socket string) (types.Client, error) {
 }
 
 func newConnection(socket string) (*grpc.ClientConn, error) {
-	conn, err := grpc.NewClient(
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	conn, err := grpc.DialContext(ctx,
 		socket,
 		grpc.WithBlock(),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
