@@ -1,28 +1,28 @@
 # Changelog
 
-## 1.3.13
+## v1.3.13
 
 - Update dependencies
 
-## 1.3.12
+## v1.3.12
 
 - Update dependencies
 
-## 1.3.11
+## v1.3.11
 
 - Update dependencies
 - feat: add `host.domainname` attribute containing the host FQDN
 
-## 1.3.10
+## v1.3.10
 
 - Update dependencies
 
-## 1.3.9
+## v1.3.9
 
 - Update dependencies
 - Pause container: action will stop if container is restarted
 
-## 1.3.8
+## v1.3.8
 
 - Update dependencies
 - Automatically set the `GOMEMLIMIT` (90% of cgroup limit) and `GOMAXPROCS`
