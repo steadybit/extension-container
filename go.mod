@@ -5,7 +5,7 @@ go 1.21.0
 require (
 	github.com/KimMachineGun/automemlimit v0.5.0
 	github.com/containerd/containerd v1.7.15
-	github.com/docker/docker v26.0.1+incompatible
+	github.com/docker/docker v26.0.2+incompatible
 	github.com/google/uuid v1.6.0
 	github.com/kataras/iris/v12 v12.2.10
 	github.com/kelseyhightower/envconfig v1.4.0
