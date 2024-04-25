@@ -18,6 +18,7 @@ jobs:
   extension-ci:
     uses: steadybit/extension-kit/.github/workflows/reusable-extension-ci.yml@main
     with:
+      go_version: '1.22'
       runs_on: steadybit_runner_ubuntu_latest_4cores_16GB
       use_kvm: true
       run_make_prepare_audit: true
