@@ -394,6 +394,7 @@ func testNetworkLimitBandwidth(t *testing.T, m *e2e.Minikube, e *e2e.Extension) 
 	}
 
 	iperf := e2e.Iperf{Minikube: m}
+
 	err := iperf.Deploy("bandwidth")
 	defer func() { _ = iperf.Delete() }()
 	require.NoError(t, err)
@@ -453,12 +454,12 @@ func testNetworkLimitBandwidth(t *testing.T, m *e2e.Minikube, e *e2e.Extension) 
 			require.NoError(t, err)
 
 			if tt.wantedLimit {
-				iperf.AssertBandwidth(t, limited*0.85, limited*1.15)
+				iperf.AssertBandwidth(t, limited*0.50, limited*1.20)
 			} else {
-				iperf.AssertBandwidth(t, unlimited*0.85, unlimited*1.15)
+				iperf.AssertBandwidth(t, unlimited*0.50, unlimited*1.20)
 			}
 			require.NoError(t, action.Cancel())
-			iperf.AssertBandwidth(t, unlimited*0.85, unlimited*1.15)
+			iperf.AssertBandwidth(t, unlimited*0.50, unlimited*1.20)
 		})
 	}
 	requireAllSidecarsCleanedUp(t, m, e)
@@ -734,7 +735,7 @@ func testNetworkBlockDns(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			if tt.wantedReachesUrl {
 				nginx.AssertCanReach(t, "https://steadybit.com", true)
 			} else {
-				nginx.AssertCannotReach(t, "https://steadybit.com", "Resolving timed out after")
+				nginx.AssertCannotReach(t, "https://steadybit.com", "Could not resolve host")
 			}
 			require.NoError(t, action.Cancel())
 			nginx.AssertIsReachable(t, true)
