@@ -958,6 +958,7 @@ func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 		method         diskfill.Method
 		wantedFileSize func(m *e2e.Minikube) int
 		wantedDelta    int
+		wantedLog      *string
 	}
 	testCases := []testCase{
 		{
@@ -1041,6 +1042,18 @@ func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			},
 			wantedDelta: 512,
 		},
+		{
+			name:      "fill disk with noop because disk is already full (dd)",
+			mode:      diskfill.Percentage,
+			size:      0,
+			blockSize: 1,
+			method:    diskfill.OverTime,
+			wantedFileSize: func(_ *e2e.Minikube) int {
+				return 4 * 1024 // 4GB
+			},
+			wantedDelta: -1,
+			wantedLog:   extutil.Ptr("disk is already filled up to"),
+		},
 	}
 
 	for _, testCase := range testCases {
@@ -1058,10 +1071,18 @@ func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			defer func() { _ = action.Cancel() }()
 			require.NoError(t, err)
 
-			if testCase.method == diskfill.OverTime {
+			if testCase.method == diskfill.OverTime && testCase.wantedDelta != -1{
 				e2e.AssertProcessRunningInContainer(t, m, nginx.Pod, "nginx", "dd", true)
 			}
-			assertFileHasSize(t, m, nginx.Pod, "nginx", pathToFill+"/disk-fill", wantedFileSize, testCase.wantedDelta)
+
+			if testCase.wantedDelta != -1 {
+				assertFileHasSize(t, m, nginx.Pod, "nginx", pathToFill+"/disk-fill", wantedFileSize, testCase.wantedDelta)
+			}
+
+			if testCase.wantedLog != nil {
+				e2e.AssertLogContains(t, m, e.Pod, *testCase.wantedLog)
+			}
+
 			require.NoError(t, action.Cancel())
 
 			if testCase.method == diskfill.OverTime {
