@@ -54,7 +54,7 @@ helm upgrade steadybit-extension-container \
     --wait \
     --timeout 5m0s \
     --create-namespace \
-    --namespace steadybit-extension \
+    --namespace steadybit-agent \
     --set container.runtime=docker \
     steadybit-extension-container/steadybit-extension-container
 ```
