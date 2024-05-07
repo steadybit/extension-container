@@ -24,7 +24,6 @@ import (
 	acorev1 "k8s.io/client-go/applyconfigurations/core/v1"
 	"math"
 	"os"
-	"os/exec"
 	"strconv"
 	"strings"
 	"sync"
@@ -152,14 +151,6 @@ func getMinikubeOptions() e2e.MinikubeOpts {
 	}
 
 	mOpts := e2e.DefaultMinikubeOpts().WithRuntimes(runtimes...)
-
-	if exec.Command("kvm-ok").Run() != nil {
-		log.Info().Msg("KVM is not available, using docker driver")
-		mOpts = mOpts.WithDriver("docker")
-	} else {
-		log.Info().Msg("KVM is available, using kvm driver")
-		mOpts = mOpts.WithDriver("kvm2")
-	}
 
 	return mOpts
 }
@@ -1071,7 +1062,7 @@ func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			defer func() { _ = action.Cancel() }()
 			require.NoError(t, err)
 
-			if testCase.method == diskfill.OverTime && testCase.wantedDelta != -1{
+			if testCase.method == diskfill.OverTime && testCase.wantedDelta != -1 {
 				e2e.AssertProcessRunningInContainer(t, m, nginx.Pod, "nginx", "dd", true)
 			}
 
