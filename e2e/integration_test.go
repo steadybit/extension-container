@@ -725,7 +725,7 @@ func testNetworkBlockDns(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			if tt.wantedReachesUrl {
 				nginx.AssertCanReach(t, "https://steadybit.com", true)
 			} else {
-				nginx.AssertCannotReach(t, "https://steadybit.com", "Resolving timed out after")
+				nginx.AssertCannotReach(t, "https://steadybit.com", "Could not resolve host")
 			}
 			require.NoError(t, action.Cancel())
 			nginx.AssertIsReachable(t, true)
