@@ -161,6 +161,11 @@ func getMinikubeOptions() e2e.MinikubeOpts {
 		mOpts = mOpts.WithDriver("kvm2")
 	}
 
+	mOpts = mOpts.AfterStart(func(m *e2e.Minikube) error {
+		log.Info().Msg("remounting cgroup2 to allow cgroup2 attacks")
+		return m.SshExec("sudo", "mount", "-o", "remount,rw,nosuid,nodev,noexec,relatime", "-t", "cgroup2", "none", "/sys/fs/cgroup").Run()
+	})
+	
 	return mOpts
 }
 
