@@ -240,8 +240,8 @@ func (a *fillDiskAction) Start(ctx context.Context, state *FillDiskActionState) 
 			Level:   extutil.Ptr(action_kit_api.Info),
 			Message: "Noop mode is enabled. No disk will be filled, because the disk is already filled enough.",
 		})
-
 	}
+
 	return &action_kit_api.StartResult{
 		Messages: extutil.Ptr(messages),
 	}, nil
