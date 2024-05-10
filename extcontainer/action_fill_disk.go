@@ -228,13 +228,22 @@ func (a *fillDiskAction) Start(ctx context.Context, state *FillDiskActionState) 
 		return nil, extension_kit.ToError("Failed to  fill disk in container", err)
 	}
 
+	messages := []action_kit_api.Message{
+		{
+			Level:   extutil.Ptr(action_kit_api.Info),
+			Message: fmt.Sprintf("Starting fill disk in container %s with args %s", state.ContainerID, strings.Join(diskFill.Args(), " ")),
+		},
+	}
+	
+	if diskFill.Noop {
+		messages = append(messages, action_kit_api.Message{
+			Level:   extutil.Ptr(action_kit_api.Info),
+			Message: "Noop mode is enabled. No disk will be filled, because the disk is already filled enough.",
+		})
+
+	}
 	return &action_kit_api.StartResult{
-		Messages: extutil.Ptr([]action_kit_api.Message{
-			{
-				Level:   extutil.Ptr(action_kit_api.Info),
-				Message: fmt.Sprintf("Starting fill disk in container %s with args %s", state.ContainerID, strings.Join(diskFill.Args(), " ")),
-			},
-		}),
+		Messages: extutil.Ptr(messages),
 	}, nil
 }
 
