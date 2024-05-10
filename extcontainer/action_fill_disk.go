@@ -234,7 +234,7 @@ func (a *fillDiskAction) Start(ctx context.Context, state *FillDiskActionState) 
 			Message: fmt.Sprintf("Starting fill disk in container %s with args %s", state.ContainerID, strings.Join(diskFill.Args(), " ")),
 		},
 	}
-	
+
 	if diskFill.Noop {
 		messages = append(messages, action_kit_api.Message{
 			Level:   extutil.Ptr(action_kit_api.Info),
