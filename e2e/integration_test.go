@@ -165,7 +165,7 @@ func getMinikubeOptions() e2e.MinikubeOpts {
 		log.Info().Msg("remounting cgroup2 to allow cgroup2 attacks")
 		return m.SshExec("sudo", "mount", "-o", "remount,rw,nosuid,nodev,noexec,relatime", "-t", "cgroup2", "none", "/sys/fs/cgroup").Run()
 	})
-	
+
 	return mOpts
 }
 
@@ -739,7 +739,7 @@ func testNetworkBlockDns(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			if tt.wantedReachesUrl {
 				nginx.AssertCanReach(t, "https://steadybit.com", true)
 			} else {
-				nginx.AssertCannotReach(t, "https://steadybit.com", "Resolving timed out after")
+				nginx.AssertCannotReach(t, "https://steadybit.com", "Could not resolve host: steadybit.com")
 			}
 			require.NoError(t, action.Cancel())
 			nginx.AssertIsReachable(t, true)
