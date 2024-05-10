@@ -1371,7 +1371,7 @@ func testStressCombined(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	err := nginx.Deploy("nginx-stress-combined", func(p *acorev1.PodApplyConfiguration) {
 		p.Spec.Containers[0].Resources = &acorev1.ResourceRequirementsApplyConfiguration{
 			Limits: &corev1.ResourceList{
-				"memory": resource.MustParse("50Mi"),
+				"memory": resource.MustParse("100Mi"),
 			},
 		}
 	})
