@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.3.15 (next)
+
+- fail actions early when cgroup2 nsdelegation is causing problems
+
 ## v1.3.14
 
 - Update dependencies (go 1.22)

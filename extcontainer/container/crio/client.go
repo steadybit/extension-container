@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"github.com/steadybit/extension-container/extcontainer/container/types"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/credentials/insecure"
 	criapi "k8s.io/cri-api/pkg/apis/runtime/v1"
 	"net"
@@ -39,18 +40,24 @@ func New(socket string) (types.Client, error) {
 }
 
 func newConnection(socket string) (*grpc.ClientConn, error) {
+	conn, err := grpc.NewClient(
+		fmt.Sprintf("passthrough:///%s", socket),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithContextDialer(dialer),
+	)
+	if err != nil {
+		return nil, err
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	conn, err := grpc.DialContext(ctx,
-		socket,
-		grpc.WithBlock(),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.FailOnNonTempDialError(true),
-		grpc.WithContextDialer(dialer),
-		grpc.WithReturnConnectionError(),
-	)
-	return conn, err
+	conn.Connect()
+	if conn.WaitForStateChange(ctx, connectivity.Ready) {
+		return conn, nil
+	} else {
+		return nil, fmt.Errorf("connection failed: %s", conn.GetState())
+	}
 }
 
 func dialer(ctx context.Context, addr string) (net.Conn, error) {
