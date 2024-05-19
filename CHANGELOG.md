@@ -3,6 +3,7 @@
 ## v1.3.15 (next)
 
 - fail actions early when cgroup2 nsdelegation is causing problems
+- support cidrs filters for the network attacks
 
 ## v1.3.14
 

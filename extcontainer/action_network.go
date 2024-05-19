@@ -73,8 +73,8 @@ var commonNetworkParameters = []action_kit_api.ActionParameter{
 	},
 	{
 		Name:         "ip",
-		Label:        "IP Address",
-		Description:  extutil.Ptr("Restrict to/from which IP addresses the traffic is affected."),
+		Label:        "IP Address/CIDR",
+		Description:  extutil.Ptr("Restrict to/from which IP addresses or blocks the traffic is affected."),
 		Type:         action_kit_api.StringArray,
 		DefaultValue: extutil.Ptr(""),
 		Advanced:     extutil.Ptr(true),
@@ -237,22 +237,22 @@ func parsePortRanges(raw []string) ([]network.PortRange, error) {
 	return ranges, nil
 }
 
-func mapToNetworkFilter(ctx context.Context, r runc.Runc, sidecat network.SidecarOpts, actionConfig map[string]interface{}, restrictedEndpoints []action_kit_api.RestrictedEndpoint) (network.Filter, error) {
-	toResolve := append(
+func mapToNetworkFilter(ctx context.Context, r runc.Runc, sidecar network.SidecarOpts, actionConfig map[string]interface{}, restrictedEndpoints []action_kit_api.RestrictedEndpoint) (network.Filter, error) {
+	includeCidrs, unresolved := network.ParseCIDRs(append(
 		extutil.ToStringArray(actionConfig["ip"]),
 		extutil.ToStringArray(actionConfig["hostname"])...,
-	)
+	))
 
-	dig := network.HostnameResolver{Dig: &network.RuncDigRunner{Runc: r, Sidecar: sidecat}}
-	includeIps, err := dig.Resolve(ctx, toResolve...)
+	dig := network.HostnameResolver{Dig: &network.RuncDigRunner{Runc: r, Sidecar: sidecar}}
+	resolved, err := dig.Resolve(ctx, unresolved...)
 	if err != nil {
 		return network.Filter{}, err
 	}
+	includeCidrs = append(includeCidrs, network.IpsToNets(resolved)...)
 
 	//if no hostname/ip specified we affect all ips
-	includeCidrs := network.NetAny
-	if len(includeIps) > 0 {
-		includeCidrs = network.IpToNet(includeIps)
+	if len(includeCidrs) == 0 {
+		includeCidrs = network.NetAny
 	}
 
 	portRanges, err := parsePortRanges(extutil.ToStringArray(actionConfig["port"]))
@@ -279,7 +279,7 @@ func mapToNetworkFilter(ctx context.Context, r runc.Runc, sidecat network.Sideca
 	ownIps := network.GetOwnIPs()
 	ownPort := config.Config.Port
 	ownHealthPort := config.Config.HealthPort
-	nets := network.IpToNet(ownIps)
+	nets := network.IpsToNets(ownIps)
 
 	log.Debug().Msgf("Adding own ip %s to exclude list (Ports %d and %d)", ownIps, ownPort, ownHealthPort)
 	excludes = append(excludes, network.NewNetWithPortRanges(nets, network.PortRange{From: ownPort, To: ownPort})...)
