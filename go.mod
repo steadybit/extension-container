@@ -5,9 +5,9 @@ go 1.22.0
 toolchain go1.22.2
 
 require (
-	github.com/KimMachineGun/automemlimit v0.6.0
-	github.com/containerd/containerd v1.7.16
-	github.com/docker/docker v26.1.2+incompatible
+	github.com/KimMachineGun/automemlimit v0.6.1
+	github.com/containerd/containerd v1.7.17
+	github.com/docker/docker v26.1.3+incompatible
 	github.com/google/uuid v1.6.0
 	github.com/kataras/iris/v12 v12.2.11
 	github.com/kelseyhightower/envconfig v1.4.0
@@ -15,7 +15,7 @@ require (
 	github.com/opencontainers/runtime-spec v1.2.0
 	github.com/rs/zerolog v1.32.0
 	github.com/steadybit/action-kit/go/action_kit_api/v2 v2.9.0
-	github.com/steadybit/action-kit/go/action_kit_commons v1.1.12
+	github.com/steadybit/action-kit/go/action_kit_commons v1.2.0
 	github.com/steadybit/action-kit/go/action_kit_sdk v1.1.9
 	github.com/steadybit/action-kit/go/action_kit_test v1.2.14
 	github.com/steadybit/discovery-kit/go/discovery_kit_api v1.5.2
@@ -122,8 +122,8 @@ require (
 	golang.org/x/text v0.15.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
-	google.golang.org/genproto v0.0.0-20240513163218-0867130af1f8 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20240513163218-0867130af1f8 // indirect
+	google.golang.org/genproto v0.0.0-20240515191416-fc5f0ca64291 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20240515191416-fc5f0ca64291 // indirect
 	google.golang.org/protobuf v1.34.1 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect

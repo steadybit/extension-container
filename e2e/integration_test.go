@@ -1,3 +1,7 @@
+/*
+ * Copyright 2024 steadybit GmbH. All rights reserved.
+ */
+
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2023 Steadybit GmbH
 
@@ -23,6 +27,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	acorev1 "k8s.io/client-go/applyconfigurations/core/v1"
 	"math"
+	"net"
 	"os"
 	"os/exec"
 	"strconv"
@@ -37,6 +42,7 @@ var (
 		AgentAwsAccountId:   nil,
 		RestrictedEndpoints: extutil.Ptr([]action_kit_api.RestrictedEndpoint{}),
 	}
+	steadybitCIDRs = getCIDRsFor("steadybit.com", 16)
 )
 
 func TestWithMinikube(t *testing.T) {
@@ -204,6 +210,16 @@ func testNetworkDelay(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			name:        "should delay only port 80 traffic",
 			port:        []string{"80"},
 			wantedDelay: false,
+		},
+		{
+			name:        "should delay only traffic for netperf",
+			ip:          []string{netperf.ServerIp},
+			wantedDelay: true,
+		},
+		{
+			name:        "should delay only traffic for netperf using cidr",
+			ip:          []string{netperf.ServerIp + "/32"},
+			wantedDelay: true,
 		},
 	}
 
@@ -511,6 +527,12 @@ func testNetworkBlackhole(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 		{
 			name:             "should blackhole only traffic for steadybit.com",
 			hostname:         []string{"steadybit.com"},
+			wantedReachable:  true,
+			wantedReachesUrl: false,
+		},
+		{
+			name:             "should blackhole only traffic for steadybit.com using CIDRs",
+			ip:               steadybitCIDRs,
 			wantedReachable:  true,
 			wantedReachesUrl: false,
 		},
@@ -1448,4 +1470,13 @@ func assertFileHasSize(t *testing.T, m *e2e.Minikube, pod metav1.Object, contain
 			}
 		}
 	}
+}
+
+func getCIDRsFor(s string, maskLen int) (cidrs []string) {
+	ips, _ := net.LookupIP(s)
+	for _, p := range ips {
+		cidr := net.IPNet{IP: p.To4(), Mask: net.CIDRMask(maskLen, 32)}
+		cidrs = append(cidrs, cidr.String())
+	}
+	return
 }
