@@ -113,3 +113,12 @@ The needed binaries are included in the extension container image.
 ### mark resources as "do not discover"
 
 to exclude container from discovery you can add the label `LABEL "steadybit.com.discovery-disabled"="true"` to the container Dockerfile.
+
+## Troubleshooting
+
+When the host is using cgorups v2 and the cgroup filesystem is mounted using the `nsdelegate` option will prevent that the action running processces in other cgroups (e.g. stress cpu/memory, disk fill) will fail.
+In that case you need to remount the cgroup filesystem without the `nsdelegate` option.
+
+```sh
+sudo mount -o remount,rw,nosuid,nodev,noexec,relatime -t cgroup2 none /sys/fs/cgroup
+```
