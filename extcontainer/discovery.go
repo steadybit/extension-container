@@ -69,7 +69,7 @@ func (d *containerDiscovery) DescribeTarget() discovery_kit_api.TargetDescriptio
 				{Attribute: "k8s.pod.name"},
 				{Attribute: "k8s.namespace"},
 				{Attribute: "host.hostname"},
-				{Attribute: "aws.zone", FallbackAttributes: &[]string{"google.zone", "azure.region", "azure.zone"}},
+				{Attribute: "aws.zone", FallbackAttributes: &[]string{"google.zone", "azure.zone"}},
 			},
 			OrderBy: []discovery_kit_api.OrderBy{
 				{Attribute: "k8s.container.name", Direction: discovery_kit_api.ASC},
