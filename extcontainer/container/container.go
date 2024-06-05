@@ -6,6 +6,7 @@ package container
 import (
 	"context"
 	"fmt"
+	"github.com/rs/zerolog/log"
 	"github.com/steadybit/extension-container/config"
 	"github.com/steadybit/extension-container/extcontainer/container/containerd"
 	"github.com/steadybit/extension-container/extcontainer/container/crio"
@@ -54,7 +55,12 @@ func NewClient() (types.Client, error) {
 }
 
 func RegisterLivenessCheck(client types.Client) chan struct{} {
-	ticker := time.NewTicker(30 * time.Second)
+	duration, err := time.ParseDuration(config.Config.LivenessCheckInterval)
+	if err != nil {
+		duration = 30 * time.Second
+		log.Error().Err(err).Msgf("Failed to parse liveness check interval, using default: %s", duration)
+	}
+	ticker := time.NewTicker(duration)
 	quit := make(chan struct{})
 	go func() {
 		for {
