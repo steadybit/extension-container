@@ -4,13 +4,16 @@
 package container
 
 import (
+	"context"
 	"fmt"
 	"github.com/steadybit/extension-container/config"
 	"github.com/steadybit/extension-container/extcontainer/container/containerd"
 	"github.com/steadybit/extension-container/extcontainer/container/crio"
 	"github.com/steadybit/extension-container/extcontainer/container/docker"
 	"github.com/steadybit/extension-container/extcontainer/container/types"
+	"github.com/steadybit/extension-kit/exthealth"
 	"os"
+	"time"
 )
 
 func AutoDetect() (runtime types.Runtime) {
@@ -48,4 +51,22 @@ func NewClient() (types.Client, error) {
 	default:
 		return nil, fmt.Errorf("unsupported container runtime: %s", runtime)
 	}
+}
+
+func RegisterLivenessCheck(client types.Client) chan struct{} {
+	ticker := time.NewTicker(30 * time.Second)
+	quit := make(chan struct{})
+	go func() {
+		for {
+			select {
+			case <- ticker.C:
+				_, err := client.Version(context.Background())
+				exthealth.SetAlive(err==nil)
+			case <- quit:
+				ticker.Stop()
+				return
+			}
+		}
+	}()
+	return quit
 }

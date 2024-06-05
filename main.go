@@ -45,6 +45,10 @@ func main() {
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to create container engine client.")
 	}
+
+	stopCheck := container.RegisterLivenessCheck(client)
+	defer close(stopCheck)
+
 	defer func(client types.Client) {
 		err := client.Close()
 		if err != nil {
