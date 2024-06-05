@@ -55,6 +55,11 @@ func NewClient() (types.Client, error) {
 }
 
 func RegisterLivenessCheck(client types.Client) chan struct{} {
+	if config.Config.LivenessCheckInterval == ""  || config.Config.LivenessCheckInterval == "0"{
+		log.Info().Msg("Liveness check is disabled.")
+		return nil
+	}
+
 	duration, err := time.ParseDuration(config.Config.LivenessCheckInterval)
 	if err != nil {
 		duration = 30 * time.Second
