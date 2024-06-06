@@ -17,6 +17,7 @@ type Specification struct {
 	DiscoveryAttributesExcludes []string `json:"discoveryAttributesExcludes" split_words:"true" required:"false" default:"container.label.io.buildpacks.lifecycle.metadata,container.label.io.buildpacks.build.metadata"`
 	Port                        uint16   `json:"port" split_words:"true" required:"false" default:"8086"`
 	HealthPort                  uint16   `json:"healthPort" split_words:"true" required:"false" default:"8082"`
+	LivenessCheckInterval       string   `json:"livenessProbeInterval" split_words:"true" required:"false" default:"30s"` // 0 or empty string disables liveness check
 }
 
 var (

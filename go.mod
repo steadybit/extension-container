@@ -22,7 +22,7 @@ require (
 	github.com/steadybit/discovery-kit/go/discovery_kit_commons v0.1.0
 	github.com/steadybit/discovery-kit/go/discovery_kit_sdk v1.0.6
 	github.com/steadybit/discovery-kit/go/discovery_kit_test v1.1.2
-	github.com/steadybit/extension-kit v1.8.14
+	github.com/steadybit/extension-kit v1.8.15-0.20240605144904-1b6f62d9eba1
 	github.com/stretchr/testify v1.9.0
 	go.uber.org/automaxprocs v1.5.3
 	golang.org/x/sync v0.7.0

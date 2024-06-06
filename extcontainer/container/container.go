@@ -4,13 +4,17 @@
 package container
 
 import (
+	"context"
 	"fmt"
+	"github.com/rs/zerolog/log"
 	"github.com/steadybit/extension-container/config"
 	"github.com/steadybit/extension-container/extcontainer/container/containerd"
 	"github.com/steadybit/extension-container/extcontainer/container/crio"
 	"github.com/steadybit/extension-container/extcontainer/container/docker"
 	"github.com/steadybit/extension-container/extcontainer/container/types"
+	"github.com/steadybit/extension-kit/exthealth"
 	"os"
+	"time"
 )
 
 func AutoDetect() (runtime types.Runtime) {
@@ -48,4 +52,32 @@ func NewClient() (types.Client, error) {
 	default:
 		return nil, fmt.Errorf("unsupported container runtime: %s", runtime)
 	}
+}
+
+func RegisterLivenessCheck(client types.Client) chan struct{} {
+	if config.Config.LivenessCheckInterval == ""  || config.Config.LivenessCheckInterval == "0"{
+		log.Info().Msg("Liveness check is disabled.")
+		return nil
+	}
+
+	duration, err := time.ParseDuration(config.Config.LivenessCheckInterval)
+	if err != nil {
+		duration = 30 * time.Second
+		log.Error().Err(err).Msgf("Failed to parse liveness check interval, using default: %s", duration)
+	}
+	ticker := time.NewTicker(duration)
+	quit := make(chan struct{})
+	go func() {
+		for {
+			select {
+			case <- ticker.C:
+				_, err := client.Version(context.Background())
+				exthealth.SetAlive(err==nil)
+			case <- quit:
+				ticker.Stop()
+				return
+			}
+		}
+	}()
+	return quit
 }
