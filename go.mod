@@ -6,7 +6,7 @@ toolchain go1.22.2
 
 require (
 	github.com/KimMachineGun/automemlimit v0.6.1
-	github.com/containerd/containerd v1.7.17
+	github.com/containerd/containerd v1.7.18
 	github.com/docker/docker v26.1.3+incompatible
 	github.com/google/uuid v1.6.0
 	github.com/kataras/iris/v12 v12.2.11
