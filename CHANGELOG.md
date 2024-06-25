@@ -1,6 +1,6 @@
 # Changelog
 
-## v1.3.16 (next)
+## v1.3.16
 
 - fixed fallback attributes of AWS availability zones to not include Azure region
 
