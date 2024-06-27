@@ -5,7 +5,6 @@ package extcontainer
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
@@ -220,12 +219,6 @@ func (a *fillDiskAction) Start(ctx context.Context, state *FillDiskActionState) 
 	copiedOpts := state.FillDiskOpts
 	diskFill, err := diskfill.New(ctx, a.runc, state.Sidecar, copiedOpts)
 	if err != nil {
-		if errors.Is(err, runc.ErrCgroup2NsdelegateOptionUsed) {
-			return nil, extension_kit.ExtensionError{
-				Title:  "Failed to fill disk in container",
-				Detail: extutil.Ptr("The cgroup2 filesystem is using the nsdelegate option causing this action to fail.\nTo remount the filesystem without this option run\n\n$ mount -o remount,rw,nosuid,nodev,noexec,relatime -t cgroup2 none /sys/fs/cgroup"),
-			}
-		}
 		return nil, extension_kit.ToError("Failed to fill disk in container", err)
 	}
 
