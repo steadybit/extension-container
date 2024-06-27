@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.3.17
+
+- feat: remove the restriction on cgroup2 mounts using nsdelegate
+
 ## v1.3.16
 
 - fixed fallback attributes of AWS availability zones to not include Azure region
