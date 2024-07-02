@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.3.18
+
+- fix: Race condition in network attacks reporting attack for namespace still active, when it isn't
+
 ## v1.3.17
 
 - feat: remove the restriction on cgroup2 mounts using nsdelegate
