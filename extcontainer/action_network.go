@@ -19,6 +19,7 @@ import (
 	"github.com/steadybit/extension-kit/extutil"
 	"net"
 	"runtime/trace"
+	"strings"
 )
 
 type networkOptsProvider func(ctx context.Context, sidecar network.SidecarOpts, request action_kit_api.PrepareActionRequestBody) (network.Opts, error)
@@ -265,6 +266,9 @@ func mapToNetworkFilter(ctx context.Context, r runc.Runc, sidecar network.Sideca
 	}
 
 	includes := network.NewNetWithPortRanges(includeCidrs, portRanges...)
+	for _, i := range includes {
+		i.Comment = "parameters"
+	}
 	var excludes []network.NetWithPortRange
 
 	for _, restrictedEndpoint := range restrictedEndpoints {
@@ -273,7 +277,22 @@ func mapToNetworkFilter(ctx context.Context, r runc.Runc, sidecar network.Sideca
 		if err != nil {
 			return network.Filter{}, fmt.Errorf("invalid cidr %s: %w", restrictedEndpoint.Cidr, err)
 		}
-		excludes = append(excludes, network.NewNetWithPortRanges([]net.IPNet{*cidr}, network.PortRange{From: uint16(restrictedEndpoint.PortMin), To: uint16(restrictedEndpoint.PortMax)})...)
+		nwps := network.NewNetWithPortRanges([]net.IPNet{*cidr}, network.PortRange{From: uint16(restrictedEndpoint.PortMin), To: uint16(restrictedEndpoint.PortMax)})
+		for _, n := range nwps {
+			var sb strings.Builder
+			sb.WriteString("restricted-endpoint ")
+			if restrictedEndpoint.Name != "" {
+				sb.WriteString(restrictedEndpoint.Name)
+				sb.WriteString(" ")
+			}
+			if restrictedEndpoint.Url != "" {
+				sb.WriteString(restrictedEndpoint.Url)
+				sb.WriteString(" ")
+			}
+			n.Comment = sb.String()
+		}
+
+		excludes = append(excludes, nwps...)
 	}
 
 	ownIps := network.GetOwnIPs()
@@ -282,8 +301,18 @@ func mapToNetworkFilter(ctx context.Context, r runc.Runc, sidecar network.Sideca
 	nets := network.IpsToNets(ownIps)
 
 	log.Debug().Msgf("Adding own ip %s to exclude list (Ports %d and %d)", ownIps, ownPort, ownHealthPort)
-	excludes = append(excludes, network.NewNetWithPortRanges(nets, network.PortRange{From: ownPort, To: ownPort})...)
-	excludes = append(excludes, network.NewNetWithPortRanges(nets, network.PortRange{From: ownHealthPort, To: ownHealthPort})...)
+	excludePort := network.NewNetWithPortRanges(nets, network.PortRange{From: ownPort, To: ownPort})
+	for _, n := range excludePort {
+		n.Comment = "extension own-port"
+	}
+	excludes = append(excludes, excludePort...)
+	if ownHealthPort > 0 && ownHealthPort != ownPort {
+		excludeHealthPort := network.NewNetWithPortRanges(nets, network.PortRange{From: ownHealthPort, To: ownHealthPort})
+		for _, n := range excludePort {
+			n.Comment = "extension health-port"
+		}
+		excludes = append(excludes, excludeHealthPort...)
+	}
 
 	return network.Filter{
 		Include: includes,
