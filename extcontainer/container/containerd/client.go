@@ -7,7 +7,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/containerd/containerd"
-	"github.com/containerd/containerd/errdefs"
+	"github.com/containerd/errdefs"
 	"github.com/rs/zerolog/log"
 	"github.com/steadybit/extension-container/extcontainer/container/types"
 	"strings"
