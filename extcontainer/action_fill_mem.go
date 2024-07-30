@@ -96,9 +96,9 @@ func (a *fillMemoryAction) Describe() action_kit_api.ActionDescription {
 			{
 				Name:         "size",
 				Label:        "Size",
-				Description:  extutil.Ptr("Depending on the mode, specify the percentage or the number of Megabytes to fill."),
+				Description:  extutil.Ptr("Depending on the unit, specify the percentage or the number of Megabytes to fill."),
 				Type:         action_kit_api.Integer,
-				DefaultValue: extutil.Ptr("80"),
+				DefaultValue: extutil.Ptr("100"),
 				Required:     extutil.Ptr(true),
 				Order:        extutil.Ptr(3),
 			},
