@@ -15,11 +15,8 @@ import (
 	"github.com/steadybit/extension-kit/extbuild"
 	"github.com/steadybit/extension-kit/extutil"
 	"golang.org/x/sync/syncmap"
-	"runtime/trace"
 	"strings"
 )
-
-var ID = fmt.Sprintf("%s.fill_disk", BaseActionID)
 
 type fillDiskAction struct {
 	runc      runc.Runc
@@ -49,7 +46,7 @@ func (a *fillDiskAction) NewEmptyState() FillDiskActionState {
 
 func (a *fillDiskAction) Describe() action_kit_api.ActionDescription {
 	return action_kit_api.ActionDescription{
-		Id:          ID,
+		Id:          fmt.Sprintf("%s.fill_disk", BaseActionID),
 		Label:       "Fill Disk",
 		Description: "Fills the disk in the container for the given duration.",
 		Version:     extbuild.GetSemverVersionStringOrUnknown(),
@@ -179,11 +176,6 @@ func fillDiskOpts(request action_kit_api.PrepareActionRequestBody) (diskfill.Opt
 }
 
 func (a *fillDiskAction) Prepare(ctx context.Context, state *FillDiskActionState, request action_kit_api.PrepareActionRequestBody) (*action_kit_api.PrepareResult, error) {
-	ctx, task := trace.NewTask(ctx, "action_fill_disk.Prepare")
-	defer task.End()
-	trace.Log(ctx, "actionId", ID)
-	trace.Log(ctx, "executionId", state.ExecutionId.String())
-
 	containerId := request.Target.Attributes["container.id"]
 	if len(containerId) == 0 {
 		return nil, extension_kit.ToError("Target is missing the 'container.id' attribute.", nil)
@@ -211,11 +203,6 @@ func (a *fillDiskAction) Prepare(ctx context.Context, state *FillDiskActionState
 }
 
 func (a *fillDiskAction) Start(ctx context.Context, state *FillDiskActionState) (*action_kit_api.StartResult, error) {
-	ctx, task := trace.NewTask(ctx, "action_fill_disk.Start")
-	defer task.End()
-	trace.Log(ctx, "actionId", ID)
-	trace.Log(ctx, "executionId", state.ExecutionId.String())
-
 	copiedOpts := state.FillDiskOpts
 	diskFill, err := diskfill.New(ctx, a.runc, state.Sidecar, copiedOpts)
 	if err != nil {
@@ -225,7 +212,7 @@ func (a *fillDiskAction) Start(ctx context.Context, state *FillDiskActionState) 
 	a.diskfills.Store(state.ExecutionId, diskFill)
 
 	if err := diskFill.Start(); err != nil {
-		return nil, extension_kit.ToError("Failed to  fill disk in container", err)
+		return nil, extension_kit.ToError("Failed to fill disk in container", err)
 	}
 
 	messages := []action_kit_api.Message{
@@ -248,15 +235,9 @@ func (a *fillDiskAction) Start(ctx context.Context, state *FillDiskActionState) 
 }
 
 func (a *fillDiskAction) Stop(ctx context.Context, state *FillDiskActionState) (*action_kit_api.StopResult, error) {
-	ctx, task := trace.NewTask(ctx, "action_fill_disk.Stop")
-	defer task.End()
-	trace.Log(ctx, "actionId", ID)
-	trace.Log(ctx, "executionId", state.ExecutionId.String())
-
 	messages := make([]action_kit_api.Message, 0)
 
-	stopped := a.stopFillDiskContainer(state.ExecutionId)
-	if stopped {
+	if a.stopFillDiskContainer(state.ExecutionId) {
 		messages = append(messages, action_kit_api.Message{
 			Level:   extutil.Ptr(action_kit_api.Info),
 			Message: fmt.Sprintf("Canceled fill disk in container %s", state.ContainerID),
@@ -266,14 +247,6 @@ func (a *fillDiskAction) Stop(ctx context.Context, state *FillDiskActionState) (
 	return &action_kit_api.StopResult{
 		Messages: &messages,
 	}, nil
-}
-
-func (a *fillDiskAction) fillDiskExited(executionId uuid.UUID) (bool, error) {
-	s, ok := a.diskfills.Load(executionId)
-	if !ok {
-		return true, nil
-	}
-	return s.(*diskfill.DiskFill).Exited()
 }
 
 func (a *fillDiskAction) stopFillDiskContainer(executionId uuid.UUID) bool {
