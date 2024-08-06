@@ -30,7 +30,7 @@ builds:
       - -X github.com/steadybit/extension-kit/extbuild.Version={{.Version}}
       - -X github.com/steadybit/extension-kit/extbuild.Revision={{.Commit}}
     hooks:
-      post: sh -c "curl -sfL \"https://github.com/steadybit/nsmount/releases/download/v1.0.0/nsmount.{{ .Arch }}\" -o \"./dist/nsmount.{{ .Arch }}\" && chmod a+x \"./dist/nsmount.{{ .Arch }}\" && curl -sfL \"https://github.com/steadybit/memfill/releases/download/v1.0.1/memfill.{{ .Arch }}\" -o \"./dist/memfill.{{ .Arch }}\" && chmod a+x \"./dist/memfill.{{ .Arch }}\""
+      post: sh -c "curl -sfL \"https://github.com/steadybit/nsmount/releases/download/v1.0.0/nsmount.{{ .Arch }}\" -o \"./dist/nsmount.{{ .Arch }}\" && chmod a+x \"./dist/nsmount.{{ .Arch }}\" && curl -sfL \"https://github.com/steadybit/memfill/releases/download/v1.0.2/memfill.{{ .Arch }}\" -o \"./dist/memfill.{{ .Arch }}\" && chmod a+x \"./dist/memfill.{{ .Arch }}\""
 
 archives:
   - name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
