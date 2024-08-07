@@ -22,6 +22,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"runtime/trace"
 	"strconv"
 	"strings"
 )
@@ -70,6 +71,11 @@ func (a *stressAction) Describe() action_kit_api.ActionDescription {
 }
 
 func (a *stressAction) Prepare(ctx context.Context, state *StressActionState, request action_kit_api.PrepareActionRequestBody) (*action_kit_api.PrepareResult, error) {
+	ctx, task := trace.NewTask(ctx, "action_stress.Prepare")
+	defer task.End()
+	trace.Log(ctx, "actionId", a.description.Id)
+	trace.Log(ctx, "executionId", state.ExecutionId.String())
+
 	containerId := request.Target.Attributes["container.id"]
 	if len(containerId) == 0 {
 		return nil, extension_kit.ToError("Target is missing the 'container.id' attribute.", nil)
@@ -102,7 +108,7 @@ func (a *stressAction) Prepare(ctx context.Context, state *StressActionState, re
 	return nil, nil
 }
 
-func readAndAdaptToCpuContainerLimits(_ context.Context, cGroupPath string, opts *stress.Opts) {
+func readAndAdaptToCpuContainerLimits(ctx context.Context, cGroupPath string, opts *stress.Opts) {
 	if opts.CpuWorkers == nil {
 		return
 	}
@@ -234,6 +240,11 @@ func adaptToCpuContainerLimits(cpuLimitInMilliCpu float64, cpuCount int, opts *s
 }
 
 func (a *stressAction) Start(ctx context.Context, state *StressActionState) (*action_kit_api.StartResult, error) {
+	ctx, task := trace.NewTask(ctx, "action_stress.Start")
+	defer task.End()
+	trace.Log(ctx, "actionId", a.description.Id)
+	trace.Log(ctx, "executionId", state.ExecutionId.String())
+
 	s, err := stress.New(ctx, a.runc, state.Sidecar, state.StressOpts)
 	if err != nil {
 		return nil, extension_kit.ToError("Failed to stess container", err)
@@ -256,6 +267,11 @@ func (a *stressAction) Start(ctx context.Context, state *StressActionState) (*ac
 }
 
 func (a *stressAction) Status(ctx context.Context, state *StressActionState) (*action_kit_api.StatusResult, error) {
+	ctx, task := trace.NewTask(ctx, "action_stress.Status")
+	defer task.End()
+	trace.Log(ctx, "actionId", a.description.Id)
+	trace.Log(ctx, "executionId", state.ExecutionId.String())
+
 	exited, err := a.stressExited(state.ExecutionId)
 	if !exited {
 		return &action_kit_api.StatusResult{Completed: false}, nil
@@ -307,9 +323,15 @@ func (a *stressAction) Status(ctx context.Context, state *StressActionState) (*a
 }
 
 func (a *stressAction) Stop(ctx context.Context, state *StressActionState) (*action_kit_api.StopResult, error) {
+	ctx, task := trace.NewTask(ctx, "action_stress.Stop")
+	defer task.End()
+	trace.Log(ctx, "actionId", a.description.Id)
+	trace.Log(ctx, "executionId", state.ExecutionId.String())
+
 	messages := make([]action_kit_api.Message, 0)
 
-	if a.stopStressContainer(state.ExecutionId) {
+	stopped := a.stopStressContainer(state.ExecutionId)
+	if stopped {
 		messages = append(messages, action_kit_api.Message{
 			Level:   extutil.Ptr(action_kit_api.Info),
 			Message: fmt.Sprintf("Canceled stress container %s", state.ContainerID),

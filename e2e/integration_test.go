@@ -135,10 +135,6 @@ func TestWithMinikube(t *testing.T) {
 			Name: "fill disk",
 			Test: testFillDisk,
 		},
-		{
-			Name: "fill memory",
-			Test: testFillMemory,
-		},
 	})
 }
 
@@ -1428,78 +1424,6 @@ func testStressCombined(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 
 	e2e.AssertProcessNOTRunningInContainer(t, m, nginx.Pod, "nginx", "stress-ng")
 
-	requireAllSidecarsCleanedUp(t, m, e)
-}
-
-func testFillMemory(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
-	tests := []struct {
-		name          string
-		failOnOomKill bool
-		performKill   bool
-		wantedErr     *string
-	}{
-		{
-			name:          "should perform successfully",
-			failOnOomKill: false,
-			performKill:   false,
-			wantedErr:     nil,
-		}, {
-			name:          "should fail on oom kill",
-			failOnOomKill: true,
-			performKill:   true,
-			wantedErr:     extutil.Ptr("exit status 137"),
-		}, {
-			name:          "should not fail on oom kill",
-			failOnOomKill: false,
-			performKill:   true,
-			wantedErr:     nil,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			nginx := e2e.Nginx{Minikube: m}
-			err := nginx.Deploy("nginx-stress-mem", func(p *acorev1.PodApplyConfiguration) {
-				p.Spec.Containers[0].Resources = &acorev1.ResourceRequirementsApplyConfiguration{
-					Limits: &corev1.ResourceList{
-						"memory": resource.MustParse("100Mi"),
-					},
-				}
-			})
-			require.NoError(t, err, "failed to create pod")
-			defer func() { _ = nginx.Delete() }()
-
-			target, err := nginx.Target()
-			require.NoError(t, err)
-
-			config := struct {
-				Duration      int    `json:"duration"`
-				Size          int    `json:"size"`
-				Unit          string `json:"unit"`
-				Mode          string `json:"mode"`
-				FailOnOomKill bool   `json:"failOnOomKill"`
-			}{Duration: 10000, Size: 80, Unit: "%", Mode: "usage", FailOnOomKill: tt.failOnOomKill}
-
-			action, err := e.RunAction(fmt.Sprintf("%s.fill_mem", extcontainer.BaseActionID), target, config, executionContext)
-			defer func() { _ = action.Cancel() }()
-			require.NoError(t, err)
-
-			e2e.AssertProcessRunningInContainer(t, m, nginx.Pod, "nginx", "memfill", false)
-
-			if tt.performKill {
-				println("performing kill")
-				require.NoError(t, m.SshExec("sudo pkill -9 memfill").Run())
-			}
-
-			if tt.wantedErr == nil {
-				require.NoError(t, action.Cancel())
-			} else {
-				err := action.Wait()
-				require.ErrorContains(t, err, *tt.wantedErr)
-			}
-			e2e.AssertProcessNOTRunningInContainer(t, m, nginx.Pod, "nginx", "memfill")
-		})
-	}
 	requireAllSidecarsCleanedUp(t, m, e)
 }
 

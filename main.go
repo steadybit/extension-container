@@ -81,7 +81,6 @@ func main() {
 	action_kit_sdk.RegisterAction(extcontainer.NewNetworkCorruptPackagesContainerAction(r))
 	action_kit_sdk.RegisterAction(extcontainer.NewNetworkPackageLossContainerAction(r))
 	action_kit_sdk.RegisterAction(extcontainer.NewFillDiskContainerAction(r))
-	action_kit_sdk.RegisterAction(extcontainer.NewFillMemoryContainerAction(r))
 
 	action_kit_sdk.InstallSignalHandler()
 
