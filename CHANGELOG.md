@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.3.22 (next release)
+
+- feat: change default value for "jitter" in "Network Delay" attack to false
+
 ## v1.3.21
 
 - fixed ip rule v6 support check

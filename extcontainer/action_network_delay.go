@@ -55,7 +55,7 @@ func getNetworkDelayDescription() action_kit_api.ActionDescription {
 				Label:        "Jitter",
 				Description:  extutil.Ptr("Add random +/-30% jitter to network delay?"),
 				Type:         action_kit_api.Boolean,
-				DefaultValue: extutil.Ptr("true"),
+				DefaultValue: extutil.Ptr("false"),
 				Required:     extutil.Ptr(true),
 				Order:        extutil.Ptr(2),
 			},
