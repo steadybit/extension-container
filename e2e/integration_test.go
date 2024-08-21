@@ -135,6 +135,10 @@ func TestWithMinikube(t *testing.T) {
 			Name: "fill disk",
 			Test: testFillDisk,
 		},
+		{
+			Name: "fill memory",
+			Test: testFillMemory,
+		},
 	})
 }
 
@@ -837,7 +841,7 @@ func testStressMemory(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			err := nginx.Deploy("nginx-stress-mem", func(p *acorev1.PodApplyConfiguration) {
 				p.Spec.Containers[0].Resources = &acorev1.ResourceRequirementsApplyConfiguration{
 					Limits: &corev1.ResourceList{
-						"memory": resource.MustParse("100Mi"),
+						"memory": resource.MustParse("250Mi"),
 					},
 				}
 			})
@@ -1389,7 +1393,7 @@ func testStressCombined(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	err := nginx.Deploy("nginx-stress-combined", func(p *acorev1.PodApplyConfiguration) {
 		p.Spec.Containers[0].Resources = &acorev1.ResourceRequirementsApplyConfiguration{
 			Limits: &corev1.ResourceList{
-				"memory": resource.MustParse("100Mi"),
+				"memory": resource.MustParse("250Mi"),
 			},
 		}
 	})
@@ -1427,19 +1431,98 @@ func testStressCombined(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	requireAllSidecarsCleanedUp(t, m, e)
 }
 
+func testFillMemory(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
+	tests := []struct {
+		name          string
+		failOnOomKill bool
+		performKill   bool
+		wantedErr     *string
+	}{
+		{
+			name:          "should perform successfully",
+			failOnOomKill: false,
+			performKill:   false,
+			wantedErr:     nil,
+		}, {
+			name:          "should fail on oom kill",
+			failOnOomKill: true,
+			performKill:   true,
+			wantedErr:     extutil.Ptr("signal: killed"),
+		}, {
+			name:          "should not fail on oom kill",
+			failOnOomKill: false,
+			performKill:   true,
+			wantedErr:     nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			nginx := e2e.Nginx{Minikube: m}
+			err := nginx.Deploy("nginx-stress-mem", func(p *acorev1.PodApplyConfiguration) {
+				p.Spec.Containers[0].Resources = &acorev1.ResourceRequirementsApplyConfiguration{
+					Limits: &corev1.ResourceList{
+						"memory": resource.MustParse("100Mi"),
+					},
+				}
+			})
+			require.NoError(t, err, "failed to create pod")
+			defer func() { _ = nginx.Delete() }()
+
+			target, err := nginx.Target()
+			require.NoError(t, err)
+
+			config := struct {
+				Duration      int    `json:"duration"`
+				Size          int    `json:"size"`
+				Unit          string `json:"unit"`
+				Mode          string `json:"mode"`
+				FailOnOomKill bool   `json:"failOnOomKill"`
+			}{Duration: 10000, Size: 80, Unit: "%", Mode: "usage", FailOnOomKill: tt.failOnOomKill}
+
+			action, err := e.RunAction(fmt.Sprintf("%s.fill_mem", extcontainer.BaseActionID), target, config, executionContext)
+			defer func() { _ = action.Cancel() }()
+			require.NoError(t, err)
+
+			e2e.AssertProcessRunningInContainer(t, m, nginx.Pod, "nginx", "memfill", false)
+
+			if tt.performKill {
+				println("performing kill")
+				require.NoError(t, m.SshExec("sudo pkill -9 memfill").Run())
+			}
+
+			if tt.wantedErr == nil {
+				require.NoError(t, action.Cancel())
+			} else {
+				err := action.Wait()
+				require.ErrorContains(t, err, *tt.wantedErr)
+			}
+			e2e.AssertProcessNOTRunningInContainer(t, m, nginx.Pod, "nginx", "memfill")
+		})
+	}
+	requireAllSidecarsCleanedUp(t, m, e)
+}
+
 func requireAllSidecarsCleanedUp(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
+	t.Helper()
 	out, err := m.PodExec(e.Pod, "steadybit-extension-container", "ls", "/tmp/steadybit/containers")
+	if strings.Contains(out, "No such file or directory") {
+		return
+	}
 	require.NoError(t, err)
 	space := strings.TrimSpace(out)
 	require.Empty(t, space, "no sidecar directories must be present")
 }
 
 func assertFileHasSize(t *testing.T, m *e2e.Minikube, pod metav1.Object, containername string, filepath string, wantedSizeInMb int, wantedDeltaInMb int) {
-	sizeInBytes := wantedSizeInMb * 1024 * 1024
-	deltaInBytes := wantedDeltaInMb * 1024 * 1024
+	t.Helper()
+	wantedSizeInBytes := wantedSizeInMb * 1024 * 1024
+	wantedDeltaInBytes := wantedDeltaInMb * 1024 * 1024
+
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	message := ""
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -1454,11 +1537,11 @@ func assertFileHasSize(t *testing.T, m *e2e.Minikube, pod metav1.Object, contain
 			}
 
 			if fileSize, err := strconv.Atoi(strings.TrimSpace(out)); err == nil {
-				actualDelta := int(math.Abs(float64(fileSize - sizeInBytes)))
-				if actualDelta <= deltaInBytes {
+				actualDelta := int(math.Abs(float64(fileSize - wantedSizeInBytes)))
+				if actualDelta <= wantedDeltaInBytes {
 					return
 				} else {
-					message = fmt.Sprintf("file size is %d, wanted %d, delta of %d exceeds allowed delta of %d", fileSize, sizeInBytes, actualDelta, deltaInBytes)
+					message = fmt.Sprintf("file size is %d, wanted %d, delta of %d exceeds allowed delta of %d", fileSize, wantedSizeInBytes, actualDelta, wantedDeltaInBytes)
 				}
 			} else {
 				message = fmt.Sprintf("cannot parse file size: %s", err.Error())

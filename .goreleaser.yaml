@@ -16,6 +16,8 @@ builds:
   - binary: extension-container
     env:
       - CGO_ENABLED=0
+      - MEMFILL_VERSION=v1.1.0
+      - NSMOUNT_VERSION=v1.0.0
     goos:
       - linux
     goarch:
@@ -30,7 +32,7 @@ builds:
       - -X github.com/steadybit/extension-kit/extbuild.Version={{.Version}}
       - -X github.com/steadybit/extension-kit/extbuild.Revision={{.Commit}}
     hooks:
-      post: sh -c "curl -sfL \"https://github.com/steadybit/nsmount/releases/download/v1.0.0/nsmount.{{ .Arch }}\" -o \"./dist/nsmount.{{ .Arch }}\" && chmod a+x \"./dist/nsmount.{{ .Arch }}\""
+      post: sh -c "curl -sfL \"https://github.com/steadybit/nsmount/releases/download/${NSMOUNT_VERSION}/nsmount.{{ .Arch }}\" -o \"./dist/nsmount.{{ .Arch }}\" && chmod a+x \"./dist/nsmount.{{ .Arch }}\" && curl -sfL \"https://github.com/steadybit/memfill/releases/download/${MEMFILL_VERSION}/memfill.{{ .Arch }}\" -o \"./dist/memfill.{{ .Arch }}\" && chmod a+x \"./dist/memfill.{{ .Arch }}\""
 
 archives:
   - name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
@@ -68,6 +70,7 @@ nfpms:
       - bind9-dnsutils
       - runc
       - libcap2-bin
+      - cgroup-tools
     bindir: /opt/steadybit/extension-container
     contents:
       - src: ./linuxpkg/systemd
@@ -79,6 +82,8 @@ nfpms:
         type: config
       - src: ./dist/nsmount.{{ .Arch }}
         dst: /opt/steadybit/extension-container/nsmount
+      - src: ./dist/memfill.{{ .Arch }}
+        dst: /opt/steadybit/extension-container/memfill
       - src: ./licenses
         dst: /opt/steadybit/extension-container/licenses
 
@@ -105,5 +110,6 @@ nfpms:
           - /usr/bin/dig
           - runc
           - /usr/sbin/capsh
+          - /usr/bin/cgexec
         recommends:
           - kernel-modules-extra
