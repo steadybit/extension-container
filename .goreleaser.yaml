@@ -16,7 +16,7 @@ builds:
   - binary: extension-container
     env:
       - CGO_ENABLED=0
-      - MEMFILL_VERSION=v1.1.0
+      - MEMFILL_VERSION=v1.1.1
       - NSMOUNT_VERSION=v1.0.0
     goos:
       - linux
