@@ -2,7 +2,16 @@ templates:
   - daemonset.yaml
 chart:
   appVersion: v0.0.0
+capabilities:
+  majorVersion: 1
+  minorVersion: 29
 tests:
+  - it: manifest should match snapshot with appArmorProfile for k8s >= 1.30
+    capabilities:
+      majorVersion: 1
+      minorVersion: 30
+    asserts:
+      - matchSnapshot: { }
   - it: manifest should match snapshot using docker
     set:
       container:
