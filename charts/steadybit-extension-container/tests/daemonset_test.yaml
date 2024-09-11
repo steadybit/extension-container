@@ -9,7 +9,7 @@ tests:
   - it: manifest should match snapshot with appArmorProfile for k8s >= 1.30
     capabilities:
       majorVersion: 1
-      minorVersion: 30
+      minorVersion: 30.3-gke.1639000
     asserts:
       - matchSnapshot: { }
   - it: manifest should match snapshot using docker

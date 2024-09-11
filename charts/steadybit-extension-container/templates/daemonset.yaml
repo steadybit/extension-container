@@ -32,7 +32,7 @@ spec:
         {{- toYaml . | nindent 8 }}
         {{- end }}
       annotations:
-        {{- if semverCompare "<1.30" .Capabilities.KubeVersion.Version}}
+        {{- if semverCompare "<1.30-0" .Capabilities.KubeVersion.Version}}
         "container.apparmor.security.beta.kubernetes.io/{{ include "extensionlib.names.name" . }}": unconfined
         {{- end }}
         {{- include "extensionlib.annotation" (list . .Values.containerPorts.http (list "ACTION" "DISCOVERY") ) | nindent 8 }}
@@ -118,7 +118,7 @@ spec:
               path: /health/readiness
               port: {{ .Values.containerPorts.health }}
           securityContext:
-            {{- if semverCompare ">=1.30" .Capabilities.KubeVersion.Version}}
+            {{- if semverCompare ">=1.30-0" .Capabilities.KubeVersion.Version}}
             appArmorProfile:
               type: Unconfined
             {{- end }}
