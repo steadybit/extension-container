@@ -28,7 +28,7 @@ require (
 	go.uber.org/automaxprocs v1.5.3
 	golang.org/x/sync v0.8.0
 	google.golang.org/grpc v1.67.0
-	k8s.io/api v0.31.0
+	k8s.io/api v0.31.1
 	k8s.io/apimachinery v0.31.1
 	k8s.io/client-go v0.31.0
 	k8s.io/cri-api v0.31.1
