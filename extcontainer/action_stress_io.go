@@ -37,7 +37,8 @@ func getStressIoDescription() action_kit_api.ActionDescription {
 			TargetType:         targetID,
 			SelectionTemplates: &targetSelectionTemplates,
 		},
-		Category:    extutil.Ptr("resource"),
+		Technology:  extutil.Ptr("Container"),
+		Category:    extutil.Ptr("Resource"),
 		Kind:        action_kit_api.Attack,
 		TimeControl: action_kit_api.TimeControlExternal,
 		Parameters: []action_kit_api.ActionParameter{

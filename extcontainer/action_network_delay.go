@@ -36,7 +36,8 @@ func getNetworkDelayDescription() action_kit_api.ActionDescription {
 			TargetType:         targetID,
 			SelectionTemplates: &targetSelectionTemplates,
 		},
-		Category:    extutil.Ptr("network"),
+		Technology:  extutil.Ptr("Container"),
+		Category:    extutil.Ptr("Network"),
 		Kind:        action_kit_api.Attack,
 		TimeControl: action_kit_api.TimeControlExternal,
 		Parameters: append(

@@ -47,7 +47,8 @@ func (a *pauseAction) Describe() action_kit_api.ActionDescription {
 			TargetType:         targetID,
 			SelectionTemplates: &targetSelectionTemplates,
 		},
-		Category:    extutil.Ptr("state"),
+		Technology:  extutil.Ptr("Container"),
+		Category:    extutil.Ptr("State"),
 		Kind:        action_kit_api.Attack,
 		TimeControl: action_kit_api.TimeControlExternal,
 		Parameters: []action_kit_api.ActionParameter{
