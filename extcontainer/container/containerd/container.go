@@ -3,25 +3,37 @@
 
 package containerd
 
-import cdcontainers "github.com/containerd/containerd/containers"
+import (
+	cdcontainers "github.com/containerd/containerd/containers"
+)
 
 // Container implements the engines.Container interface for containerd
-type Container struct {
-	info cdcontainers.Container
+type container struct {
+	id        string
+	imageName string
+	labels    map[string]string
 }
 
-func (c *Container) Id() string {
-	return c.info.ID
+func newContainer(c cdcontainers.Container) *container {
+	return &container{
+		id:        c.ID,
+		imageName: c.Image,
+		labels:    c.Labels,
+	}
 }
 
-func (c *Container) Name() string {
+func (c *container) Id() string {
+	return c.id
+}
+
+func (c *container) Name() string {
 	return ""
 }
 
-func (c *Container) ImageName() string {
-	return c.info.Image
+func (c *container) ImageName() string {
+	return c.imageName
 }
 
-func (c *Container) Labels() map[string]string {
-	return c.info.Labels
+func (c *container) Labels() map[string]string {
+	return c.labels
 }

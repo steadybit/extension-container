@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// SPDX-FileCopyrightText: 2023 Steadybit GmbH
+// SPDX-FileCopyrightText: 2024 Steadybit GmbH
 
 package containerd
 
@@ -63,7 +63,7 @@ func (c *client) List(ctx context.Context) ([]types.Container, error) {
 }
 
 func getStatus(ctx context.Context, container containerd.Container) (containerd.Status, error) {
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
 	task, err := container.Task(ctx, nil)
 	if err != nil {
@@ -84,12 +84,12 @@ func (c *client) GetPid(ctx context.Context, containerId string) (int, error) {
 	return int(task.Pid()), nil
 }
 
-func toContainer(ctx context.Context, container containerd.Container) (*Container, error) {
+func toContainer(ctx context.Context, container containerd.Container) (*container, error) {
 	info, err := container.Info(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return &Container{info}, nil
+	return newContainer(info), nil
 }
 
 func (c *client) Pause(ctx context.Context, id string) error {

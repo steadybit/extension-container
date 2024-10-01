@@ -81,7 +81,7 @@ func (c *client) List(ctx context.Context) ([]types.Container, error) {
 
 	result := make([]types.Container, 0, len(containerList.Containers))
 	for _, container := range containerList.Containers {
-		result = append(result, &Container{container})
+		result = append(result, newContainer(container))
 	}
 	return result, nil
 }
