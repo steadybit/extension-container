@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// SPDX-FileCopyrightText: 2023 Steadybit GmbH
+// SPDX-FileCopyrightText: 2024 Steadybit GmbH
 
 package extcontainer
 
@@ -125,13 +125,13 @@ func (d *containerDiscovery) DescribeAttributes() []discovery_kit_api.AttributeD
 }
 
 func (d *containerDiscovery) DiscoverTargets(ctx context.Context) ([]discovery_kit_api.Target, error) {
+	hostname, fqdn, _ := extruntime.GetHostname()
+	version, _ := d.client.Version(ctx)
+
 	containers, err := d.client.List(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list containers: %w", err)
 	}
-
-	hostname, fqdn, _ := extruntime.GetHostname()
-	version, _ := d.client.Version(ctx)
 
 	targets := make([]discovery_kit_api.Target, 0, len(containers))
 	for _, container := range containers {
@@ -145,15 +145,17 @@ func (d *containerDiscovery) DiscoverTargets(ctx context.Context) ([]discovery_k
 }
 
 func ignoreContainer(container types.Container) bool {
-	if label := container.Labels()["io.cri-containerd.kind"]; label == "sandbox" {
+	labels := container.Labels()
+
+	if label := labels["io.cri-containerd.kind"]; label == "sandbox" {
 		return true
 	}
 
-	if label := container.Labels()["io.kubernetes.docker.type"]; label == "podsandbox" {
+	if label := labels["io.kubernetes.docker.type"]; label == "podsandbox" {
 		return true
 	}
 
-	if label := container.Labels()["com.amazonaws.ecs.container-name"]; label == "~internal~ecs~pause" {
+	if label := labels["com.amazonaws.ecs.container-name"]; label == "~internal~ecs~pause" {
 		return true
 	}
 
@@ -161,15 +163,15 @@ func ignoreContainer(container types.Container) bool {
 		return false
 	}
 
-	if label := container.Labels()["steadybit.com.discovery-disabled"]; label == "true" {
+	if label := labels["steadybit.com.discovery-disabled"]; label == "true" {
 		return true
 	}
 
-	if label := container.Labels()["steadybit.com/discovery-disabled"]; label == "true" {
+	if label := labels["steadybit.com/discovery-disabled"]; label == "true" {
 		return true
 	}
 
-	if label := container.Labels()["com.steadybit.agent"]; label == "true" {
+	if label := labels["com.steadybit.agent"]; label == "true" {
 		return true
 	}
 
@@ -208,18 +210,19 @@ func (d *containerDiscovery) mapTarget(container types.Container, hostname, fqdn
 		attributes["container.engine.version"] = []string{version}
 	}
 
-	for key, value := range container.Labels() {
+	labels := container.Labels()
+	for key, value := range labels {
 		addLabelOrK8sAttribute(attributes, key, value)
 	}
 
 	label := container.Id()
 	if len(name) > 0 {
 		label = name
-	} else if container.Labels()["io.kubernetes.container.name"] != "" {
+	} else if labels["io.kubernetes.container.name"] != "" {
 		label = fmt.Sprintf("%s_%s_%s",
-			container.Labels()["io.kubernetes.pod.namespace"],
-			container.Labels()["io.kubernetes.pod.name"],
-			container.Labels()["io.kubernetes.container.name"],
+			labels["io.kubernetes.pod.namespace"],
+			labels["io.kubernetes.pod.name"],
+			labels["io.kubernetes.container.name"],
 		)
 	}
 
@@ -233,7 +236,7 @@ func (d *containerDiscovery) mapTarget(container types.Container, hostname, fqdn
 
 func addLabelOrK8sAttribute(attributes map[string][]string, key, value string) {
 	if strings.HasPrefix(key, labelPrefixAppKubernetes) {
-		key = "k8s.app." + strings.TrimPrefix(key, labelPrefixAppKubernetes)
+		key = fmt.Sprintf("k8s.app.%s", strings.TrimPrefix(key, labelPrefixAppKubernetes))
 		attributes[key] = append(attributes[key], value)
 		return
 	}
@@ -246,7 +249,7 @@ func addLabelOrK8sAttribute(attributes map[string][]string, key, value string) {
 	case "io.kubernetes.container.name":
 		key = "k8s.container.name"
 	default:
-		key = "container.label." + key
+		key = fmt.Sprintf("container.label.%s", key)
 	}
 
 	attributes[key] = append(attributes[key], value)

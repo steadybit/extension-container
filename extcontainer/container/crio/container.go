@@ -6,22 +6,34 @@ package crio
 import runtime "k8s.io/cri-api/pkg/apis/runtime/v1"
 
 // Container implements the types.Container interface for CRI
-type Container struct {
-	container *runtime.Container
+type container struct {
+	id        string
+	name      string
+	imageName string
+	labels    map[string]string
 }
 
-func (c *Container) Id() string {
-	return c.container.Id
+func newContainer(c *runtime.Container) *container {
+	return &container{
+		id:        c.Id,
+		name:      c.Metadata.Name,
+		imageName: c.Image.Image,
+		labels:    c.Labels,
+	}
 }
 
-func (c *Container) Name() string {
-	return c.container.Metadata.Name
+func (c *container) Id() string {
+	return c.id
 }
 
-func (c *Container) ImageName() string {
-	return c.container.Image.Image
+func (c *container) Name() string {
+	return c.name
 }
 
-func (c *Container) Labels() map[string]string {
-	return c.container.Labels
+func (c *container) ImageName() string {
+	return c.imageName
+}
+
+func (c *container) Labels() map[string]string {
+	return c.labels
 }
