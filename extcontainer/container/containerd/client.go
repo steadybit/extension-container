@@ -43,8 +43,7 @@ func (c *client) List(ctx context.Context) ([]types.Container, error) {
 
 	result := make([]types.Container, 0, len(containers))
 	for _, container := range containers {
-		if status, err := getStatus(ctx, container); status.Status != containerd.Running &&
-			status.Status != containerd.Paused && status.Status != containerd.Pausing {
+		if status, err := getStatus(ctx, container); status != containerd.Running && status != containerd.Paused && status != containerd.Pausing {
 			if err != nil && !errdefs.IsNotFound(err) {
 				log.Warn().Err(err).Msg("Failed to get status for container")
 			}
@@ -53,8 +52,7 @@ func (c *client) List(ctx context.Context) ([]types.Container, error) {
 
 		if mapped, err := toContainer(ctx, container); err == nil {
 			result = append(result, mapped)
-		}
-		if err != nil {
+		} else {
 			log.Warn().Err(err).Msg("Failed to get info for container")
 		}
 	}
@@ -62,14 +60,15 @@ func (c *client) List(ctx context.Context) ([]types.Container, error) {
 	return result, nil
 }
 
-func getStatus(ctx context.Context, container containerd.Container) (containerd.Status, error) {
+func getStatus(ctx context.Context, container containerd.Container) (containerd.ProcessStatus, error) {
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
 	task, err := container.Task(ctx, nil)
 	if err != nil {
-		return containerd.Status{}, err
+		return containerd.Unknown, err
 	}
-	return task.Status(ctx)
+	status, err := task.Status(ctx)
+	return status.Status, err
 }
 
 func (c *client) GetPid(ctx context.Context, containerId string) (int, error) {
@@ -85,7 +84,7 @@ func (c *client) GetPid(ctx context.Context, containerId string) (int, error) {
 }
 
 func toContainer(ctx context.Context, container containerd.Container) (*container, error) {
-	info, err := container.Info(ctx)
+	info, err := container.Info(ctx, containerd.WithoutRefreshedMetadata)
 	if err != nil {
 		return nil, err
 	}
