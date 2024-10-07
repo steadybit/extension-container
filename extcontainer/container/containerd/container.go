@@ -4,7 +4,7 @@
 package containerd
 
 import (
-	cdcontainers "github.com/containerd/containerd/containers"
+	containersapi "github.com/containerd/containerd/api/services/containers/v1"
 )
 
 // Container implements the engines.Container interface for containerd
@@ -14,7 +14,7 @@ type container struct {
 	labels    map[string]string
 }
 
-func newContainer(c cdcontainers.Container) *container {
+func newContainer(c *containersapi.Container) *container {
 	return &container{
 		id:        c.ID,
 		imageName: c.Image,
