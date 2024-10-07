@@ -5,11 +5,17 @@ package containerd
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/containerd/containerd"
+	containersapi "github.com/containerd/containerd/api/services/containers/v1"
+	tasksapi "github.com/containerd/containerd/api/services/tasks/v1"
 	"github.com/containerd/errdefs"
 	"github.com/rs/zerolog/log"
 	"github.com/steadybit/extension-container/extcontainer/container/types"
+	"google.golang.org/grpc/codes"
+	grpcstatus "google.golang.org/grpc/status"
+	"io"
 	"strings"
 	"syscall"
 	"time"
@@ -35,40 +41,66 @@ func (c *client) Runtime() types.Runtime {
 	return types.RuntimeContainerd
 }
 
+var errStreamNotAvailable = errors.New("streaming api not available")
+
 func (c *client) List(ctx context.Context) ([]types.Container, error) {
-	containers, err := c.containerd.Containers(ctx)
+	containers := containersapi.NewContainersClient(c.containerd.Conn())
+	session, err := containers.ListStream(ctx, &containersapi.ListContainersRequest{})
 	if err != nil {
-		return nil, fmt.Errorf("failed to list containers: %w", err)
+		return nil, fmt.Errorf("failed to list containers: %w", errdefs.FromGRPC(err))
 	}
 
-	result := make([]types.Container, 0, len(containers))
-	for _, container := range containers {
-		if status, err := getStatus(ctx, container); status != containerd.Running && status != containerd.Paused && status != containerd.Pausing {
-			if err != nil && !errdefs.IsNotFound(err) {
-				log.Warn().Err(err).Msg("Failed to get status for container")
+	tasks := tasksapi.NewTasksClient(c.containerd.Conn())
+	var result []types.Container
+
+	for {
+		r, err := session.Recv()
+		if err != nil {
+			if err == io.EOF {
+				return result, nil
 			}
-			continue
+			if s, ok := grpcstatus.FromError(err); ok {
+				if s.Code() == codes.Unimplemented {
+					return nil, errStreamNotAvailable
+				}
+			}
+			return nil, errdefs.FromGRPC(err)
 		}
 
-		if mapped, err := toContainer(ctx, container); err == nil {
-			result = append(result, mapped)
-		} else {
-			log.Warn().Err(err).Msg("Failed to get info for container")
+		select {
+		case <-ctx.Done():
+			return result, ctx.Err()
+		default:
+			if isContainerAlive(ctx, tasks, r.Container.ID) {
+				result = append(result, newContainer(r.Container))
+			}
 		}
 	}
-
-	return result, nil
 }
 
-func getStatus(ctx context.Context, container containerd.Container) (containerd.ProcessStatus, error) {
+func isContainerAlive(ctx context.Context, tasks tasksapi.TasksClient, id string) bool {
+	status, err := getStatus(ctx, tasks, id)
+	if err != nil && !errdefs.IsNotFound(err) {
+		log.Warn().Err(err).Msg("Failed to get status for container")
+		return false
+	}
+	return status == containerd.Running || status == containerd.Paused || status == containerd.Pausing
+}
+
+func getStatus(ctx context.Context, tasks tasksapi.TasksClient, id string) (containerd.ProcessStatus, error) {
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
-	task, err := container.Task(ctx, nil)
+
+	r, err := tasks.Get(ctx, &tasksapi.GetRequest{ContainerID: id})
 	if err != nil {
+		err = errdefs.FromGRPC(err)
+		if errdefs.IsNotFound(err) {
+			return containerd.Unknown, fmt.Errorf("no running task found: %w", err)
+		}
 		return containerd.Unknown, err
 	}
-	status, err := task.Status(ctx)
-	return status.Status, err
+
+	return containerd.ProcessStatus(strings.ToLower(r.Process.Status.String())), err
 }
 
 func (c *client) GetPid(ctx context.Context, containerId string) (int, error) {
@@ -81,14 +113,6 @@ func (c *client) GetPid(ctx context.Context, containerId string) (int, error) {
 		return 0, fmt.Errorf("failed to load task for container: %w", err)
 	}
 	return int(task.Pid()), nil
-}
-
-func toContainer(ctx context.Context, container containerd.Container) (*container, error) {
-	info, err := container.Info(ctx, containerd.WithoutRefreshedMetadata)
-	if err != nil {
-		return nil, err
-	}
-	return newContainer(info), nil
 }
 
 func (c *client) Pause(ctx context.Context, id string) error {
