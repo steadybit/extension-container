@@ -6,6 +6,7 @@ package extcontainer
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/opencontainers/runtime-spec/specs-go"
@@ -108,12 +109,11 @@ func (a *networkAction) Prepare(ctx context.Context, state *NetworkActionState, 
 
 	processInfo, err := getProcessInfoForContainer(ctx, a.runc, RemovePrefix(state.ContainerID))
 	if err != nil {
-		return nil, extension_kit.ToError("Failed to prepare network settings.", err)
+		return nil, extension_kit.ToError("Failed to read target process info", err)
 	}
 
 	state.Sidecar = network.SidecarOpts{
 		TargetProcess: processInfo,
-		ImagePath:     "/",
 		IdSuffix:      RemovePrefix(state.ContainerID)[:8],
 	}
 
@@ -158,7 +158,18 @@ func (a *networkAction) Start(ctx context.Context, state *NetworkActionState) (*
 
 	err = network.Apply(ctx, a.runc, state.Sidecar, opts)
 	if err != nil {
-		return nil, extension_kit.ToError(fmt.Sprintf("Failed to apply network settings for container %s", state.ContainerID), err)
+		var toomany *network.ErrTooManyTcCommands
+		if errors.As(err, &toomany) {
+			return &action_kit_api.StartResult{
+				Messages: extutil.Ptr([]action_kit_api.Message{
+					{
+						Level:   extutil.Ptr(action_kit_api.Error),
+						Message: "Too many tc commands where generated for this attack. This may happen if we need to add too many exclude rules for steadybit extensions. Please try to make the attack more specific by adding ports or CIDRs to the parameters.",
+					},
+				}),
+			}, nil
+		}
+		return nil, extension_kit.ToError("Failed to apply network settings.", err)
 	}
 
 	return &action_kit_api.StartResult{
@@ -253,68 +264,39 @@ func mapToNetworkFilter(ctx context.Context, r runc.Runc, sidecar network.Sideca
 	for _, i := range includes {
 		i.Comment = "parameters"
 	}
+
+	excludes, err := toExcludes(restrictedEndpoints)
+	if err != nil {
+		return network.Filter{}, err
+	}
+	excludes = append(excludes, network.ComputeExcludesForOwnIpAndPorts(config.Config.Port, config.Config.HealthPort)...)
+
+	return network.Filter{Include: includes, Exclude: excludes}, nil
+}
+
+func toExcludes(restrictedEndpoints []action_kit_api.RestrictedEndpoint) ([]network.NetWithPortRange, error) {
 	var excludes []network.NetWithPortRange
 
 	for _, restrictedEndpoint := range restrictedEndpoints {
-		log.Debug().Msgf("Adding restricted endpoint %s (%s) => %s:%d-%d", restrictedEndpoint.Name, restrictedEndpoint.Url, restrictedEndpoint.Cidr, restrictedEndpoint.PortMin, restrictedEndpoint.PortMax)
 		_, cidr, err := net.ParseCIDR(restrictedEndpoint.Cidr)
 		if err != nil {
-			return network.Filter{}, fmt.Errorf("invalid cidr %s: %w", restrictedEndpoint.Cidr, err)
+			return nil, fmt.Errorf("invalid cidr %s: %w", restrictedEndpoint.Cidr, err)
 		}
+
 		nwps := network.NewNetWithPortRanges([]net.IPNet{*cidr}, network.PortRange{From: uint16(restrictedEndpoint.PortMin), To: uint16(restrictedEndpoint.PortMax)})
-		for _, n := range nwps {
+		for i := range nwps {
 			var sb strings.Builder
-			sb.WriteString("restricted-endpoint ")
 			if restrictedEndpoint.Name != "" {
 				sb.WriteString(restrictedEndpoint.Name)
 				sb.WriteString(" ")
 			}
 			if restrictedEndpoint.Url != "" {
 				sb.WriteString(restrictedEndpoint.Url)
-				sb.WriteString(" ")
 			}
-			n.Comment = sb.String()
+			nwps[i].Comment = strings.TrimSpace(sb.String())
 		}
 
 		excludes = append(excludes, nwps...)
 	}
-
-	ownIps := network.GetOwnIPs()
-	ownPort := config.Config.Port
-	ownHealthPort := config.Config.HealthPort
-	nets := network.IpsToNets(ownIps)
-
-	log.Debug().Msgf("Adding own ip %s to exclude list (Ports %d and %d)", ownIps, ownPort, ownHealthPort)
-	excludePort := network.NewNetWithPortRanges(nets, network.PortRange{From: ownPort, To: ownPort})
-	for _, n := range excludePort {
-		n.Comment = "extension own-port"
-	}
-	excludes = append(excludes, excludePort...)
-	if ownHealthPort > 0 && ownHealthPort != ownPort {
-		excludeHealthPort := network.NewNetWithPortRanges(nets, network.PortRange{From: ownHealthPort, To: ownHealthPort})
-		for _, n := range excludePort {
-			n.Comment = "extension health-port"
-		}
-		excludes = append(excludes, excludeHealthPort...)
-	}
-
-	return network.Filter{
-		Include: includes,
-		Exclude: excludes,
-	}, nil
-}
-
-func readNetworkInterfaces(ctx context.Context, r runc.Runc, sidecar network.SidecarOpts) ([]string, error) {
-	ifcs, err := network.ListInterfaces(ctx, r, sidecar)
-	if err != nil {
-		return nil, err
-	}
-
-	var ifcNames []string
-	for _, ifc := range ifcs {
-		if ifc.HasFlag("UP") && !ifc.HasFlag("LOOPBACK") {
-			ifcNames = append(ifcNames, ifc.Name)
-		}
-	}
-	return ifcNames, nil
+	return excludes, nil
 }

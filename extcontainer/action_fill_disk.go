@@ -195,7 +195,6 @@ func (a *fillDiskAction) Prepare(ctx context.Context, state *FillDiskActionState
 
 	state.Sidecar = diskfill.SidecarOpts{
 		TargetProcess: processInfo,
-		ImagePath:     "/",
 		IdSuffix:      RemovePrefix(state.ContainerID)[:8],
 	}
 	state.FillDiskOpts = opts

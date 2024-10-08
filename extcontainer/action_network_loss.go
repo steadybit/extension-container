@@ -73,7 +73,7 @@ func packageLoss(r runc.Runc) networkOptsProvider {
 
 		interfaces := extutil.ToStringArray(request.Config["networkInterface"])
 		if len(interfaces) == 0 {
-			interfaces, err = readNetworkInterfaces(ctx, r, sidecar)
+			interfaces, err = network.ListNonLoopbackInterfaceNames(ctx, r, sidecar)
 			if err != nil {
 				return nil, err
 			}

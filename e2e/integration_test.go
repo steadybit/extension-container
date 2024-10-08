@@ -38,10 +38,6 @@ import (
 )
 
 var (
-	executionContext = &action_kit_api.ExecutionContext{
-		AgentAwsAccountId:   nil,
-		RestrictedEndpoints: extutil.Ptr([]action_kit_api.RestrictedEndpoint{}),
-	}
 	steadybitCIDRs = getCIDRsFor("steadybit.com", 16)
 )
 
@@ -188,37 +184,42 @@ func testNetworkDelay(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	require.NoError(t, err)
 
 	tests := []struct {
-		name        string
-		ip          []string
-		hostname    []string
-		port        []string
-		interfaces  []string
-		wantedDelay bool
+		name                string
+		ip                  []string
+		hostname            []string
+		port                []string
+		interfaces          []string
+		restrictedEndpoints []action_kit_api.RestrictedEndpoint
+		wantedDelay         bool
 	}{
 		{
 			name:        "should delay all traffic",
 			wantedDelay: true,
 		},
 		{
-			name:        "should delay only port 5000 traffic",
-			port:        []string{"5000"},
-			interfaces:  []string{"eth0"},
-			wantedDelay: true,
+			name:                "should delay only port 5000 traffic",
+			port:                []string{"5000"},
+			interfaces:          []string{"eth0"},
+			restrictedEndpoints: generateRestrictedEndpoints(1500),
+			wantedDelay:         true,
 		},
 		{
-			name:        "should delay only port 80 traffic",
-			port:        []string{"80"},
-			wantedDelay: false,
+			name:                "should delay only port 80 traffic",
+			port:                []string{"80"},
+			restrictedEndpoints: generateRestrictedEndpoints(1500),
+			wantedDelay:         false,
 		},
 		{
-			name:        "should delay only traffic for netperf",
-			ip:          []string{netperf.ServerIp},
-			wantedDelay: true,
+			name:                "should delay only traffic for netperf",
+			ip:                  []string{netperf.ServerIp},
+			restrictedEndpoints: generateRestrictedEndpoints(1500),
+			wantedDelay:         true,
 		},
 		{
-			name:        "should delay only traffic for netperf using cidr",
-			ip:          []string{netperf.ServerIp + "/32"},
-			wantedDelay: true,
+			name:                "should delay only traffic for netperf using cidr",
+			ip:                  []string{fmt.Sprintf("%s/32", netperf.ServerIp)},
+			restrictedEndpoints: generateRestrictedEndpoints(1500),
+			wantedDelay:         true,
 		},
 	}
 
@@ -245,6 +246,8 @@ func testNetworkDelay(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 		}
 
 		t.Run(tt.name, func(t *testing.T) {
+			executionContext := &action_kit_api.ExecutionContext{RestrictedEndpoints: &tt.restrictedEndpoints}
+
 			action, err := e.RunAction(fmt.Sprintf("%s.network_delay", extcontainer.BaseActionID), target, config, executionContext)
 			defer func() { _ = action.Cancel() }()
 			require.NoError(t, err)
@@ -260,6 +263,38 @@ func testNetworkDelay(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 		})
 	}
 	requireAllSidecarsCleanedUp(t, m, e)
+}
+
+func generateRestrictedEndpoints(count int) []action_kit_api.RestrictedEndpoint {
+	address := net.IPv4(192, 168, 0, 1)
+	result := make([]action_kit_api.RestrictedEndpoint, 0, count)
+
+	for i := 0; i < count; i++ {
+		result = append(result, action_kit_api.RestrictedEndpoint{
+			Cidr:    fmt.Sprintf("%s/32", address.String()),
+			PortMin: 8086,
+			PortMax: 8088,
+		})
+		incrementIP(address, len(address)-1)
+	}
+
+	return result
+}
+
+func incrementIP(a net.IP, idx int) {
+	if idx < 0 || idx >= len(a) {
+		return
+	}
+
+	if idx == len(a)-1 && a[idx] >= 254 {
+		a[idx] = 1
+		incrementIP(a, idx-1)
+	} else if a[idx] == 255 {
+		a[idx] = 0
+		incrementIP(a, idx-1)
+	} else {
+		a[idx]++
+	}
 }
 
 func testNetworkPackageLoss(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
@@ -318,7 +353,7 @@ func testNetworkPackageLoss(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 		}
 
 		t.Run(tt.name, func(t *testing.T) {
-			action, err := e.RunAction(fmt.Sprintf("%s.network_package_loss", extcontainer.BaseActionID), target, config, executionContext)
+			action, err := e.RunAction(fmt.Sprintf("%s.network_package_loss", extcontainer.BaseActionID), target, config, &action_kit_api.ExecutionContext{})
 			defer func() { _ = action.Cancel() }()
 			require.NoError(t, err)
 
@@ -391,7 +426,7 @@ func testNetworkPackageCorruption(t *testing.T, m *e2e.Minikube, e *e2e.Extensio
 		}
 
 		t.Run(tt.name, func(t *testing.T) {
-			action, err := e.RunAction(fmt.Sprintf("%s.network_package_corruption", extcontainer.BaseActionID), target, config, executionContext)
+			action, err := e.RunAction(fmt.Sprintf("%s.network_package_corruption", extcontainer.BaseActionID), target, config, &action_kit_api.ExecutionContext{})
 			defer func() { _ = action.Cancel() }()
 			require.NoError(t, err)
 
@@ -469,7 +504,7 @@ func testNetworkLimitBandwidth(t *testing.T, m *e2e.Minikube, e *e2e.Extension) 
 		}
 
 		t.Run(tt.name, func(t *testing.T) {
-			action, err := e.RunAction(fmt.Sprintf("%s.network_bandwidth", extcontainer.BaseActionID), target, config, executionContext)
+			action, err := e.RunAction(fmt.Sprintf("%s.network_bandwidth", extcontainer.BaseActionID), target, config, &action_kit_api.ExecutionContext{})
 			defer func() { _ = action.Cancel() }()
 			require.NoError(t, err)
 
@@ -557,7 +592,7 @@ func testNetworkBlackhole(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			nginx.AssertIsReachable(t, true)
 			nginx.AssertCanReach(t, "https://steadybit.com", true)
 
-			action, err := e.RunAction(fmt.Sprintf("%s.network_blackhole", extcontainer.BaseActionID), target, config, executionContext)
+			action, err := e.RunAction(fmt.Sprintf("%s.network_blackhole", extcontainer.BaseActionID), target, config, &action_kit_api.ExecutionContext{})
 			defer func() { _ = action.Cancel() }()
 			require.NoError(t, err)
 
@@ -753,7 +788,7 @@ func testNetworkBlockDns(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			nginx.AssertIsReachable(t, true)
 			nginx.AssertCanReach(t, "https://steadybit.com", true)
 
-			action, err := e.RunAction(fmt.Sprintf("%s.network_block_dns", extcontainer.BaseActionID), target, config, executionContext)
+			action, err := e.RunAction(fmt.Sprintf("%s.network_block_dns", extcontainer.BaseActionID), target, config, &action_kit_api.ExecutionContext{})
 			defer func() { _ = action.Cancel() }()
 			require.NoError(t, err)
 
@@ -795,7 +830,7 @@ func testStressCpu(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	hostnameBefore, err := m.PodExec(nginx.Pod, "nginx", "hostname")
 	require.NoError(t, err)
 
-	action, err := e.RunAction(fmt.Sprintf("%s.stress_cpu", extcontainer.BaseActionID), target, config, executionContext)
+	action, err := e.RunAction(fmt.Sprintf("%s.stress_cpu", extcontainer.BaseActionID), target, config, &action_kit_api.ExecutionContext{})
 	defer func() { _ = action.Cancel() }()
 	require.NoError(t, err)
 	e2e.AssertProcessRunningInContainer(t, m, nginx.Pod, "nginx", "stress-ng", false)
@@ -857,7 +892,7 @@ func testStressMemory(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 				FailOnOomKill bool `json:"failOnOomKill"`
 			}{Duration: 10000, Percentage: 1, FailOnOomKill: tt.failOnOomKill}
 
-			action, err := e.RunAction(fmt.Sprintf("%s.stress_mem", extcontainer.BaseActionID), target, config, executionContext)
+			action, err := e.RunAction(fmt.Sprintf("%s.stress_mem", extcontainer.BaseActionID), target, config, &action_kit_api.ExecutionContext{})
 			defer func() { _ = action.Cancel() }()
 			require.NoError(t, err)
 
@@ -919,7 +954,7 @@ func testStressIo(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 				Mode            string `json:"mode"`
 			}{Duration: 20000, Workers: 1, MbytesPerWorker: 50, Path: "/host-tmp/stressng", Mode: mode}
 
-			action, err := e.RunAction(fmt.Sprintf("%s.stress_io", extcontainer.BaseActionID), target, config, executionContext)
+			action, err := e.RunAction(fmt.Sprintf("%s.stress_io", extcontainer.BaseActionID), target, config, &action_kit_api.ExecutionContext{})
 			defer func() { _ = action.Cancel() }()
 			require.NoError(t, err)
 			e2e.AssertProcessRunningInContainer(t, m, nginx.Pod, "nginx", "stress-ng", false)
@@ -1094,7 +1129,7 @@ func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 				Method    string `json:"method"`
 			}{Duration: 60000, Size: testCase.size, Mode: string(testCase.mode), Method: string(testCase.method), BlockSize: testCase.blockSize, Path: pathToFill}
 			wantedFileSize := testCase.wantedFileSize(m)
-			action, err := e.RunAction(fmt.Sprintf("%s.fill_disk", extcontainer.BaseActionID), target, config, executionContext)
+			action, err := e.RunAction(fmt.Sprintf("%s.fill_disk", extcontainer.BaseActionID), target, config, &action_kit_api.ExecutionContext{})
 			defer func() { _ = action.Cancel() }()
 			require.NoError(t, err)
 
@@ -1153,7 +1188,7 @@ func testPauseContainer(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	config := struct {
 		Duration int `json:"duration"`
 	}{Duration: 5000}
-	action, err := e.RunAction(fmt.Sprintf("%s.pause", extcontainer.BaseActionID), target, config, executionContext)
+	action, err := e.RunAction(fmt.Sprintf("%s.pause", extcontainer.BaseActionID), target, config, &action_kit_api.ExecutionContext{})
 	defer func() { _ = action.Cancel() }()
 	require.NoError(t, err)
 	err = action.Wait()
@@ -1195,12 +1230,12 @@ func testStopContainer(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 		Graceful bool `json:"graceful"`
 	}{Graceful: true}
 	go func() {
-		action, err := e.RunAction(fmt.Sprintf("%s.stop", extcontainer.BaseActionID), target, config, executionContext)
+		action, err := e.RunAction(fmt.Sprintf("%s.stop", extcontainer.BaseActionID), target, config, &action_kit_api.ExecutionContext{})
 		defer func() { _ = action.Cancel() }()
 		require.NoError(t, err)
 		require.NoError(t, action.Wait())
 	}()
-	action2, err2 := e.RunAction(fmt.Sprintf("%s.stop", extcontainer.BaseActionID), target2, config, executionContext)
+	action2, err2 := e.RunAction(fmt.Sprintf("%s.stop", extcontainer.BaseActionID), target2, config, &action_kit_api.ExecutionContext{})
 
 	defer func() { _ = action2.Cancel() }()
 	require.NoError(t, err2)
@@ -1295,7 +1330,7 @@ func testHostNetwork(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 		}
 
 		t.Run(tt.name, func(t *testing.T) {
-			action, err := e.RunAction(fmt.Sprintf("%s.network_blackhole", extcontainer.BaseActionID), target, config, executionContext)
+			action, err := e.RunAction(fmt.Sprintf("%s.network_blackhole", extcontainer.BaseActionID), target, config, &action_kit_api.ExecutionContext{})
 			defer func() { _ = action.Cancel() }()
 
 			if tt.wantedError {
@@ -1339,11 +1374,11 @@ func testNetworkDelayOnTwoContainers(t *testing.T, m *e2e.Minikube, e *e2e.Exten
 		Delay:    200,
 	}
 
-	action, err := e.RunAction(fmt.Sprintf("%s.network_delay", extcontainer.BaseActionID), target, config, executionContext)
+	action, err := e.RunAction(fmt.Sprintf("%s.network_delay", extcontainer.BaseActionID), target, config, &action_kit_api.ExecutionContext{})
 	defer func() { _ = action.Cancel() }()
 	require.NoError(t, err)
 
-	action2, err2 := e.RunAction(fmt.Sprintf("%s.network_delay", extcontainer.BaseActionID), target2, config, executionContext)
+	action2, err2 := e.RunAction(fmt.Sprintf("%s.network_delay", extcontainer.BaseActionID), target2, config, &action_kit_api.ExecutionContext{})
 	defer func() { _ = action2.Cancel() }()
 	require.NoError(t, err2)
 
@@ -1370,7 +1405,7 @@ func testNetworkDelayAndBandwidthOnSameContainer(t *testing.T, m *e2e.Minikube, 
 		Duration: 10000,
 		Delay:    200,
 	}
-	actionDelay, err := e.RunAction(fmt.Sprintf("%s.network_delay", extcontainer.BaseActionID), target, configDelay, executionContext)
+	actionDelay, err := e.RunAction(fmt.Sprintf("%s.network_delay", extcontainer.BaseActionID), target, configDelay, &action_kit_api.ExecutionContext{})
 	defer func() { _ = actionDelay.Cancel() }()
 	require.NoError(t, err)
 
@@ -1381,7 +1416,7 @@ func testNetworkDelayAndBandwidthOnSameContainer(t *testing.T, m *e2e.Minikube, 
 		Duration:  10000,
 		Bandwidth: "200mbit",
 	}
-	actionLimit, err2 := e.RunAction(fmt.Sprintf("%s.network_bandwidth", extcontainer.BaseActionID), target, configLimit, executionContext)
+	actionLimit, err2 := e.RunAction(fmt.Sprintf("%s.network_bandwidth", extcontainer.BaseActionID), target, configLimit, &action_kit_api.ExecutionContext{})
 	defer func() { _ = actionLimit.Cancel() }()
 	require.ErrorContains(t, err2, "running multiple network attacks at the same time on the same network namespace is not supported")
 
@@ -1408,7 +1443,7 @@ func testStressCombined(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 		Percentage    int  `json:"percentage"`
 		FailOnOomKill bool `json:"failOnOomKill"`
 	}{Duration: 10_000, Percentage: 1}
-	memAction, err := e.RunAction(fmt.Sprintf("%s.stress_mem", extcontainer.BaseActionID), target, memConfig, executionContext)
+	memAction, err := e.RunAction(fmt.Sprintf("%s.stress_mem", extcontainer.BaseActionID), target, memConfig, &action_kit_api.ExecutionContext{})
 	defer func() { _ = memAction.Cancel() }()
 	require.NoError(t, err)
 
@@ -1417,7 +1452,7 @@ func testStressCombined(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 		CpuLoad  int `json:"cpuLoad"`
 		Workers  int `json:"workers"`
 	}{Duration: 10_000, Workers: 1, CpuLoad: 10}
-	cpuAction, err := e.RunAction(fmt.Sprintf("%s.stress_cpu", extcontainer.BaseActionID), target, cpuConfig, executionContext)
+	cpuAction, err := e.RunAction(fmt.Sprintf("%s.stress_cpu", extcontainer.BaseActionID), target, cpuConfig, &action_kit_api.ExecutionContext{})
 	defer func() { _ = cpuAction.Cancel() }()
 	require.NoError(t, err)
 
@@ -1480,7 +1515,7 @@ func testFillMemory(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 				FailOnOomKill bool   `json:"failOnOomKill"`
 			}{Duration: 10000, Size: 80, Unit: "%", Mode: "usage", FailOnOomKill: tt.failOnOomKill}
 
-			action, err := e.RunAction(fmt.Sprintf("%s.fill_mem", extcontainer.BaseActionID), target, config, executionContext)
+			action, err := e.RunAction(fmt.Sprintf("%s.fill_mem", extcontainer.BaseActionID), target, config, &action_kit_api.ExecutionContext{})
 			defer func() { _ = action.Cancel() }()
 			require.NoError(t, err)
 

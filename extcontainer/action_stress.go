@@ -78,12 +78,11 @@ func (a *stressAction) Prepare(ctx context.Context, state *StressActionState, re
 
 	processInfo, err := getProcessInfoForContainer(ctx, a.runc, RemovePrefix(state.ContainerID))
 	if err != nil {
-		return nil, extension_kit.ToError("Failed to prepare network settings.", err)
+		return nil, extension_kit.ToError("Failed to read target process info", err)
 	}
 
 	state.Sidecar = stress.SidecarOpts{
 		TargetProcess: processInfo,
-		ImagePath:     "/",
 		IdSuffix:      RemovePrefix(state.ContainerID)[:8],
 	}
 
