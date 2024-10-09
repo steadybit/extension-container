@@ -8,7 +8,7 @@ require (
 	github.com/KimMachineGun/automemlimit v0.6.1
 	github.com/containerd/containerd v1.7.22
 	github.com/containerd/containerd/api v1.7.19
-	github.com/containerd/errdefs v0.1.0
+	github.com/containerd/errdefs v0.3.0
 	github.com/docker/docker v27.3.1+incompatible
 	github.com/google/uuid v1.6.0
 	github.com/kataras/iris/v12 v12.2.11
