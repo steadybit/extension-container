@@ -1,6 +1,10 @@
 # Changelog
 
-## v1.3.22 
+## v1.3.23
+
+- chore: update action_kit_sdk dependency
+
+## v1.3.22
 
 - feat: change default value for "jitter" in "Network Delay" attack to false
 - feat: add memfill attack
