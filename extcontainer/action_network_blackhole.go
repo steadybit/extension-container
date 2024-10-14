@@ -44,13 +44,13 @@ func getNetworkBlackholeDescription() action_kit_api.ActionDescription {
 }
 
 func blackhole(r runc.Runc) networkOptsProvider {
-	return func(ctx context.Context, sidecar network.SidecarOpts, request action_kit_api.PrepareActionRequestBody) (network.Opts, error) {
-		filter, err := mapToNetworkFilter(ctx, r, sidecar, request.Config, getRestrictedEndpoints(request))
+	return func(ctx context.Context, sidecar network.SidecarOpts, request action_kit_api.PrepareActionRequestBody) (network.Opts, action_kit_api.Messages, error) {
+		filter, messages, err := mapToNetworkFilter(ctx, r, sidecar, request.Config, getRestrictedEndpoints(request))
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
-		return &network.BlackholeOpts{Filter: filter}, nil
+		return &network.BlackholeOpts{Filter: filter}, messages, nil
 	}
 }
 

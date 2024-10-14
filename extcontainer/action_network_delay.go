@@ -73,7 +73,7 @@ func getNetworkDelayDescription() action_kit_api.ActionDescription {
 }
 
 func delay(r runc.Runc) networkOptsProvider {
-	return func(ctx context.Context, sidecar network.SidecarOpts, request action_kit_api.PrepareActionRequestBody) (network.Opts, error) {
+	return func(ctx context.Context, sidecar network.SidecarOpts, request action_kit_api.PrepareActionRequestBody) (network.Opts, action_kit_api.Messages, error) {
 		delay := time.Duration(extutil.ToInt64(request.Config["networkDelay"])) * time.Millisecond
 		hasJitter := extutil.ToBool(request.Config["networkDelayJitter"])
 
@@ -82,21 +82,21 @@ func delay(r runc.Runc) networkOptsProvider {
 			jitter = delay * 30 / 100
 		}
 
-		filter, err := mapToNetworkFilter(ctx, r, sidecar, request.Config, getRestrictedEndpoints(request))
+		filter, messages, err := mapToNetworkFilter(ctx, r, sidecar, request.Config, getRestrictedEndpoints(request))
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		interfaces := extutil.ToStringArray(request.Config["networkInterface"])
 		if len(interfaces) == 0 {
 			interfaces, err = network.ListNonLoopbackInterfaceNames(ctx, r, sidecar)
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 		}
 
 		if len(interfaces) == 0 {
-			return nil, fmt.Errorf("no network interfaces specified")
+			return nil, nil, fmt.Errorf("no network interfaces specified")
 		}
 
 		return &network.DelayOpts{
@@ -104,7 +104,7 @@ func delay(r runc.Runc) networkOptsProvider {
 			Delay:      delay,
 			Jitter:     jitter,
 			Interfaces: interfaces,
-		}, nil
+		}, messages, nil
 	}
 }
 

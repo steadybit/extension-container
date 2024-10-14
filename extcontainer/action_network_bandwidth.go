@@ -63,31 +63,31 @@ func getNetworkLimitBandwidthDescription() action_kit_api.ActionDescription {
 }
 
 func limitBandwidth(r runc.Runc) networkOptsProvider {
-	return func(ctx context.Context, sidecar network.SidecarOpts, request action_kit_api.PrepareActionRequestBody) (network.Opts, error) {
+	return func(ctx context.Context, sidecar network.SidecarOpts, request action_kit_api.PrepareActionRequestBody) (network.Opts, action_kit_api.Messages, error) {
 		bandwidth := extutil.ToString(request.Config["bandwidth"])
 
-		filter, err := mapToNetworkFilter(ctx, r, sidecar, request.Config, getRestrictedEndpoints(request))
+		filter, messages, err := mapToNetworkFilter(ctx, r, sidecar, request.Config, getRestrictedEndpoints(request))
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		interfaces := extutil.ToStringArray(request.Config["networkInterface"])
 		if len(interfaces) == 0 {
 			interfaces, err = network.ListNonLoopbackInterfaceNames(ctx, r, sidecar)
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 		}
 
 		if len(interfaces) == 0 {
-			return nil, fmt.Errorf("no network interfaces specified")
+			return nil, nil, fmt.Errorf("no network interfaces specified")
 		}
 
 		return &network.LimitBandwidthOpts{
 			Filter:     filter,
 			Bandwidth:  bandwidth,
 			Interfaces: interfaces,
-		}, nil
+		}, messages, nil
 	}
 }
 

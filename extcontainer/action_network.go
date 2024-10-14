@@ -22,7 +22,7 @@ import (
 	"strings"
 )
 
-type networkOptsProvider func(ctx context.Context, sidecar network.SidecarOpts, request action_kit_api.PrepareActionRequestBody) (network.Opts, error)
+type networkOptsProvider func(ctx context.Context, sidecar network.SidecarOpts, request action_kit_api.PrepareActionRequestBody) (network.Opts, action_kit_api.Messages, error)
 
 type networkOptsDecoder func(data json.RawMessage) (network.Opts, error)
 
@@ -126,7 +126,7 @@ func (a *networkAction) Prepare(ctx context.Context, state *NetworkActionState, 
 		}, nil
 	}
 
-	opts, err := a.optsProvider(ctx, state.Sidecar, request)
+	opts, messages, err := a.optsProvider(ctx, state.Sidecar, request)
 	if err != nil {
 		return nil, extension_kit.ToError("Failed to prepare network settings.", err)
 	}
@@ -138,7 +138,7 @@ func (a *networkAction) Prepare(ctx context.Context, state *NetworkActionState, 
 
 	state.NetworkOpts = rawOpts
 	state.ExecutionId = request.ExecutionId
-	return nil, nil
+	return &action_kit_api.PrepareResult{Messages: &messages}, nil
 }
 
 func isUsingHostNetwork(ns []runc.LinuxNamespace) bool {
@@ -156,31 +156,27 @@ func (a *networkAction) Start(ctx context.Context, state *NetworkActionState) (*
 		return nil, extension_kit.ToError("Failed to deserialize network settings.", err)
 	}
 
+	result := action_kit_api.StartResult{Messages: &action_kit_api.Messages{
+		{
+			Level:   extutil.Ptr(action_kit_api.Info),
+			Message: opts.String(),
+		},
+	}}
+
 	err = network.Apply(ctx, a.runc, state.Sidecar, opts)
 	if err != nil {
 		var toomany *network.ErrTooManyTcCommands
 		if errors.As(err, &toomany) {
-			return &action_kit_api.StartResult{
-				Messages: extutil.Ptr([]action_kit_api.Message{
-					{
-						Level:   extutil.Ptr(action_kit_api.Error),
-						Message: "Too many tc commands where generated for this attack. This may happen if we need to add too many exclude rules for steadybit extensions. Please try to make the attack more specific by adding ports or CIDRs to the parameters.",
-					},
-				}),
-			}, nil
+			result.Messages = extutil.Ptr(append(*result.Messages, action_kit_api.Message{
+				Level:   extutil.Ptr(action_kit_api.Error),
+				Message: fmt.Sprintf("Too many tc commands (%d) generated. This happens when too many excludes for steadybit agent and extensions are needed. Please configure a more specific attack by adding ports, and/or CIDRs to the parameters.", toomany.Count),
+			}))
+			return &result, nil
 		}
-		return nil, extension_kit.ToError("Failed to apply network settings.", err)
+		return &result, extension_kit.ToError("Failed to apply network settings.", err)
 	}
 
-	return &action_kit_api.StartResult{
-		Messages: extutil.Ptr([]action_kit_api.Message{
-			{
-				Level:   extutil.Ptr(action_kit_api.Info),
-				Message: fmt.Sprintf("ContainerId: %s %s", state.ContainerID, opts.String()),
-			},
-		}),
-	}, nil
-
+	return &result, nil
 }
 
 func (a *networkAction) Stop(ctx context.Context, state *NetworkActionState) (*action_kit_api.StopResult, error) {
@@ -233,7 +229,7 @@ func parsePortRanges(raw []string) ([]network.PortRange, error) {
 	return ranges, nil
 }
 
-func mapToNetworkFilter(ctx context.Context, r runc.Runc, sidecar network.SidecarOpts, actionConfig map[string]interface{}, restrictedEndpoints []action_kit_api.RestrictedEndpoint) (network.Filter, error) {
+func mapToNetworkFilter(ctx context.Context, r runc.Runc, sidecar network.SidecarOpts, actionConfig map[string]interface{}, restrictedEndpoints []action_kit_api.RestrictedEndpoint) (network.Filter, action_kit_api.Messages, error) {
 	includeCidrs, unresolved := network.ParseCIDRs(append(
 		extutil.ToStringArray(actionConfig["ip"]),
 		extutil.ToStringArray(actionConfig["hostname"])...,
@@ -242,7 +238,7 @@ func mapToNetworkFilter(ctx context.Context, r runc.Runc, sidecar network.Sideca
 	dig := network.HostnameResolver{Dig: &network.RuncDigRunner{Runc: r, Sidecar: sidecar}}
 	resolved, err := dig.Resolve(ctx, unresolved...)
 	if err != nil {
-		return network.Filter{}, err
+		return network.Filter{}, nil, err
 	}
 	includeCidrs = append(includeCidrs, network.IpsToNets(resolved)...)
 
@@ -253,7 +249,7 @@ func mapToNetworkFilter(ctx context.Context, r runc.Runc, sidecar network.Sideca
 
 	portRanges, err := parsePortRanges(extutil.ToStringArray(actionConfig["port"]))
 	if err != nil {
-		return network.Filter{}, err
+		return network.Filter{}, nil, err
 	}
 	if len(portRanges) == 0 {
 		//if no hostname/ip specified we affect all ports
@@ -267,11 +263,28 @@ func mapToNetworkFilter(ctx context.Context, r runc.Runc, sidecar network.Sideca
 
 	excludes, err := toExcludes(restrictedEndpoints)
 	if err != nil {
-		return network.Filter{}, err
+		return network.Filter{}, nil, err
 	}
 	excludes = append(excludes, network.ComputeExcludesForOwnIpAndPorts(config.Config.Port, config.Config.HealthPort)...)
 
-	return network.Filter{Include: includes, Exclude: excludes}, nil
+	var messages []action_kit_api.Message
+	excludes, condensed := condenseExcludes(excludes)
+	if condensed {
+		messages = append(messages, action_kit_api.Message{
+			Level: extutil.Ptr(action_kit_api.Warn),
+			Message: "Some excludes (to protect agent and extensions) were aggregated to reduce the number of tc commands necessary." +
+				"This may lead to less specific exclude rules, some traffic might not be affected, as expected. " +
+				"You can avoid this by configuring a more specific attack (e.g. by specifying ports or CIDRs).",
+		})
+	}
+
+	return network.Filter{Include: includes, Exclude: excludes}, messages, nil
+}
+
+func condenseExcludes(excludes []network.NetWithPortRange) ([]network.NetWithPortRange, bool) {
+	l := len(excludes)
+	excludes = network.CondenseNetWithPortRange(excludes, 500)
+	return excludes, l != len(excludes)
 }
 
 func toExcludes(restrictedEndpoints []action_kit_api.RestrictedEndpoint) ([]network.NetWithPortRange, error) {
