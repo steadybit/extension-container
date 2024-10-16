@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// SPDX-FileCopyrightText: 2023 Steadybit GmbH
+// SPDX-FileCopyrightText: 2024 Steadybit GmbH
 
 package extcontainer
 
@@ -50,7 +50,7 @@ func getNetworkBlockDnsDescription() action_kit_api.ActionDescription {
 			},
 			{
 				Name:         "dnsPort",
-				Label:        "Network Dns",
+				Label:        "DNS Port",
 				Description:  extutil.Ptr("dnsPort"),
 				Type:         action_kit_api.Integer,
 				DefaultValue: extutil.Ptr("53"),
