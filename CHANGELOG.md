@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.3.24
+
+- fix: only create network excludes which are necessary for the given includes
+- fix: aggregate excludes to ip ranges if there are too many
+- fix: fail early when too many tc rules are generated for a network attack
+
 ## v1.3.23
 
 - chore: update action_kit_sdk dependency
