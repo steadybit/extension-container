@@ -55,7 +55,7 @@ func NewClient() (types.Client, error) {
 }
 
 func RegisterLivenessCheck(client types.Client) chan struct{} {
-	if config.Config.LivenessCheckInterval == ""  || config.Config.LivenessCheckInterval == "0"{
+	if config.Config.LivenessCheckInterval == "" || config.Config.LivenessCheckInterval == "0" {
 		log.Info().Msg("Liveness check is disabled.")
 		return nil
 	}
@@ -70,10 +70,10 @@ func RegisterLivenessCheck(client types.Client) chan struct{} {
 	go func() {
 		for {
 			select {
-			case <- ticker.C:
+			case <-ticker.C:
 				_, err := client.Version(context.Background())
-				exthealth.SetAlive(err==nil)
-			case <- quit:
+				exthealth.SetAlive(err == nil)
+			case <-quit:
 				ticker.Stop()
 				return
 			}

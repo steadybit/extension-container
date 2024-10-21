@@ -6,9 +6,10 @@ toolchain go1.23.1
 
 require (
 	github.com/KimMachineGun/automemlimit v0.6.1
-	github.com/containerd/containerd v1.7.22
+	github.com/containerd/containerd v1.7.23
 	github.com/containerd/containerd/api v1.7.19
-	github.com/containerd/errdefs v0.1.0
+	github.com/containerd/errdefs v0.3.0
+	github.com/containerd/errdefs/pkg v0.3.0
 	github.com/docker/docker v27.3.1+incompatible
 	github.com/google/uuid v1.6.0
 	github.com/kataras/iris/v12 v12.2.11
@@ -17,14 +18,14 @@ require (
 	github.com/opencontainers/runtime-spec v1.2.0
 	github.com/rs/zerolog v1.33.0
 	github.com/steadybit/action-kit/go/action_kit_api/v2 v2.9.3
-	github.com/steadybit/action-kit/go/action_kit_commons v1.2.9
-	github.com/steadybit/action-kit/go/action_kit_sdk v1.1.11
+	github.com/steadybit/action-kit/go/action_kit_commons v1.2.10
+	github.com/steadybit/action-kit/go/action_kit_sdk v1.1.12
 	github.com/steadybit/action-kit/go/action_kit_test v1.3.0
 	github.com/steadybit/discovery-kit/go/discovery_kit_api v1.6.0
 	github.com/steadybit/discovery-kit/go/discovery_kit_commons v0.2.0
 	github.com/steadybit/discovery-kit/go/discovery_kit_sdk v1.2.1
 	github.com/steadybit/discovery-kit/go/discovery_kit_test v1.1.2
-	github.com/steadybit/extension-kit v1.8.16
+	github.com/steadybit/extension-kit v1.8.18
 	github.com/stretchr/testify v1.9.0
 	go.uber.org/automaxprocs v1.6.0
 	golang.org/x/sync v0.8.0
@@ -53,7 +54,7 @@ require (
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/distribution/reference v0.6.0 // indirect
 	github.com/docker/go-connections v0.5.0 // indirect
-	github.com/docker/go-events v0.0.0-20190806004212-e31b211e4f1c // indirect
+	github.com/docker/go-events v0.0.0-20241017185736-969db071c880 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/elastic/go-sysinfo v1.14.2 // indirect
 	github.com/elastic/go-windows v1.0.2 // indirect
@@ -101,7 +102,7 @@ require (
 	github.com/oapi-codegen/runtime v1.1.1 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.0 // indirect
-	github.com/opencontainers/selinux v1.11.0 // indirect
+	github.com/opencontainers/selinux v1.11.1 // indirect
 	github.com/pbnjay/memory v0.0.0-20210728143218-7b4eea64cf58 // indirect
 	github.com/perimeterx/marshmallow v1.1.5 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
@@ -115,7 +116,7 @@ require (
 	github.com/yalp/jsonpath v0.0.0-20180802001716-5cc68e5049a0 // indirect
 	github.com/zmwangx/debounce v1.0.0 // indirect
 	go.opencensus.io v0.24.0 // indirect
-	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.55.0 // indirect
+	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.56.0 // indirect
 	go.opentelemetry.io/otel v1.31.0 // indirect
 	go.opentelemetry.io/otel/metric v1.31.0 // indirect
 	go.opentelemetry.io/otel/trace v1.31.0 // indirect
@@ -126,8 +127,8 @@ require (
 	golang.org/x/term v0.25.0 // indirect
 	golang.org/x/text v0.19.0 // indirect
 	golang.org/x/time v0.7.0 // indirect
-	google.golang.org/genproto v0.0.0-20241007155032-5fefd90f89a9 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20241007155032-5fefd90f89a9 // indirect
+	google.golang.org/genproto v0.0.0-20241015192408-796eee8c2d53 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20241015192408-796eee8c2d53 // indirect
 	google.golang.org/protobuf v1.35.1 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
