@@ -11,6 +11,7 @@ import (
 	containersapi "github.com/containerd/containerd/api/services/containers/v1"
 	tasksapi "github.com/containerd/containerd/api/services/tasks/v1"
 	"github.com/containerd/errdefs"
+	"github.com/containerd/errdefs/pkg/errgrpc"
 	"github.com/rs/zerolog/log"
 	"github.com/steadybit/extension-container/extcontainer/container/types"
 	"google.golang.org/grpc/codes"
@@ -47,7 +48,7 @@ func (c *client) List(ctx context.Context) ([]types.Container, error) {
 	containers := containersapi.NewContainersClient(c.containerd.Conn())
 	session, err := containers.ListStream(ctx, &containersapi.ListContainersRequest{})
 	if err != nil {
-		return nil, fmt.Errorf("failed to list containers: %w", errdefs.FromGRPC(err))
+		return nil, fmt.Errorf("failed to list containers: %w", errgrpc.ToNative(err))
 	}
 
 	tasks := tasksapi.NewTasksClient(c.containerd.Conn())
@@ -64,7 +65,7 @@ func (c *client) List(ctx context.Context) ([]types.Container, error) {
 					return nil, errStreamNotAvailable
 				}
 			}
-			return nil, errdefs.FromGRPC(err)
+			return nil, errgrpc.ToNative(err)
 		}
 
 		select {
@@ -93,7 +94,7 @@ func getStatus(ctx context.Context, tasks tasksapi.TasksClient, id string) (cont
 
 	r, err := tasks.Get(ctx, &tasksapi.GetRequest{ContainerID: id})
 	if err != nil {
-		err = errdefs.FromGRPC(err)
+		err = errgrpc.ToNative(err)
 		if errdefs.IsNotFound(err) {
 			return containerd.Unknown, fmt.Errorf("no running task found: %w", err)
 		}
