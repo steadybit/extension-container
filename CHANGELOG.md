@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.3.25
+
+- chore: update dependencies
+
 ## v1.3.24
 
 - fix: only create network excludes which are necessary for the given includes
