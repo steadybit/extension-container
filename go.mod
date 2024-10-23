@@ -18,7 +18,7 @@ require (
 	github.com/opencontainers/runtime-spec v1.2.0
 	github.com/rs/zerolog v1.33.0
 	github.com/steadybit/action-kit/go/action_kit_api/v2 v2.9.3
-	github.com/steadybit/action-kit/go/action_kit_commons v1.2.10
+	github.com/steadybit/action-kit/go/action_kit_commons v1.2.11-0.20241023194209-bee2981d0385
 	github.com/steadybit/action-kit/go/action_kit_sdk v1.1.12
 	github.com/steadybit/action-kit/go/action_kit_test v1.3.0
 	github.com/steadybit/discovery-kit/go/discovery_kit_api v1.6.0
