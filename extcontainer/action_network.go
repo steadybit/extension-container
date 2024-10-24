@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// SPDX-FileCopyrightText: 2023 Steadybit GmbH
+// SPDX-FileCopyrightText: 2024 Steadybit GmbH
 
 package extcontainer
 
@@ -128,7 +128,7 @@ func (a *networkAction) Prepare(ctx context.Context, state *NetworkActionState, 
 
 	opts, messages, err := a.optsProvider(ctx, state.Sidecar, request)
 	if err != nil {
-		return nil, extension_kit.ToError("Failed to prepare network settings.", err)
+		return nil, extension_kit.WrapError(err)
 	}
 
 	rawOpts, err := json.Marshal(opts)
