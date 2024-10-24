@@ -17,7 +17,7 @@ require (
 	github.com/novln/docker-parser v1.0.0
 	github.com/opencontainers/runtime-spec v1.2.0
 	github.com/rs/zerolog v1.33.0
-	github.com/steadybit/action-kit/go/action_kit_api/v2 v2.9.3
+	github.com/steadybit/action-kit/go/action_kit_api/v2 v2.9.4
 	github.com/steadybit/action-kit/go/action_kit_commons v1.2.11-0.20241023194209-bee2981d0385
 	github.com/steadybit/action-kit/go/action_kit_sdk v1.1.12
 	github.com/steadybit/action-kit/go/action_kit_test v1.3.0
@@ -25,7 +25,7 @@ require (
 	github.com/steadybit/discovery-kit/go/discovery_kit_commons v0.2.0
 	github.com/steadybit/discovery-kit/go/discovery_kit_sdk v1.2.1
 	github.com/steadybit/discovery-kit/go/discovery_kit_test v1.1.2
-	github.com/steadybit/extension-kit v1.8.18
+	github.com/steadybit/extension-kit v1.8.19
 	github.com/stretchr/testify v1.9.0
 	go.uber.org/automaxprocs v1.6.0
 	golang.org/x/sync v0.8.0
@@ -33,14 +33,14 @@ require (
 	k8s.io/api v0.31.1
 	k8s.io/apimachinery v0.31.1
 	k8s.io/client-go v0.31.1
-	k8s.io/cri-api v0.31.1
+	k8s.io/cri-api v0.31.2
 )
 
 require (
 	github.com/AdaLogics/go-fuzz-headers v0.0.0-20240806141605-e8a1dd7889d6 // indirect
 	github.com/AdamKorcz/go-118-fuzz-build v0.0.0-20231105174938-2b5cbb29f3e2 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
-	github.com/Microsoft/hcsshim v0.12.7 // indirect
+	github.com/Microsoft/hcsshim v0.12.8 // indirect
 	github.com/apapsch/go-jsonmerge/v2 v2.0.0 // indirect
 	github.com/cilium/ebpf v0.16.0 // indirect
 	github.com/containerd/cgroups/v3 v3.0.3 // indirect
@@ -127,8 +127,8 @@ require (
 	golang.org/x/term v0.25.0 // indirect
 	golang.org/x/text v0.19.0 // indirect
 	golang.org/x/time v0.7.0 // indirect
-	google.golang.org/genproto v0.0.0-20241015192408-796eee8c2d53 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20241015192408-796eee8c2d53 // indirect
+	google.golang.org/genproto v0.0.0-20241021214115-324edc3d5d38 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20241021214115-324edc3d5d38 // indirect
 	google.golang.org/protobuf v1.35.1 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
