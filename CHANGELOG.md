@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.3.26
+
+- chore: update dependencies
+- fix: network actions if runc debug is enabled
+
 ## v1.3.25
 
 - chore: update dependencies
