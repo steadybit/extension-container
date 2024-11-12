@@ -83,7 +83,7 @@ func main() {
 	action_kit_sdk.RegisterAction(extcontainer.NewFillDiskContainerAction(r))
 	action_kit_sdk.RegisterAction(extcontainer.NewFillMemoryContainerAction(r))
 
-	action_kit_sdk.InstallSignalHandler()
+	extsignals.ActivateSignalHandlers()
 
 	action_kit_sdk.RegisterCoverageEndpoints()
 
