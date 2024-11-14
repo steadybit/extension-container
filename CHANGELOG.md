@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.3.27
+
+- chore: use new signal handle mechanism from extension-kit
+- chore: update dependencies
+
 ## v1.3.26
 
 - chore: update dependencies
