@@ -1,5 +1,7 @@
 # Changelog
 
+- fix: Network attack cannot be executed, after a previous attack skipped cleanup for missing container
+
 ## v1.3.27
 
 - chore: use new signal handle mechanism from extension-kit
