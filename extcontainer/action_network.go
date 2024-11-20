@@ -180,32 +180,31 @@ func (a *networkAction) Start(ctx context.Context, state *NetworkActionState) (*
 }
 
 func (a *networkAction) Stop(ctx context.Context, state *NetworkActionState) (*action_kit_api.StopResult, error) {
-	if err := runc.NamespacesExists(ctx, state.Sidecar.TargetProcess.Namespaces, specs.NetworkNamespace); err != nil {
-		log.Info().
-			Str("containerId", state.ContainerID).
-			AnErr("reason", err).
-			Msg("skipping revert network config")
-
-		return &action_kit_api.StopResult{
-			Messages: &[]action_kit_api.Message{
-				{
-					Level:   extutil.Ptr(action_kit_api.Info),
-					Message: fmt.Sprintf("Skipped revert network config. Target container %s exited? %s", state.ContainerID, err),
-				},
-			},
-		}, nil
-	}
-
 	opts, err := a.optsDecoder(state.NetworkOpts)
 	if err != nil {
 		return nil, extension_kit.ToError("Failed to deserialize network settings.", err)
 	}
 
-	if err := network.Revert(ctx, a.runc, state.Sidecar, opts); err != nil {
+	if err := network.Revert(ctx, a.runc, state.Sidecar, opts); err == nil {
+		return nil, nil
+	} else if nsExistsErr := runc.NamespacesExists(ctx, state.Sidecar.TargetProcess.Namespaces, specs.NetworkNamespace); nsExistsErr == nil {
 		return nil, extension_kit.ToError("Failed to revert network settings.", err)
-	}
+	} else {
+		log.Info().
+			Str("containerId", state.ContainerID).
+			AnErr("reason", nsExistsErr).
+			AnErr("err", err).
+			Msg("ignoring error from revert network config")
 
-	return nil, nil
+		return &action_kit_api.StopResult{
+			Messages: &[]action_kit_api.Message{
+				{
+					Level:   extutil.Ptr(action_kit_api.Info),
+					Message: fmt.Sprintf("Ingoring errors from revert network config. Target container %s exited? %s", state.ContainerID, nsExistsErr),
+				},
+			},
+		}, nil
+	}
 }
 
 func parsePortRanges(raw []string) ([]network.PortRange, error) {

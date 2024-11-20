@@ -10,7 +10,6 @@ import (
 	"github.com/steadybit/action-kit/go/action_kit_commons/runc"
 	"github.com/steadybit/extension-container/extcontainer/container/types"
 	"github.com/steadybit/extension-kit/extutil"
-	"runtime/trace"
 	"strings"
 )
 
@@ -73,9 +72,9 @@ func getRestrictedEndpoints(request action_kit_api.PrepareActionRequestBody) []a
 	return restrictedEndpoints
 }
 
-func getProcessInfoForContainer(ctx context.Context, r runc.Runc, containerId string) (runc.LinuxProcessInfo, error) {
-	defer trace.StartRegion(ctx, "network.getProcessInfoForContainer").End()
+var getProcessInfoForContainer = getProcessInfoForContainerImpl
 
+func getProcessInfoForContainerImpl(ctx context.Context, r runc.Runc, containerId string) (runc.LinuxProcessInfo, error) {
 	state, err := r.State(ctx, containerId)
 	if err != nil {
 		return runc.LinuxProcessInfo{}, fmt.Errorf("failed to read state of target container %s: %w", containerId, err)
