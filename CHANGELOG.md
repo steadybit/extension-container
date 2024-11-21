@@ -1,6 +1,9 @@
 # Changelog
 
+## v1.3.28
+
 - fix: Network attack cannot be executed, after a previous attack skipped cleanup for missing container
+- chore: update dependencies
 
 ## v1.3.27
 
