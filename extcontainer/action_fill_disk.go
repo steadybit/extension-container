@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// SPDX-FileCopyrightText: 2023 Steadybit GmbH
+// SPDX-FileCopyrightText: 2024 Steadybit GmbH
 
 package extcontainer
 
@@ -26,6 +26,7 @@ type fillDiskAction struct {
 type FillDiskActionState struct {
 	ExecutionId  uuid.UUID
 	ContainerID  string
+	TargetLabel  string
 	Sidecar      diskfill.SidecarOpts
 	FillDiskOpts diskfill.Opts
 }
@@ -182,6 +183,7 @@ func (a *fillDiskAction) Prepare(ctx context.Context, state *FillDiskActionState
 		return nil, extension_kit.ToError("Target is missing the 'container.id' attribute.", nil)
 	}
 	state.ContainerID = containerId[0]
+	state.TargetLabel = getTargetLabel(*request.Target)
 
 	opts, err := fillDiskOpts(request)
 	if err != nil {
@@ -218,7 +220,7 @@ func (a *fillDiskAction) Start(ctx context.Context, state *FillDiskActionState) 
 	messages := []action_kit_api.Message{
 		{
 			Level:   extutil.Ptr(action_kit_api.Info),
-			Message: fmt.Sprintf("Starting fill disk in container %s with args %s", state.ContainerID, strings.Join(diskFill.Args(), " ")),
+			Message: fmt.Sprintf("Starting fill disk in container %s with args %s", state.TargetLabel, strings.Join(diskFill.Args(), " ")),
 		},
 	}
 
@@ -234,13 +236,13 @@ func (a *fillDiskAction) Start(ctx context.Context, state *FillDiskActionState) 
 	}, nil
 }
 
-func (a *fillDiskAction) Stop(ctx context.Context, state *FillDiskActionState) (*action_kit_api.StopResult, error) {
+func (a *fillDiskAction) Stop(_ context.Context, state *FillDiskActionState) (*action_kit_api.StopResult, error) {
 	messages := make([]action_kit_api.Message, 0)
 
 	if a.stopFillDiskContainer(state.ExecutionId) {
 		messages = append(messages, action_kit_api.Message{
 			Level:   extutil.Ptr(action_kit_api.Info),
-			Message: fmt.Sprintf("Canceled fill disk in container %s", state.ContainerID),
+			Message: fmt.Sprintf("Canceled fill disk in container %s", state.TargetLabel),
 		})
 	}
 

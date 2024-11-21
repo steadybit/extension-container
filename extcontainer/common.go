@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// SPDX-FileCopyrightText: 2023 Steadybit GmbH
+// SPDX-FileCopyrightText: 2024 Steadybit GmbH
 
 package extcontainer
 
@@ -62,6 +62,15 @@ func AddPrefix(containerId string, runtime types.Runtime) string {
 		return fmt.Sprintf("%s%s%s", runtime, separator, containerId)
 	}
 	return containerId
+}
+
+func getTargetLabel(target action_kit_api.Target) string {
+	containerId := target.Attributes["container.id"][0]
+	if len(target.Attributes["steadybit.label"]) > 0 {
+		return fmt.Sprintf("%s (%s)", target.Attributes["steadybit.label"][0], RemovePrefix(containerId)[0:8])
+	} else {
+		return containerId
+	}
 }
 
 func getRestrictedEndpoints(request action_kit_api.PrepareActionRequestBody) []action_kit_api.RestrictedEndpoint {

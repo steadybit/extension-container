@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// SPDX-FileCopyrightText: 2023 Steadybit GmbH
+// SPDX-FileCopyrightText: 2024 Steadybit GmbH
 
 package extcontainer
 
@@ -20,6 +20,7 @@ type pauseAction struct {
 
 type PauseActionState struct {
 	ContainerId string
+	TargetLabel string
 }
 
 // Make sure pauseAction implements all required interfaces
@@ -76,6 +77,8 @@ func (a *pauseAction) Prepare(_ context.Context, state *PauseActionState, reques
 	}
 
 	state.ContainerId = containerId[0]
+	state.TargetLabel = getTargetLabel(*request.Target)
+
 	return nil, nil
 }
 
@@ -88,7 +91,7 @@ func (a *pauseAction) Start(ctx context.Context, state *PauseActionState) (*acti
 		Messages: extutil.Ptr([]action_kit_api.Message{
 			{
 				Level:   extutil.Ptr(action_kit_api.Info),
-				Message: fmt.Sprintf("Pausing container %s", state.ContainerId),
+				Message: fmt.Sprintf("Pausing container %s", state.TargetLabel),
 			},
 		}),
 	}, nil
@@ -102,7 +105,7 @@ func (a *pauseAction) Status(ctx context.Context, state *PauseActionState) (*act
 			Messages: extutil.Ptr([]action_kit_api.Message{
 				{
 					Level:   extutil.Ptr(action_kit_api.Warn),
-					Message: fmt.Sprintf("Container %s is not running anymore", state.ContainerId),
+					Message: fmt.Sprintf("Container %s is not running anymore", state.TargetLabel),
 				},
 			}),
 		}, nil
@@ -119,7 +122,7 @@ func (a *pauseAction) Stop(ctx context.Context, state *PauseActionState) (*actio
 			Messages: extutil.Ptr([]action_kit_api.Message{
 				{
 					Level:   extutil.Ptr(action_kit_api.Warn),
-					Message: fmt.Sprintf("Container %s is not running anymore", state.ContainerId),
+					Message: fmt.Sprintf("Container %s is not running anymore", state.TargetLabel),
 				},
 			}),
 		}, nil
@@ -134,7 +137,7 @@ func (a *pauseAction) Stop(ctx context.Context, state *PauseActionState) (*actio
 		Messages: extutil.Ptr([]action_kit_api.Message{
 			{
 				Level:   extutil.Ptr(action_kit_api.Info),
-				Message: fmt.Sprintf("Unpaused container %s", state.ContainerId),
+				Message: fmt.Sprintf("Unpaused container %s", state.TargetLabel),
 			},
 		}),
 	}, nil

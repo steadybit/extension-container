@@ -38,6 +38,7 @@ type NetworkActionState struct {
 	NetworkOpts json.RawMessage
 	Sidecar     network.SidecarOpts
 	ContainerID string
+	TargetLabel string
 }
 
 // Make sure networkAction implements all required interfaces
@@ -106,6 +107,7 @@ func (a *networkAction) Prepare(ctx context.Context, state *NetworkActionState, 
 		return nil, extension_kit.ToError("Target is missing the 'container.id' attribute.", nil)
 	}
 	state.ContainerID = containerId[0]
+	state.TargetLabel = getTargetLabel(*request.Target)
 
 	processInfo, err := getProcessInfoForContainer(ctx, a.runc, RemovePrefix(state.ContainerID))
 	if err != nil {
@@ -200,7 +202,7 @@ func (a *networkAction) Stop(ctx context.Context, state *NetworkActionState) (*a
 			Messages: &[]action_kit_api.Message{
 				{
 					Level:   extutil.Ptr(action_kit_api.Info),
-					Message: fmt.Sprintf("Ingoring errors from revert network config. Target container %s exited? %s", state.ContainerID, nsExistsErr),
+					Message: fmt.Sprintf("Ingoring errors from revert network config. Target container %s exited? %s", state.TargetLabel, nsExistsErr),
 				},
 			},
 		}, nil

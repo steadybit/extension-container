@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// SPDX-FileCopyrightText: 2023 Steadybit GmbH
+// SPDX-FileCopyrightText: 2024 Steadybit GmbH
 
 package extcontainer
 
@@ -38,6 +38,7 @@ type stressAction struct {
 type StressActionState struct {
 	Sidecar         stress.SidecarOpts
 	ContainerID     string
+	TargetLabel     string
 	StressOpts      stress.Opts
 	ExecutionId     uuid.UUID
 	IgnoreExitCodes []int
@@ -75,6 +76,7 @@ func (a *stressAction) Prepare(ctx context.Context, state *StressActionState, re
 		return nil, extension_kit.ToError("Target is missing the 'container.id' attribute.", nil)
 	}
 	state.ContainerID = containerId[0]
+	state.TargetLabel = getTargetLabel(*request.Target)
 
 	processInfo, err := getProcessInfoForContainer(ctx, a.runc, RemovePrefix(state.ContainerID))
 	if err != nil {
@@ -248,13 +250,13 @@ func (a *stressAction) Start(ctx context.Context, state *StressActionState) (*ac
 		Messages: extutil.Ptr([]action_kit_api.Message{
 			{
 				Level:   extutil.Ptr(action_kit_api.Info),
-				Message: fmt.Sprintf("Starting stress container %s with args %s", state.ContainerID, strings.Join(state.StressOpts.Args(), " ")),
+				Message: fmt.Sprintf("Starting stress container %s with args %s", state.TargetLabel, strings.Join(state.StressOpts.Args(), " ")),
 			},
 		}),
 	}, nil
 }
 
-func (a *stressAction) Status(ctx context.Context, state *StressActionState) (*action_kit_api.StatusResult, error) {
+func (a *stressAction) Status(_ context.Context, state *StressActionState) (*action_kit_api.StatusResult, error) {
 	exited, err := a.stressExited(state.ExecutionId)
 	if !exited {
 		return &action_kit_api.StatusResult{Completed: false}, nil
@@ -266,7 +268,7 @@ func (a *stressAction) Status(ctx context.Context, state *StressActionState) (*a
 			Messages: &[]action_kit_api.Message{
 				{
 					Level:   extutil.Ptr(action_kit_api.Info),
-					Message: fmt.Sprintf("Stessing container %s stopped", state.ContainerID),
+					Message: fmt.Sprintf("Stessing container %s stopped", state.TargetLabel),
 				},
 			},
 		}, nil
@@ -305,13 +307,13 @@ func (a *stressAction) Status(ctx context.Context, state *StressActionState) (*a
 	}, nil
 }
 
-func (a *stressAction) Stop(ctx context.Context, state *StressActionState) (*action_kit_api.StopResult, error) {
+func (a *stressAction) Stop(_ context.Context, state *StressActionState) (*action_kit_api.StopResult, error) {
 	messages := make([]action_kit_api.Message, 0)
 
 	if a.stopStressContainer(state.ExecutionId) {
 		messages = append(messages, action_kit_api.Message{
 			Level:   extutil.Ptr(action_kit_api.Info),
-			Message: fmt.Sprintf("Canceled stress container %s", state.ContainerID),
+			Message: fmt.Sprintf("Canceled stress container %s", state.TargetLabel),
 		})
 	}
 

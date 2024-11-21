@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// SPDX-FileCopyrightText: 2023 Steadybit GmbH
+// SPDX-FileCopyrightText: 2024 Steadybit GmbH
 
 package extcontainer
 
@@ -30,6 +30,7 @@ type fillMemoryAction struct {
 type FillMemoryActionState struct {
 	ExecutionId     uuid.UUID
 	ContainerID     string
+	TargetLabel     string
 	TargetProcess   runc.LinuxProcessInfo
 	FillMemoryOpts  memfill.Opts
 	IgnoreExitCodes []int
@@ -152,6 +153,7 @@ func (a *fillMemoryAction) Prepare(ctx context.Context, state *FillMemoryActionS
 		return nil, extension_kit.ToError("Target is missing the 'container.id' attribute.", nil)
 	}
 	state.ContainerID = containerId[0]
+	state.TargetLabel = getTargetLabel(*request.Target)
 
 	opts, err := fillMemoryOpts(request)
 	if err != nil {
@@ -190,7 +192,7 @@ func (a *fillMemoryAction) Start(_ context.Context, state *FillMemoryActionState
 		Messages: extutil.Ptr([]action_kit_api.Message{
 			{
 				Level:   extutil.Ptr(action_kit_api.Info),
-				Message: fmt.Sprintf("Starting fill memory in container %s with args %s", state.ContainerID, strings.Join(memFill.Args(), " ")),
+				Message: fmt.Sprintf("Starting fill memory in container %s with args %s", state.TargetLabel, strings.Join(memFill.Args(), " ")),
 			},
 		}),
 	}, nil
@@ -208,7 +210,7 @@ func (a *fillMemoryAction) Status(_ context.Context, state *FillMemoryActionStat
 			Messages: &[]action_kit_api.Message{
 				{
 					Level:   extutil.Ptr(action_kit_api.Info),
-					Message: fmt.Sprintf("fill memory for container %s stopped", state.ContainerID),
+					Message: fmt.Sprintf("fill memory for container %s stopped", state.TargetLabel),
 				},
 			},
 		}, nil
@@ -252,7 +254,7 @@ func (a *fillMemoryAction) Stop(_ context.Context, state *FillMemoryActionState)
 	if a.stopFillMemoryContainer(state.ExecutionId) {
 		messages = append(messages, action_kit_api.Message{
 			Level:   extutil.Ptr(action_kit_api.Info),
-			Message: fmt.Sprintf("Canceled fill memory in container %s", state.ContainerID),
+			Message: fmt.Sprintf("Canceled fill memory in container %s", state.TargetLabel),
 		})
 	}
 

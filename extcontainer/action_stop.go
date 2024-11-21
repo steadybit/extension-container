@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// SPDX-FileCopyrightText: 2023 Steadybit GmbH
+// SPDX-FileCopyrightText: 2024 Steadybit GmbH
 
 package extcontainer
 
@@ -29,6 +29,7 @@ type completer struct {
 
 type StopActionState struct {
 	ContainerId string
+	TargetLabel string
 	Graceful    bool
 	ExecutionId uuid.UUID
 }
@@ -89,6 +90,8 @@ func (a *stopAction) Prepare(_ context.Context, state *StopActionState, request 
 	}
 
 	state.ContainerId = containerId[0]
+	state.TargetLabel = getTargetLabel(*request.Target)
+
 	state.Graceful = extutil.ToBool(request.Config["graceful"])
 	state.ExecutionId = request.ExecutionId
 	return nil, nil
@@ -104,7 +107,7 @@ func (a *stopAction) Start(_ context.Context, state *StopActionState) (*action_k
 		Messages: extutil.Ptr([]action_kit_api.Message{
 			{
 				Level:   extutil.Ptr(action_kit_api.Info),
-				Message: fmt.Sprintf("Stopping container %s (graceful=%t)", state.ContainerId, state.Graceful),
+				Message: fmt.Sprintf("Stopping container %s (graceful=%t)", state.TargetLabel, state.Graceful),
 			},
 		}),
 	}, nil
@@ -116,12 +119,12 @@ func (a *stopAction) Status(_ context.Context, state *StopActionState) (*action_
 	if err != nil {
 		messages = append(messages, action_kit_api.Message{
 			Level:   extutil.Ptr(action_kit_api.Error),
-			Message: fmt.Sprintf("Failed to stop container %s: %s", state.ContainerId, err),
+			Message: fmt.Sprintf("Failed to stop container %s: %s", state.TargetLabel, err),
 		})
 	} else if completed {
 		messages = append(messages, action_kit_api.Message{
 			Level:   extutil.Ptr(action_kit_api.Info),
-			Message: fmt.Sprintf("Container %s stopped", state.ContainerId),
+			Message: fmt.Sprintf("Container %s stopped", state.TargetLabel),
 		})
 	}
 
@@ -138,7 +141,7 @@ func (a *stopAction) Stop(_ context.Context, state *StopActionState) (*action_ki
 	if stopped {
 		messages = append(messages, action_kit_api.Message{
 			Level:   extutil.Ptr(action_kit_api.Info),
-			Message: fmt.Sprintf("Canceled stop container %s", state.ContainerId),
+			Message: fmt.Sprintf("Canceled stop container %s", state.TargetLabel),
 		})
 	}
 
