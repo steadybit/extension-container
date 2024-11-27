@@ -191,10 +191,10 @@ manifest should match snapshot using crio using podAnnotations and Labels:
               resources:
                 limits:
                   cpu: 500m
-                  memory: 128Mi
+                  memory: 144Mi
                 requests:
                   cpu: 100m
-                  memory: 32Mi
+                  memory: 48Mi
               securityContext:
                 capabilities:
                   add:
@@ -313,10 +313,10 @@ manifest should match snapshot using docker:
               resources:
                 limits:
                   cpu: 500m
-                  memory: 128Mi
+                  memory: 144Mi
                 requests:
                   cpu: 100m
-                  memory: 32Mi
+                  memory: 48Mi
               securityContext:
                 capabilities:
                   add:
@@ -439,10 +439,10 @@ manifest should match snapshot with TLS:
               resources:
                 limits:
                   cpu: 500m
-                  memory: 128Mi
+                  memory: 144Mi
                 requests:
                   cpu: 100m
-                  memory: 32Mi
+                  memory: 48Mi
               securityContext:
                 capabilities:
                   add:
@@ -567,10 +567,10 @@ manifest should match snapshot with appArmorProfile for k8s >= 1.30:
               resources:
                 limits:
                   cpu: 500m
-                  memory: 128Mi
+                  memory: 144Mi
                 requests:
                   cpu: 100m
-                  memory: 32Mi
+                  memory: 48Mi
               securityContext:
                 appArmorProfile:
                   type: Unconfined
@@ -691,10 +691,10 @@ manifest should match snapshot with different containerPorts:
               resources:
                 limits:
                   cpu: 500m
-                  memory: 128Mi
+                  memory: 144Mi
                 requests:
                   cpu: 100m
-                  memory: 32Mi
+                  memory: 48Mi
               securityContext:
                 capabilities:
                   add:
@@ -815,10 +815,10 @@ manifest should match snapshot with discover all deployments:
               resources:
                 limits:
                   cpu: 500m
-                  memory: 128Mi
+                  memory: 144Mi
                 requests:
                   cpu: 100m
-                  memory: 32Mi
+                  memory: 48Mi
               securityContext:
                 capabilities:
                   add:
@@ -944,10 +944,10 @@ manifest should match snapshot with extra env vars:
               resources:
                 limits:
                   cpu: 500m
-                  memory: 128Mi
+                  memory: 144Mi
                 requests:
                   cpu: 100m
-                  memory: 32Mi
+                  memory: 48Mi
               securityContext:
                 capabilities:
                   add:
@@ -1068,10 +1068,10 @@ manifest should match snapshot with extra labels:
               resources:
                 limits:
                   cpu: 500m
-                  memory: 128Mi
+                  memory: 144Mi
                 requests:
                   cpu: 100m
-                  memory: 32Mi
+                  memory: 48Mi
               securityContext:
                 capabilities:
                   add:
@@ -1196,10 +1196,10 @@ manifest should match snapshot with mutual TLS:
               resources:
                 limits:
                   cpu: 500m
-                  memory: 128Mi
+                  memory: 144Mi
                 requests:
                   cpu: 100m
-                  memory: 32Mi
+                  memory: 48Mi
               securityContext:
                 capabilities:
                   add:
@@ -1338,10 +1338,10 @@ manifest should match snapshot with mutual TLS using containerPaths:
               resources:
                 limits:
                   cpu: 500m
-                  memory: 128Mi
+                  memory: 144Mi
                 requests:
                   cpu: 100m
-                  memory: 32Mi
+                  memory: 48Mi
               securityContext:
                 capabilities:
                   add:
@@ -1460,10 +1460,10 @@ manifest should match snapshot with podSecurityContext:
               resources:
                 limits:
                   cpu: 500m
-                  memory: 128Mi
+                  memory: 144Mi
                 requests:
                   cpu: 100m
-                  memory: 32Mi
+                  memory: 48Mi
               securityContext:
                 capabilities:
                   add:
@@ -1584,10 +1584,10 @@ manifest should match snapshot with priority class:
               resources:
                 limits:
                   cpu: 500m
-                  memory: 128Mi
+                  memory: 144Mi
                 requests:
                   cpu: 100m
-                  memory: 32Mi
+                  memory: 48Mi
               securityContext:
                 capabilities:
                   add:
@@ -1707,10 +1707,10 @@ manifest should match snapshot with update strategy:
               resources:
                 limits:
                   cpu: 500m
-                  memory: 128Mi
+                  memory: 144Mi
                 requests:
                   cpu: 100m
-                  memory: 32Mi
+                  memory: 48Mi
               securityContext:
                 capabilities:
                   add:
