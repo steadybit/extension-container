@@ -51,10 +51,11 @@ func TestWithMinikube(t *testing.T) {
 				"--set", "logging.level=trace",
 				"--set", "discovery.attributes.excludes={container.label.*}",
 				"--set", "container.runcDebug=true",
+				"--set", "extraEnv[0].name=STEADYBIT_EXTENSION_ENABLE_INTERNAL_NAMESPACE_RESOLUTION",
+				"--set", "extraEnv[0].value=\"true\"",
 			}
 		},
 	}
-
 	e2e.WithMinikube(t, getMinikubeOptions(), &extFactory, []e2e.WithMinikubeTestCase{
 		{
 			Name: "validate discovery",
