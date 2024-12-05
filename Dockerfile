@@ -45,7 +45,7 @@ RUN apt-get -qq update \
     && rm -rf /var/lib/apt/lists/* \
     && mkdir -p /run/systemd/system /sidecar
 
-USER $USERNAME
+USER $USER_UID
 
 WORKDIR /
 
