@@ -80,6 +80,11 @@ serviceAccount:
   # serviceAccount.name -- The name of the ServiceAccount to use.
   name: steadybit-extension-container
 
+securityContextConstraint:
+  # securityContextConstraint.create -- Specifies whether a SecurityContextConstraint should be created. Defaults to true if the cluster is OpenShift.
+  create: null
+  name: steadybit-extension-container
+
 updateStrategy:
   # updateStrategy.type -- Specifies the strategy used to replace old Pods by new ones.
   type: RollingUpdate
@@ -113,7 +118,30 @@ affinity: {}
 priorityClassName: null
 
 # podSecurityContext -- SecurityContext to apply to the pod.
-podSecurityContext: {}
+podSecurityContext:
+  seccompProfile:
+    type: Unconfined
+  runAsNonRoot: true
+
+# containerSecurityContext -- SecurityContext to apply to the container.
+containerSecurityContext:
+  appArmorProfile:
+    type: Unconfined
+  seccompProfile:
+    type: Unconfined
+  readOnlyRootFilesystem: true
+  capabilities:
+    add:
+      - SYS_ADMIN
+      - SYS_CHROOT
+      - SYS_RESOURCE
+      - SYS_PTRACE
+      - KILL
+      - NET_ADMIN
+      - DAC_OVERRIDE
+      - SETUID
+      - SETGID
+      - AUDIT_WRITE
 
 # extraEnv -- Array with extra environment variables to add to the container
 # e.g:
@@ -141,20 +169,6 @@ containerRuntimes:
   cri-o:
     socket: /var/run/crio/crio.sock
     runcRoot: /run/runc
-
-securityContext:
-  capabilities:
-    add:
-      - SYS_ADMIN
-      - SYS_CHROOT
-      - SYS_RESOURCE
-      - SYS_PTRACE
-      - KILL
-      - NET_ADMIN
-      - DAC_OVERRIDE
-      - SETUID
-      - SETGID
-      - AUDIT_WRITE
 
 discovery:
   # discovery.disableExcludes -- Ignore discovery excludes specified by `steadybit.com/discovery-disabled` (mainly for internal use)

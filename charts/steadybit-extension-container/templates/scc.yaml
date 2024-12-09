@@ -1,0 +1,20 @@
+{{- if or .Values.securityContextConstraint.create (and (.Capabilities.APIVersions.Has "security.openshift.io/v1/SecurityContextConstraints") (eq .Values.securityContextConstraint.create nil)) -}}
+apiVersion: security.openshift.io/v1
+kind: SecurityContextConstraints
+metadata:
+  name: {{ .Values.securityContextConstraint.name }}
+priority: null
+allowedCapabilities:
+  {{- .Values.containerSecurityContext.capabilities.add | toYaml | nindent 2 }}
+allowHostNetwork: true
+allowHostPID: true
+allowHostPorts: true
+allowHostDirVolumePlugin: true
+allowPrivilegeEscalation: true
+runAsUser:
+  type: MustRunAsNonRoot
+seccompProfiles:
+  - unconfined
+seLinuxContext:
+  type: MustRunAs
+{{- end -}}
