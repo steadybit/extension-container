@@ -1,0 +1,114 @@
+forced rendering on kubernetes:
+  1: |
+    apiVersion: rbac.authorization.k8s.io/v1
+    kind: ClusterRole
+    metadata:
+      name: system:openshift:scc:my-scc
+    rules:
+      - apiGroups:
+          - security.openshift.io
+        resourceNames:
+          - my-scc
+        resources:
+          - securitycontextconstraints
+        verbs:
+          - use
+  2: |
+    apiVersion: rbac.authorization.k8s.io/v1
+    kind: RoleBinding
+    metadata:
+      name: system:openshift:scc:my-scc
+      namespace: NAMESPACE
+    roleRef:
+      apiGroup: rbac.authorization.k8s.io
+      kind: ClusterRole
+      name: system:openshift:scc:my-scc
+    subjects:
+      - kind: ServiceAccount
+        name: steadybit-extension-container
+        namespace: NAMESPACE
+  3: |
+    allowHostDirVolumePlugin: true
+    allowHostNetwork: true
+    allowHostPID: true
+    allowHostPorts: true
+    allowPrivilegeEscalation: true
+    allowedCapabilities:
+      - SYS_ADMIN
+      - SYS_CHROOT
+      - SYS_RESOURCE
+      - SYS_PTRACE
+      - KILL
+      - NET_ADMIN
+      - DAC_OVERRIDE
+      - SETUID
+      - SETGID
+      - AUDIT_WRITE
+    apiVersion: security.openshift.io/v1
+    kind: SecurityContextConstraints
+    metadata:
+      name: my-scc
+    priority: null
+    runAsUser:
+      type: MustRunAsNonRoot
+    seLinuxContext:
+      type: MustRunAs
+    seccompProfiles:
+      - unconfined
+rendering by default on openshift:
+  1: |
+    apiVersion: rbac.authorization.k8s.io/v1
+    kind: ClusterRole
+    metadata:
+      name: system:openshift:scc:steadybit-extension-container
+    rules:
+      - apiGroups:
+          - security.openshift.io
+        resourceNames:
+          - steadybit-extension-container
+        resources:
+          - securitycontextconstraints
+        verbs:
+          - use
+  2: |
+    apiVersion: rbac.authorization.k8s.io/v1
+    kind: RoleBinding
+    metadata:
+      name: system:openshift:scc:steadybit-extension-container
+      namespace: NAMESPACE
+    roleRef:
+      apiGroup: rbac.authorization.k8s.io
+      kind: ClusterRole
+      name: system:openshift:scc:steadybit-extension-container
+    subjects:
+      - kind: ServiceAccount
+        name: steadybit-extension-container
+        namespace: NAMESPACE
+  3: |
+    allowHostDirVolumePlugin: true
+    allowHostNetwork: true
+    allowHostPID: true
+    allowHostPorts: true
+    allowPrivilegeEscalation: true
+    allowedCapabilities:
+      - SYS_ADMIN
+      - SYS_CHROOT
+      - SYS_RESOURCE
+      - SYS_PTRACE
+      - KILL
+      - NET_ADMIN
+      - DAC_OVERRIDE
+      - SETUID
+      - SETGID
+      - AUDIT_WRITE
+    apiVersion: security.openshift.io/v1
+    kind: SecurityContextConstraints
+    metadata:
+      name: steadybit-extension-container
+    priority: null
+    runAsUser:
+      type: MustRunAsNonRoot
+    seLinuxContext:
+      type: MustRunAs
+    seccompProfiles:
+      - unconfined

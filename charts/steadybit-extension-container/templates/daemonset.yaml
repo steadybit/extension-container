@@ -117,19 +117,10 @@ spec:
             httpGet:
               path: /health/readiness
               port: {{ .Values.containerPorts.health }}
+          {{- with (include "omitForKuberVersion" (list . "<1.30-0" .Values.containerSecurityContext "appArmorProfile" )) }}
           securityContext:
-            {{- if semverCompare ">=1.30-0" .Capabilities.KubeVersion.Version}}
-            appArmorProfile:
-              type: Unconfined
-            {{- end }}
-            seccompProfile:
-              type: Unconfined
-            capabilities:
-              add: {{ toJson .Values.securityContext.capabilities.add }}
-            readOnlyRootFilesystem: true
-            runAsNonRoot: true
-            runAsUser: 10000
-            runAsGroup: 10000
+          {{- . | nindent 12 }}
+          {{- end }}
       volumes:
         - name: tmp-dir
           emptyDir: {}
