@@ -138,7 +138,6 @@ containerSecurityContext:
       - SYS_PTRACE
       - KILL
       - NET_ADMIN
-      - DAC_OVERRIDE
       - SETUID
       - SETGID
       - AUDIT_WRITE

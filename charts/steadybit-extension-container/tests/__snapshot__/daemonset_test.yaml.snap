@@ -82,7 +82,6 @@ manifest should match snapshot using containerd and using resource limits:
                     - SYS_PTRACE
                     - KILL
                     - NET_ADMIN
-                    - DAC_OVERRIDE
                     - SETUID
                     - SETGID
                     - AUDIT_WRITE
@@ -209,7 +208,6 @@ manifest should match snapshot using crio using podAnnotations and Labels:
                     - SYS_PTRACE
                     - KILL
                     - NET_ADMIN
-                    - DAC_OVERRIDE
                     - SETUID
                     - SETGID
                     - AUDIT_WRITE
@@ -334,7 +332,6 @@ manifest should match snapshot using docker:
                     - SYS_PTRACE
                     - KILL
                     - NET_ADMIN
-                    - DAC_OVERRIDE
                     - SETUID
                     - SETGID
                     - AUDIT_WRITE
@@ -463,7 +460,6 @@ manifest should match snapshot with TLS:
                     - SYS_PTRACE
                     - KILL
                     - NET_ADMIN
-                    - DAC_OVERRIDE
                     - SETUID
                     - SETGID
                     - AUDIT_WRITE
@@ -594,7 +590,6 @@ manifest should match snapshot with appArmorProfile for k8s >= 1.30:
                     - SYS_PTRACE
                     - KILL
                     - NET_ADMIN
-                    - DAC_OVERRIDE
                     - SETUID
                     - SETGID
                     - AUDIT_WRITE
@@ -719,7 +714,6 @@ manifest should match snapshot with different containerPorts:
                     - SYS_PTRACE
                     - KILL
                     - NET_ADMIN
-                    - DAC_OVERRIDE
                     - SETUID
                     - SETGID
                     - AUDIT_WRITE
@@ -846,7 +840,6 @@ manifest should match snapshot with discover all deployments:
                     - SYS_PTRACE
                     - KILL
                     - NET_ADMIN
-                    - DAC_OVERRIDE
                     - SETUID
                     - SETGID
                     - AUDIT_WRITE
@@ -978,7 +971,6 @@ manifest should match snapshot with extra env vars:
                     - SYS_PTRACE
                     - KILL
                     - NET_ADMIN
-                    - DAC_OVERRIDE
                     - SETUID
                     - SETGID
                     - AUDIT_WRITE
@@ -1105,7 +1097,6 @@ manifest should match snapshot with extra labels:
                     - SYS_PTRACE
                     - KILL
                     - NET_ADMIN
-                    - DAC_OVERRIDE
                     - SETUID
                     - SETGID
                     - AUDIT_WRITE
@@ -1236,7 +1227,6 @@ manifest should match snapshot with mutual TLS:
                     - SYS_PTRACE
                     - KILL
                     - NET_ADMIN
-                    - DAC_OVERRIDE
                     - SETUID
                     - SETGID
                     - AUDIT_WRITE
@@ -1381,7 +1371,6 @@ manifest should match snapshot with mutual TLS using containerPaths:
                     - SYS_PTRACE
                     - KILL
                     - NET_ADMIN
-                    - DAC_OVERRIDE
                     - SETUID
                     - SETGID
                     - AUDIT_WRITE
@@ -1506,7 +1495,6 @@ manifest should match snapshot with podSecurityContext:
                     - SYS_PTRACE
                     - KILL
                     - NET_ADMIN
-                    - DAC_OVERRIDE
                     - SETUID
                     - SETGID
                     - AUDIT_WRITE
@@ -1632,7 +1620,6 @@ manifest should match snapshot with priority class:
                     - SYS_PTRACE
                     - KILL
                     - NET_ADMIN
-                    - DAC_OVERRIDE
                     - SETUID
                     - SETGID
                     - AUDIT_WRITE
@@ -1758,7 +1745,6 @@ manifest should match snapshot with update strategy:
                     - SYS_PTRACE
                     - KILL
                     - NET_ADMIN
-                    - DAC_OVERRIDE
                     - SETUID
                     - SETGID
                     - AUDIT_WRITE
