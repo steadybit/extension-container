@@ -22,8 +22,10 @@ our [Reliability Hub](https://hub.steadybit.com/extension/com.steadybit.extensio
 | `STEADYBIT_EXTENSION_DISCOVERY_CALL_INTERVAL`       |                                                        | Interval for container discovery                                                                                           | false    | `30s`   |
 | `STEADYBIT_EXTENSION_DISABLE_DISCOVERY_EXCLUDES`    | `discovery.disableExcludes`                            | Ignore discovery excludes specified by `steadybit.com/discovery-disabled`                                                  | false    | `false` |
 | `STEADYBIT_EXTENSION_DISCOVERY_ATTRIBUTES_EXCLUDES` | `discovery.attributes.excludes`                        | List of Target Attributes which will be excluded during discovery. Checked by key equality and supporting trailing "*"     | false    |         |
+| `STEADYBIT_EXTENSION_HOSTNAME`                      |                                                        | Optional hostname for the targets to be reported. If not given will be read from the UTS namespace of the init process     | false    |         |
 
-The extension supports all environment variables provided by [steadybit/extension-kit](https://github.com/steadybit/extension-kit#environment-variables).
+The extension supports all environment variables provided
+by [steadybit/extension-kit](https://github.com/steadybit/extension-kit#environment-variables).
 
 When installed as linux package this configuration is in`/etc/steadybit/extension-container`.
 
@@ -33,13 +35,16 @@ The capabilities needed by this extension are: (which are provided by the helm c
 
 - SYS_ADMIN
 - SYS_CHROOT
-- SYS_RESOURCE
 - SYS_PTRACE
 - NET_ADMIN
 - DAC_OVERRIDE
 - SETUID
 - SETGID
 - AUDIT_WRITE
+
+Optional:
+
+- SYS_RESOURCE
 
 ## Installation
 
@@ -62,7 +67,8 @@ You can provide additional values to configure this extension.
 ```
 
 Additional configuration options can be found in
-the [helm-chart](https://github.com/steadybit/extension-container/blob/main/charts/steadybit-extension-container/values.yaml) of the
+the [helm-chart](https://github.com/steadybit/extension-container/blob/main/charts/steadybit-extension-container/values.yaml)
+of the
 extension.
 
 #### Alternative (via own helm chart)
@@ -113,17 +119,21 @@ runtime socket.
 
 Resource attacks starting stress-ng processes, the network attacks are starting ip or tc processes as runc container
 reusing the target container's linux namespace(s), control group(s) and user.
-This requires the following capabilities: SYS_CHROOT, SYS_ADMIN, SYS_RESOURCE, SYS_PTRACE, KILL, NET_ADMIN, DAC_OVERRIDE, SETUID,
-SETGID, AUDIT_WRITE.
+This requires the following capabilities: CAP_SYS_CHROOT, CAP_SYS_ADMIN, CAP_SYS_PTRACE, CAP_NET_ADMIN,
+CAP_DAC_OVERRIDE, CAP_SETUID, CAP_SETGID, CAP_AUDIT_WRITE.
+The CAP_SYS_RESOURCE is optional. We'd recommend it to be used otherwise the resource attacks are more likely to be
+oomkilled by the kernel and are failing to carry out the attack.
 The needed binaries are included in the extension container image.
 
 ### mark resources as "do not discover"
 
-to exclude container from discovery you can add the label `LABEL "steadybit.com.discovery-disabled"="true"` to the container Dockerfile.
+to exclude container from discovery you can add the label `LABEL "steadybit.com.discovery-disabled"="true"` to the
+container Dockerfile.
 
 ## Troubleshooting
 
-When the host is using cgroups v2 and the cgroup filesystem is mounted using the `nsdelegate` option will prevent that the action running processces in other cgroups (e.g. stress cpu/memory, disk fill) will fail.
+When the host is using cgroups v2 and the cgroup filesystem is mounted using the `nsdelegate` option will prevent that
+the action running processces in other cgroups (e.g. stress cpu/memory, disk fill) will fail.
 In that case you need to remount the cgroup filesystem without the `nsdelegate` option.
 
 ```sh
