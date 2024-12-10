@@ -78,7 +78,6 @@ manifest should match snapshot using containerd and using resource limits:
                   add:
                     - SYS_ADMIN
                     - SYS_CHROOT
-                    - SYS_RESOURCE
                     - SYS_PTRACE
                     - KILL
                     - NET_ADMIN
@@ -205,7 +204,6 @@ manifest should match snapshot using crio using podAnnotations and Labels:
                   add:
                     - SYS_ADMIN
                     - SYS_CHROOT
-                    - SYS_RESOURCE
                     - SYS_PTRACE
                     - KILL
                     - NET_ADMIN
@@ -330,7 +328,6 @@ manifest should match snapshot using docker:
                   add:
                     - SYS_ADMIN
                     - SYS_CHROOT
-                    - SYS_RESOURCE
                     - SYS_PTRACE
                     - KILL
                     - NET_ADMIN
@@ -459,7 +456,6 @@ manifest should match snapshot with TLS:
                   add:
                     - SYS_ADMIN
                     - SYS_CHROOT
-                    - SYS_RESOURCE
                     - SYS_PTRACE
                     - KILL
                     - NET_ADMIN
@@ -590,7 +586,6 @@ manifest should match snapshot with appArmorProfile for k8s >= 1.30:
                   add:
                     - SYS_ADMIN
                     - SYS_CHROOT
-                    - SYS_RESOURCE
                     - SYS_PTRACE
                     - KILL
                     - NET_ADMIN
@@ -715,7 +710,6 @@ manifest should match snapshot with different containerPorts:
                   add:
                     - SYS_ADMIN
                     - SYS_CHROOT
-                    - SYS_RESOURCE
                     - SYS_PTRACE
                     - KILL
                     - NET_ADMIN
@@ -842,7 +836,6 @@ manifest should match snapshot with discover all deployments:
                   add:
                     - SYS_ADMIN
                     - SYS_CHROOT
-                    - SYS_RESOURCE
                     - SYS_PTRACE
                     - KILL
                     - NET_ADMIN
@@ -974,7 +967,6 @@ manifest should match snapshot with extra env vars:
                   add:
                     - SYS_ADMIN
                     - SYS_CHROOT
-                    - SYS_RESOURCE
                     - SYS_PTRACE
                     - KILL
                     - NET_ADMIN
@@ -1101,7 +1093,6 @@ manifest should match snapshot with extra labels:
                   add:
                     - SYS_ADMIN
                     - SYS_CHROOT
-                    - SYS_RESOURCE
                     - SYS_PTRACE
                     - KILL
                     - NET_ADMIN
@@ -1232,7 +1223,6 @@ manifest should match snapshot with mutual TLS:
                   add:
                     - SYS_ADMIN
                     - SYS_CHROOT
-                    - SYS_RESOURCE
                     - SYS_PTRACE
                     - KILL
                     - NET_ADMIN
@@ -1377,7 +1367,6 @@ manifest should match snapshot with mutual TLS using containerPaths:
                   add:
                     - SYS_ADMIN
                     - SYS_CHROOT
-                    - SYS_RESOURCE
                     - SYS_PTRACE
                     - KILL
                     - NET_ADMIN
@@ -1502,7 +1491,6 @@ manifest should match snapshot with podSecurityContext:
                   add:
                     - SYS_ADMIN
                     - SYS_CHROOT
-                    - SYS_RESOURCE
                     - SYS_PTRACE
                     - KILL
                     - NET_ADMIN
@@ -1628,7 +1616,6 @@ manifest should match snapshot with priority class:
                   add:
                     - SYS_ADMIN
                     - SYS_CHROOT
-                    - SYS_RESOURCE
                     - SYS_PTRACE
                     - KILL
                     - NET_ADMIN
@@ -1754,7 +1741,6 @@ manifest should match snapshot with update strategy:
                   add:
                     - SYS_ADMIN
                     - SYS_CHROOT
-                    - SYS_RESOURCE
                     - SYS_PTRACE
                     - KILL
                     - NET_ADMIN
