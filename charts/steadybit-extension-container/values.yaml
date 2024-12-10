@@ -140,7 +140,6 @@ containerSecurityContext:
       - SYS_CHROOT
       - SYS_PTRACE
       - NET_ADMIN
-      - DAC_OVERRIDE
       - SETUID
       - SETGID
       - AUDIT_WRITE

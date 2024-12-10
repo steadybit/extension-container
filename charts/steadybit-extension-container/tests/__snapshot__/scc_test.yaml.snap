@@ -39,7 +39,6 @@ forced rendering on kubernetes:
       - SYS_CHROOT
       - SYS_PTRACE
       - NET_ADMIN
-      - DAC_OVERRIDE
       - SETUID
       - SETGID
       - AUDIT_WRITE
@@ -96,7 +95,6 @@ rendering by default on openshift:
       - SYS_CHROOT
       - SYS_PTRACE
       - NET_ADMIN
-      - DAC_OVERRIDE
       - SETUID
       - SETGID
       - AUDIT_WRITE

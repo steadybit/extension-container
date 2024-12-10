@@ -84,7 +84,6 @@ manifest should match snapshot using containerd and using resource limits:
                     - SYS_CHROOT
                     - SYS_PTRACE
                     - NET_ADMIN
-                    - DAC_OVERRIDE
                     - SETUID
                     - SETGID
                     - AUDIT_WRITE
@@ -214,7 +213,6 @@ manifest should match snapshot using crio using podAnnotations and Labels:
                     - SYS_CHROOT
                     - SYS_PTRACE
                     - NET_ADMIN
-                    - DAC_OVERRIDE
                     - SETUID
                     - SETGID
                     - AUDIT_WRITE
@@ -342,7 +340,6 @@ manifest should match snapshot using docker:
                     - SYS_CHROOT
                     - SYS_PTRACE
                     - NET_ADMIN
-                    - DAC_OVERRIDE
                     - SETUID
                     - SETGID
                     - AUDIT_WRITE
@@ -474,7 +471,6 @@ manifest should match snapshot with TLS:
                     - SYS_CHROOT
                     - SYS_PTRACE
                     - NET_ADMIN
-                    - DAC_OVERRIDE
                     - SETUID
                     - SETGID
                     - AUDIT_WRITE
@@ -610,7 +606,6 @@ manifest should match snapshot with appArmorProfile for k8s >= 1.30:
                     - SYS_CHROOT
                     - SYS_PTRACE
                     - NET_ADMIN
-                    - DAC_OVERRIDE
                     - SETUID
                     - SETGID
                     - AUDIT_WRITE
@@ -738,7 +733,6 @@ manifest should match snapshot with different containerPorts:
                     - SYS_CHROOT
                     - SYS_PTRACE
                     - NET_ADMIN
-                    - DAC_OVERRIDE
                     - SETUID
                     - SETGID
                     - AUDIT_WRITE
@@ -868,7 +862,6 @@ manifest should match snapshot with discover all deployments:
                     - SYS_CHROOT
                     - SYS_PTRACE
                     - NET_ADMIN
-                    - DAC_OVERRIDE
                     - SETUID
                     - SETGID
                     - AUDIT_WRITE
@@ -1003,7 +996,6 @@ manifest should match snapshot with extra env vars:
                     - SYS_CHROOT
                     - SYS_PTRACE
                     - NET_ADMIN
-                    - DAC_OVERRIDE
                     - SETUID
                     - SETGID
                     - AUDIT_WRITE
@@ -1133,7 +1125,6 @@ manifest should match snapshot with extra labels:
                     - SYS_CHROOT
                     - SYS_PTRACE
                     - NET_ADMIN
-                    - DAC_OVERRIDE
                     - SETUID
                     - SETGID
                     - AUDIT_WRITE
@@ -1267,7 +1258,6 @@ manifest should match snapshot with mutual TLS:
                     - SYS_CHROOT
                     - SYS_PTRACE
                     - NET_ADMIN
-                    - DAC_OVERRIDE
                     - SETUID
                     - SETGID
                     - AUDIT_WRITE
@@ -1415,7 +1405,6 @@ manifest should match snapshot with mutual TLS using containerPaths:
                     - SYS_CHROOT
                     - SYS_PTRACE
                     - NET_ADMIN
-                    - DAC_OVERRIDE
                     - SETUID
                     - SETGID
                     - AUDIT_WRITE
@@ -1543,7 +1532,6 @@ manifest should match snapshot with podSecurityContext:
                     - SYS_CHROOT
                     - SYS_PTRACE
                     - NET_ADMIN
-                    - DAC_OVERRIDE
                     - SETUID
                     - SETGID
                     - AUDIT_WRITE
@@ -1672,7 +1660,6 @@ manifest should match snapshot with priority class:
                     - SYS_CHROOT
                     - SYS_PTRACE
                     - NET_ADMIN
-                    - DAC_OVERRIDE
                     - SETUID
                     - SETGID
                     - AUDIT_WRITE
@@ -1801,7 +1788,6 @@ manifest should match snapshot with update strategy:
                     - SYS_CHROOT
                     - SYS_PTRACE
                     - NET_ADMIN
-                    - DAC_OVERRIDE
                     - SETUID
                     - SETGID
                     - AUDIT_WRITE

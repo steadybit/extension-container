@@ -20,7 +20,7 @@ COPY . .
 
 
 RUN --mount=type=cache,target="/root/.cache/go-build" GOCACHE=/root/.cache/go-build GOOS=$TARGETOS GOARCH=$TARGETARCH goreleaser build --snapshot="${BUILD_SNAPSHOT}" --single-target -o extension \
-    && setcap "cap_setuid,cap_sys_chroot,cap_setgid,cap_sys_admin,cap_dac_override+eip" ./extension
+    && setcap "cap_setuid,cap_sys_chroot,cap_setgid,cap_sys_admin+eip" ./extension
 ##
 ## Runtime
 ##
