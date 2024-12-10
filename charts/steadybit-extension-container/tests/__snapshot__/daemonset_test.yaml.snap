@@ -76,7 +76,6 @@ manifest should match snapshot using containerd and using resource limits:
                   type: Unconfined
                 capabilities:
                   add:
-                    - SYS_ADMIN
                     - SYS_CHROOT
                     - SYS_RESOURCE
                     - SYS_PTRACE
@@ -203,7 +202,6 @@ manifest should match snapshot using crio using podAnnotations and Labels:
                   type: Unconfined
                 capabilities:
                   add:
-                    - SYS_ADMIN
                     - SYS_CHROOT
                     - SYS_RESOURCE
                     - SYS_PTRACE
@@ -328,7 +326,6 @@ manifest should match snapshot using docker:
                   type: Unconfined
                 capabilities:
                   add:
-                    - SYS_ADMIN
                     - SYS_CHROOT
                     - SYS_RESOURCE
                     - SYS_PTRACE
@@ -457,7 +454,6 @@ manifest should match snapshot with TLS:
                   type: Unconfined
                 capabilities:
                   add:
-                    - SYS_ADMIN
                     - SYS_CHROOT
                     - SYS_RESOURCE
                     - SYS_PTRACE
@@ -588,7 +584,6 @@ manifest should match snapshot with appArmorProfile for k8s >= 1.30:
                   type: Unconfined
                 capabilities:
                   add:
-                    - SYS_ADMIN
                     - SYS_CHROOT
                     - SYS_RESOURCE
                     - SYS_PTRACE
@@ -713,7 +708,6 @@ manifest should match snapshot with different containerPorts:
                   type: Unconfined
                 capabilities:
                   add:
-                    - SYS_ADMIN
                     - SYS_CHROOT
                     - SYS_RESOURCE
                     - SYS_PTRACE
@@ -840,7 +834,6 @@ manifest should match snapshot with discover all deployments:
                   type: Unconfined
                 capabilities:
                   add:
-                    - SYS_ADMIN
                     - SYS_CHROOT
                     - SYS_RESOURCE
                     - SYS_PTRACE
@@ -972,7 +965,6 @@ manifest should match snapshot with extra env vars:
                   type: Unconfined
                 capabilities:
                   add:
-                    - SYS_ADMIN
                     - SYS_CHROOT
                     - SYS_RESOURCE
                     - SYS_PTRACE
@@ -1099,7 +1091,6 @@ manifest should match snapshot with extra labels:
                   type: Unconfined
                 capabilities:
                   add:
-                    - SYS_ADMIN
                     - SYS_CHROOT
                     - SYS_RESOURCE
                     - SYS_PTRACE
@@ -1230,7 +1221,6 @@ manifest should match snapshot with mutual TLS:
                   type: Unconfined
                 capabilities:
                   add:
-                    - SYS_ADMIN
                     - SYS_CHROOT
                     - SYS_RESOURCE
                     - SYS_PTRACE
@@ -1375,7 +1365,6 @@ manifest should match snapshot with mutual TLS using containerPaths:
                   type: Unconfined
                 capabilities:
                   add:
-                    - SYS_ADMIN
                     - SYS_CHROOT
                     - SYS_RESOURCE
                     - SYS_PTRACE
@@ -1500,7 +1489,6 @@ manifest should match snapshot with podSecurityContext:
                   type: Unconfined
                 capabilities:
                   add:
-                    - SYS_ADMIN
                     - SYS_CHROOT
                     - SYS_RESOURCE
                     - SYS_PTRACE
@@ -1626,7 +1614,6 @@ manifest should match snapshot with priority class:
                   type: Unconfined
                 capabilities:
                   add:
-                    - SYS_ADMIN
                     - SYS_CHROOT
                     - SYS_RESOURCE
                     - SYS_PTRACE
@@ -1752,7 +1739,6 @@ manifest should match snapshot with update strategy:
                   type: Unconfined
                 capabilities:
                   add:
-                    - SYS_ADMIN
                     - SYS_CHROOT
                     - SYS_RESOURCE
                     - SYS_PTRACE

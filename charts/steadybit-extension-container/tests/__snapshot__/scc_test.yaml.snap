@@ -34,7 +34,6 @@ forced rendering on kubernetes:
     allowHostPorts: true
     allowPrivilegeEscalation: true
     allowedCapabilities:
-      - SYS_ADMIN
       - SYS_CHROOT
       - SYS_RESOURCE
       - SYS_PTRACE
@@ -91,7 +90,6 @@ rendering by default on openshift:
     allowHostPorts: true
     allowPrivilegeEscalation: true
     allowedCapabilities:
-      - SYS_ADMIN
       - SYS_CHROOT
       - SYS_RESOURCE
       - SYS_PTRACE

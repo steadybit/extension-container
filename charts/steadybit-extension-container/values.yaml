@@ -132,7 +132,6 @@ containerSecurityContext:
   readOnlyRootFilesystem: true
   capabilities:
     add:
-      - SYS_ADMIN
       - SYS_CHROOT
       - SYS_RESOURCE
       - SYS_PTRACE
