@@ -72,8 +72,6 @@ manifest should match snapshot using containerd and using resource limits:
                   cpu: 200m
                   memory: 256Mi
               securityContext:
-                appArmorProfile:
-                  type: Unconfined
                 capabilities:
                   add:
                     - SYS_ADMIN
@@ -199,8 +197,6 @@ manifest should match snapshot using crio using podAnnotations and Labels:
                   cpu: 100m
                   memory: 48Mi
               securityContext:
-                appArmorProfile:
-                  type: Unconfined
                 capabilities:
                   add:
                     - SYS_ADMIN
@@ -324,8 +320,6 @@ manifest should match snapshot using docker:
                   cpu: 100m
                   memory: 48Mi
               securityContext:
-                appArmorProfile:
-                  type: Unconfined
                 capabilities:
                   add:
                     - SYS_ADMIN
@@ -453,8 +447,6 @@ manifest should match snapshot with TLS:
                   cpu: 100m
                   memory: 48Mi
               securityContext:
-                appArmorProfile:
-                  type: Unconfined
                 capabilities:
                   add:
                     - SYS_ADMIN
@@ -709,8 +701,6 @@ manifest should match snapshot with different containerPorts:
                   cpu: 100m
                   memory: 48Mi
               securityContext:
-                appArmorProfile:
-                  type: Unconfined
                 capabilities:
                   add:
                     - SYS_ADMIN
@@ -836,8 +826,6 @@ manifest should match snapshot with discover all deployments:
                   cpu: 100m
                   memory: 48Mi
               securityContext:
-                appArmorProfile:
-                  type: Unconfined
                 capabilities:
                   add:
                     - SYS_ADMIN
@@ -968,8 +956,6 @@ manifest should match snapshot with extra env vars:
                   cpu: 100m
                   memory: 48Mi
               securityContext:
-                appArmorProfile:
-                  type: Unconfined
                 capabilities:
                   add:
                     - SYS_ADMIN
@@ -1095,8 +1081,6 @@ manifest should match snapshot with extra labels:
                   cpu: 100m
                   memory: 48Mi
               securityContext:
-                appArmorProfile:
-                  type: Unconfined
                 capabilities:
                   add:
                     - SYS_ADMIN
@@ -1226,8 +1210,6 @@ manifest should match snapshot with mutual TLS:
                   cpu: 100m
                   memory: 48Mi
               securityContext:
-                appArmorProfile:
-                  type: Unconfined
                 capabilities:
                   add:
                     - SYS_ADMIN
@@ -1371,8 +1353,6 @@ manifest should match snapshot with mutual TLS using containerPaths:
                   cpu: 100m
                   memory: 48Mi
               securityContext:
-                appArmorProfile:
-                  type: Unconfined
                 capabilities:
                   add:
                     - SYS_ADMIN
@@ -1496,8 +1476,6 @@ manifest should match snapshot with podSecurityContext:
                   cpu: 100m
                   memory: 48Mi
               securityContext:
-                appArmorProfile:
-                  type: Unconfined
                 capabilities:
                   add:
                     - SYS_ADMIN
@@ -1622,8 +1600,6 @@ manifest should match snapshot with priority class:
                   cpu: 100m
                   memory: 48Mi
               securityContext:
-                appArmorProfile:
-                  type: Unconfined
                 capabilities:
                   add:
                     - SYS_ADMIN
@@ -1748,8 +1724,6 @@ manifest should match snapshot with update strategy:
                   cpu: 100m
                   memory: 48Mi
               securityContext:
-                appArmorProfile:
-                  type: Unconfined
                 capabilities:
                   add:
                     - SYS_ADMIN

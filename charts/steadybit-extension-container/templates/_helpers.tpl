@@ -51,7 +51,7 @@ will omit attribute from the passed in object depending on the KubeVersion
 {{- $dict := index . 2 -}}
 {{- $toOmit := index . 3 -}}
 {{- if semverCompare $versionConstraint $top.Capabilities.KubeVersion.Version -}}
-{{- $dict := omit $dict $toOmit -}}
+{{- $dict = omit $dict $toOmit -}}
 {{- end -}}
 {{- $dict | toYaml -}}
 {{- end -}}
