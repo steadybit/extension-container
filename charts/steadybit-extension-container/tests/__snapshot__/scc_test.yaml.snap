@@ -30,7 +30,6 @@ forced rendering on kubernetes:
   3: |
     allowHostDirVolumePlugin: true
     allowHostNetwork: true
-    allowHostPID: true
     allowHostPorts: true
     allowPrivilegeEscalation: true
     allowedCapabilities:
@@ -87,7 +86,6 @@ rendering by default on openshift:
   3: |
     allowHostDirVolumePlugin: true
     allowHostNetwork: true
-    allowHostPID: true
     allowHostPorts: true
     allowPrivilegeEscalation: true
     allowedCapabilities:

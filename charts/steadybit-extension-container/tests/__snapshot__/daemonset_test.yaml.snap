@@ -98,7 +98,6 @@ manifest should match snapshot using containerd and using resource limits:
                   name: runtime-runc-root
           dnsPolicy: ClusterFirstWithHostNet
           hostNetwork: true
-          hostPID: true
           securityContext:
             runAsNonRoot: true
             seccompProfile:
@@ -223,7 +222,6 @@ manifest should match snapshot using crio using podAnnotations and Labels:
                   name: runtime-runc-root
           dnsPolicy: ClusterFirstWithHostNet
           hostNetwork: true
-          hostPID: true
           securityContext:
             runAsNonRoot: true
             seccompProfile:
@@ -346,7 +344,6 @@ manifest should match snapshot using docker:
                   name: runtime-runc-root
           dnsPolicy: ClusterFirstWithHostNet
           hostNetwork: true
-          hostPID: true
           securityContext:
             runAsNonRoot: true
             seccompProfile:
@@ -476,7 +473,6 @@ manifest should match snapshot with TLS:
                   readOnly: true
           dnsPolicy: ClusterFirstWithHostNet
           hostNetwork: true
-          hostPID: true
           securityContext:
             runAsNonRoot: true
             seccompProfile:
@@ -604,7 +600,6 @@ manifest should match snapshot with appArmorProfile for k8s >= 1.30:
                   name: runtime-runc-root
           dnsPolicy: ClusterFirstWithHostNet
           hostNetwork: true
-          hostPID: true
           securityContext:
             runAsNonRoot: true
             seccompProfile:
@@ -727,7 +722,6 @@ manifest should match snapshot with different containerPorts:
                   name: runtime-runc-root
           dnsPolicy: ClusterFirstWithHostNet
           hostNetwork: true
-          hostPID: true
           securityContext:
             runAsNonRoot: true
             seccompProfile:
@@ -852,7 +846,6 @@ manifest should match snapshot with discover all deployments:
                   name: runtime-runc-root
           dnsPolicy: ClusterFirstWithHostNet
           hostNetwork: true
-          hostPID: true
           securityContext:
             runAsNonRoot: true
             seccompProfile:
@@ -982,7 +975,6 @@ manifest should match snapshot with extra env vars:
                   name: runtime-runc-root
           dnsPolicy: ClusterFirstWithHostNet
           hostNetwork: true
-          hostPID: true
           securityContext:
             runAsNonRoot: true
             seccompProfile:
@@ -1107,7 +1099,6 @@ manifest should match snapshot with extra labels:
                   name: runtime-runc-root
           dnsPolicy: ClusterFirstWithHostNet
           hostNetwork: true
-          hostPID: true
           securityContext:
             runAsNonRoot: true
             seccompProfile:
@@ -1242,7 +1233,6 @@ manifest should match snapshot with mutual TLS:
                   readOnly: true
           dnsPolicy: ClusterFirstWithHostNet
           hostNetwork: true
-          hostPID: true
           securityContext:
             runAsNonRoot: true
             seccompProfile:
@@ -1379,7 +1369,6 @@ manifest should match snapshot with mutual TLS using containerPaths:
                   name: runtime-runc-root
           dnsPolicy: ClusterFirstWithHostNet
           hostNetwork: true
-          hostPID: true
           securityContext:
             runAsNonRoot: true
             seccompProfile:
@@ -1502,7 +1491,6 @@ manifest should match snapshot with podSecurityContext:
                   name: runtime-runc-root
           dnsPolicy: ClusterFirstWithHostNet
           hostNetwork: true
-          hostPID: true
           securityContext:
             runAsNonRoot: true
             runAsUser: 2222
@@ -1626,7 +1614,6 @@ manifest should match snapshot with priority class:
                   name: runtime-runc-root
           dnsPolicy: ClusterFirstWithHostNet
           hostNetwork: true
-          hostPID: true
           priorityClassName: my-priority-class
           securityContext:
             runAsNonRoot: true
@@ -1750,7 +1737,6 @@ manifest should match snapshot with update strategy:
                   name: runtime-runc-root
           dnsPolicy: ClusterFirstWithHostNet
           hostNetwork: true
-          hostPID: true
           securityContext:
             runAsNonRoot: true
             seccompProfile:

@@ -49,7 +49,6 @@ spec:
       {{- toYaml . | nindent 8 }}
       {{- end }}
       hostNetwork: true
-      hostPID: true
       dnsPolicy: ClusterFirstWithHostNet
       containers:
         - image: {{ .Values.image.name }}:{{ default .Chart.AppVersion .Values.image.tag }}
