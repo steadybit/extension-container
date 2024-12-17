@@ -7,14 +7,16 @@ import (
 	"context"
 	"fmt"
 	dockerparser "github.com/novln/docker-parser"
+	"github.com/steadybit/action-kit/go/action_kit_commons/runc"
 	"github.com/steadybit/discovery-kit/go/discovery_kit_api"
 	"github.com/steadybit/discovery-kit/go/discovery_kit_commons"
 	"github.com/steadybit/discovery-kit/go/discovery_kit_sdk"
 	"github.com/steadybit/extension-container/config"
 	"github.com/steadybit/extension-container/extcontainer/container/types"
 	"github.com/steadybit/extension-kit/extbuild"
-	"github.com/steadybit/extension-kit/extruntime"
 	"github.com/steadybit/extension-kit/extutil"
+	"net"
+	"os"
 	"strings"
 	"time"
 )
@@ -125,7 +127,7 @@ func (d *containerDiscovery) DescribeAttributes() []discovery_kit_api.AttributeD
 }
 
 func (d *containerDiscovery) DiscoverTargets(ctx context.Context) ([]discovery_kit_api.Target, error) {
-	hostname, fqdn, _ := extruntime.GetHostname()
+	hostname, fqdn := d.getHostname()
 	version, _ := d.client.Version(ctx)
 
 	containers, err := d.client.List(ctx)
@@ -253,4 +255,69 @@ func addLabelOrK8sAttribute(attributes map[string][]string, key, value string) {
 	}
 
 	attributes[key] = append(attributes[key], value)
+}
+
+func (d *containerDiscovery) getHostname() (hostname, fqdn string) {
+	hostname = config.Config.Hostname
+
+	if hostname == "" {
+		hostname, _ = getHostnameFromInitProcess()
+	}
+
+	if hostname == "" {
+		hostname, _ = os.Hostname()
+	}
+
+	if hostname != "" {
+		fqdn, _ = resolveFQDN(context.Background(), hostname)
+		if fqdn == "" {
+			fqdn = hostname
+		}
+	} else {
+		hostname = "unknown"
+		fqdn = "unknown"
+	}
+	return
+}
+
+// inspired by elastic/go-sysinfo
+func resolveFQDN(ctx context.Context, hostname string) (string, error) {
+	var errs error
+	cname, err := net.DefaultResolver.LookupCNAME(ctx, hostname)
+	if err != nil {
+		errs = fmt.Errorf("could not get FQDN, all methods failed: failed looking up CNAME: %w", err)
+	}
+
+	if cname != "" {
+		cname = strings.TrimSuffix(cname, ".")
+
+		if strings.EqualFold(cname, hostname) {
+			return hostname, nil
+		}
+
+		return cname, nil
+	}
+
+	ips, err := net.DefaultResolver.LookupIP(ctx, "ip", hostname)
+	if err != nil {
+		errs = fmt.Errorf("%s: failed looking up IP: %w", errs, err)
+	}
+
+	for _, ip := range ips {
+		names, err := net.DefaultResolver.LookupAddr(ctx, ip.String())
+		if err != nil || len(names) == 0 {
+			continue
+		}
+		return strings.TrimSuffix(names[0], "."), nil
+	}
+
+	return "", errs
+}
+
+func getHostnameFromInitProcess() (string, error) {
+	if out, err := runc.RootCommandContext(context.Background(), "nsenter", "-t", "1", "-u", "--", "hostname").CombinedOutput(); err == nil {
+		return strings.TrimSpace(string(out)), err
+	} else {
+		return "", err
+	}
 }

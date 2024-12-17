@@ -2,7 +2,7 @@ module github.com/steadybit/extension-container
 
 go 1.23.0
 
-toolchain go1.23.1
+toolchain go1.23.4
 
 require (
 	github.com/KimMachineGun/automemlimit v0.6.1
