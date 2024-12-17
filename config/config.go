@@ -19,6 +19,7 @@ type Specification struct {
 	HealthPort                  uint16   `json:"healthPort" split_words:"true" required:"false" default:"8082"`
 	LivenessCheckInterval       string   `json:"livenessProbeInterval" split_words:"true" required:"false" default:"30s"` // 0 or empty string disables liveness check
 	MemfillPath                 string   `json:"memfillPath" split_words:"true" required:"true"`
+	Hostname                    string   `json:"hostname" split_words:"true" required:"false	"`
 }
 
 var (

@@ -29,7 +29,6 @@ forced rendering on kubernetes:
         namespace: NAMESPACE
   3: |
     allowHostDirVolumePlugin: true
-    allowHostNetwork: true
     allowHostPID: true
     allowHostPorts: true
     allowPrivilegeEscalation: true
@@ -86,7 +85,6 @@ rendering by default on openshift:
         namespace: NAMESPACE
   3: |
     allowHostDirVolumePlugin: true
-    allowHostNetwork: true
     allowHostPID: true
     allowHostPorts: true
     allowPrivilegeEscalation: true
