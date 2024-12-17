@@ -35,6 +35,7 @@ The capabilities needed by this extension are: (which are provided by the helm c
 - SYS_CHROOT
 - SYS_RESOURCE
 - SYS_PTRACE
+- KILL
 - NET_ADMIN
 - DAC_OVERRIDE
 - SETUID
