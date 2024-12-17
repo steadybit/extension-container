@@ -137,7 +137,6 @@ containerSecurityContext:
       - NET_BIND_SERVICE
       - KILL
       - SYS_ADMIN
-      - SYS_CHROOT
       - SYS_PTRACE
       - NET_ADMIN
       - DAC_OVERRIDE

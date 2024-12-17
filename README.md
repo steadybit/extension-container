@@ -34,7 +34,6 @@ When installed as linux package this configuration is in`/etc/steadybit/extensio
 The capabilities needed by this extension are: (which are provided by the helm chart)
 
 - SYS_ADMIN
-- SYS_CHROOT
 - SYS_PTRACE
 - NET_ADMIN
 - NET_BIND_SERVICE
@@ -121,7 +120,7 @@ runtime socket.
 
 Resource attacks starting stress-ng processes, the network attacks are starting ip or tc processes as runc container
 reusing the target container's linux namespace(s), control group(s) and user.
-This requires the following capabilities: CAP_SYS_CHROOT, CAP_SYS_ADMIN, CAP_SYS_PTRACE, CAP_NET_ADMIN, CAP_NET_BIND_SERVICE
+This requires the following capabilities: CAP_SYS_ADMIN, CAP_SYS_PTRACE, CAP_NET_ADMIN, CAP_NET_BIND_SERVICE
 CAP_DAC_OVERRIDE, CAP_SETUID, CAP_SETGID, CAP_AUDIT_WRITE, CAP_KILL.
 The CAP_SYS_RESOURCE is optional. We'd recommend it to be used otherwise the resource attacks are more likely to be
 oomkilled by the kernel and are failing to carry out the attack.

@@ -81,7 +81,6 @@ manifest should match snapshot using containerd and using resource limits:
                     - NET_BIND_SERVICE
                     - KILL
                     - SYS_ADMIN
-                    - SYS_CHROOT
                     - SYS_PTRACE
                     - NET_ADMIN
                     - DAC_OVERRIDE
@@ -211,7 +210,6 @@ manifest should match snapshot using crio using podAnnotations and Labels:
                     - NET_BIND_SERVICE
                     - KILL
                     - SYS_ADMIN
-                    - SYS_CHROOT
                     - SYS_PTRACE
                     - NET_ADMIN
                     - DAC_OVERRIDE
@@ -339,7 +337,6 @@ manifest should match snapshot using docker:
                     - NET_BIND_SERVICE
                     - KILL
                     - SYS_ADMIN
-                    - SYS_CHROOT
                     - SYS_PTRACE
                     - NET_ADMIN
                     - DAC_OVERRIDE
@@ -471,7 +468,6 @@ manifest should match snapshot with TLS:
                     - NET_BIND_SERVICE
                     - KILL
                     - SYS_ADMIN
-                    - SYS_CHROOT
                     - SYS_PTRACE
                     - NET_ADMIN
                     - DAC_OVERRIDE
@@ -607,7 +603,6 @@ manifest should match snapshot with appArmorProfile for k8s >= 1.30:
                     - NET_BIND_SERVICE
                     - KILL
                     - SYS_ADMIN
-                    - SYS_CHROOT
                     - SYS_PTRACE
                     - NET_ADMIN
                     - DAC_OVERRIDE
@@ -735,7 +730,6 @@ manifest should match snapshot with different containerPorts:
                     - NET_BIND_SERVICE
                     - KILL
                     - SYS_ADMIN
-                    - SYS_CHROOT
                     - SYS_PTRACE
                     - NET_ADMIN
                     - DAC_OVERRIDE
@@ -865,7 +859,6 @@ manifest should match snapshot with discover all deployments:
                     - NET_BIND_SERVICE
                     - KILL
                     - SYS_ADMIN
-                    - SYS_CHROOT
                     - SYS_PTRACE
                     - NET_ADMIN
                     - DAC_OVERRIDE
@@ -1000,7 +993,6 @@ manifest should match snapshot with extra env vars:
                     - NET_BIND_SERVICE
                     - KILL
                     - SYS_ADMIN
-                    - SYS_CHROOT
                     - SYS_PTRACE
                     - NET_ADMIN
                     - DAC_OVERRIDE
@@ -1130,7 +1122,6 @@ manifest should match snapshot with extra labels:
                     - NET_BIND_SERVICE
                     - KILL
                     - SYS_ADMIN
-                    - SYS_CHROOT
                     - SYS_PTRACE
                     - NET_ADMIN
                     - DAC_OVERRIDE
@@ -1264,7 +1255,6 @@ manifest should match snapshot with mutual TLS:
                     - NET_BIND_SERVICE
                     - KILL
                     - SYS_ADMIN
-                    - SYS_CHROOT
                     - SYS_PTRACE
                     - NET_ADMIN
                     - DAC_OVERRIDE
@@ -1412,7 +1402,6 @@ manifest should match snapshot with mutual TLS using containerPaths:
                     - NET_BIND_SERVICE
                     - KILL
                     - SYS_ADMIN
-                    - SYS_CHROOT
                     - SYS_PTRACE
                     - NET_ADMIN
                     - DAC_OVERRIDE
@@ -1540,7 +1529,6 @@ manifest should match snapshot with podSecurityContext:
                     - NET_BIND_SERVICE
                     - KILL
                     - SYS_ADMIN
-                    - SYS_CHROOT
                     - SYS_PTRACE
                     - NET_ADMIN
                     - DAC_OVERRIDE
@@ -1669,7 +1657,6 @@ manifest should match snapshot with priority class:
                     - NET_BIND_SERVICE
                     - KILL
                     - SYS_ADMIN
-                    - SYS_CHROOT
                     - SYS_PTRACE
                     - NET_ADMIN
                     - DAC_OVERRIDE
@@ -1798,7 +1785,6 @@ manifest should match snapshot with update strategy:
                     - NET_BIND_SERVICE
                     - KILL
                     - SYS_ADMIN
-                    - SYS_CHROOT
                     - SYS_PTRACE
                     - NET_ADMIN
                     - DAC_OVERRIDE
