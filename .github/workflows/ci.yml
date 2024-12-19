@@ -15,13 +15,49 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  e2e-tests:
+    name: E2E Tests (${{ matrix.e2e-runtime }})
+    runs-on: steadybit_runner_ubuntu_latest_4cores_16GB
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        e2e-runtime: ['docker', 'containerd', 'cri-o']
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Remove non-semver tags (from helmchart) for goreleaser to work properly
+        run: |
+          git tag -d $(git tag -l | grep -v "^v[0-9]*.[0-9]*.[0-9]*")
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+
+      - name: Enable KVM group perms
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          sudo apt-get update
+          sudo apt-get install -y libvirt-clients libvirt-daemon-system libvirt-daemon virtinst bridge-utils qemu qemu-system-x86
+          sudo usermod -a -G kvm,libvirt $USER
+
+      - name: Audit
+        run: |
+          make prepare_audit
+          go mod download
+          echo 'exec in a new sell for the group change to take effect'
+          sudo -u $USER env "PATH=$PATH" "E2E_RUNTIMES=${{ matrix.e2e-runtime }}"  make e2e-test
+
   extension-ci:
     uses: steadybit/extension-kit/.github/workflows/reusable-extension-ci.yml@main
+    needs: [e2e-tests]
     with:
       go_version: '1.23'
-      runs_on: steadybit_runner_ubuntu_latest_4cores_16GB
-      use_kvm: true
-      run_make_prepare_audit: true
       build_linux_packages: true
       VERSION_BUMPER_APPID: ${{ vars.GH_APP_STEADYBIT_APP_ID }}
     secrets:
