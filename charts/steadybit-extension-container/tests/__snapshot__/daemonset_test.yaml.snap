@@ -78,6 +78,8 @@ manifest should match snapshot using containerd and using resource limits:
               securityContext:
                 capabilities:
                   add:
+                    - NET_BIND_SERVICE
+                    - KILL
                     - SYS_ADMIN
                     - SYS_CHROOT
                     - SYS_PTRACE
@@ -206,6 +208,8 @@ manifest should match snapshot using crio using podAnnotations and Labels:
               securityContext:
                 capabilities:
                   add:
+                    - NET_BIND_SERVICE
+                    - KILL
                     - SYS_ADMIN
                     - SYS_CHROOT
                     - SYS_PTRACE
@@ -332,6 +336,8 @@ manifest should match snapshot using docker:
               securityContext:
                 capabilities:
                   add:
+                    - NET_BIND_SERVICE
+                    - KILL
                     - SYS_ADMIN
                     - SYS_CHROOT
                     - SYS_PTRACE
@@ -462,6 +468,8 @@ manifest should match snapshot with TLS:
               securityContext:
                 capabilities:
                   add:
+                    - NET_BIND_SERVICE
+                    - KILL
                     - SYS_ADMIN
                     - SYS_CHROOT
                     - SYS_PTRACE
@@ -596,6 +604,8 @@ manifest should match snapshot with appArmorProfile for k8s >= 1.30:
                   type: Unconfined
                 capabilities:
                   add:
+                    - NET_BIND_SERVICE
+                    - KILL
                     - SYS_ADMIN
                     - SYS_CHROOT
                     - SYS_PTRACE
@@ -722,6 +732,8 @@ manifest should match snapshot with different containerPorts:
               securityContext:
                 capabilities:
                   add:
+                    - NET_BIND_SERVICE
+                    - KILL
                     - SYS_ADMIN
                     - SYS_CHROOT
                     - SYS_PTRACE
@@ -850,6 +862,8 @@ manifest should match snapshot with discover all deployments:
               securityContext:
                 capabilities:
                   add:
+                    - NET_BIND_SERVICE
+                    - KILL
                     - SYS_ADMIN
                     - SYS_CHROOT
                     - SYS_PTRACE
@@ -983,6 +997,8 @@ manifest should match snapshot with extra env vars:
               securityContext:
                 capabilities:
                   add:
+                    - NET_BIND_SERVICE
+                    - KILL
                     - SYS_ADMIN
                     - SYS_CHROOT
                     - SYS_PTRACE
@@ -1111,6 +1127,8 @@ manifest should match snapshot with extra labels:
               securityContext:
                 capabilities:
                   add:
+                    - NET_BIND_SERVICE
+                    - KILL
                     - SYS_ADMIN
                     - SYS_CHROOT
                     - SYS_PTRACE
@@ -1243,6 +1261,8 @@ manifest should match snapshot with mutual TLS:
               securityContext:
                 capabilities:
                   add:
+                    - NET_BIND_SERVICE
+                    - KILL
                     - SYS_ADMIN
                     - SYS_CHROOT
                     - SYS_PTRACE
@@ -1389,6 +1409,8 @@ manifest should match snapshot with mutual TLS using containerPaths:
               securityContext:
                 capabilities:
                   add:
+                    - NET_BIND_SERVICE
+                    - KILL
                     - SYS_ADMIN
                     - SYS_CHROOT
                     - SYS_PTRACE
@@ -1515,6 +1537,8 @@ manifest should match snapshot with podSecurityContext:
               securityContext:
                 capabilities:
                   add:
+                    - NET_BIND_SERVICE
+                    - KILL
                     - SYS_ADMIN
                     - SYS_CHROOT
                     - SYS_PTRACE
@@ -1642,6 +1666,8 @@ manifest should match snapshot with priority class:
               securityContext:
                 capabilities:
                   add:
+                    - NET_BIND_SERVICE
+                    - KILL
                     - SYS_ADMIN
                     - SYS_CHROOT
                     - SYS_PTRACE
@@ -1769,6 +1795,8 @@ manifest should match snapshot with update strategy:
               securityContext:
                 capabilities:
                   add:
+                    - NET_BIND_SERVICE
+                    - KILL
                     - SYS_ADMIN
                     - SYS_CHROOT
                     - SYS_PTRACE
