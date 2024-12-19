@@ -39,13 +39,22 @@ prepare_audit:
 	minikube config set cpus max
 	minikube config set memory 8g
 
-## audit: run quality control checks
+## audit: run quality control checks - in CI we run the e2e tests separate
 .PHONY: audit
 audit:
 	go vet ./...
 	go run honnef.co/go/tools/cmd/staticcheck@latest -checks=all,-SA1019,-ST1000,-U1000,-ST1003 ./...
-	go test -race -vet=off -coverprofile=coverage.out -timeout 35m -v ./...
 	go mod verify
+ifeq ($(CI), true)
+	go test -race -vet=off -coverprofile=coverage.out -timeout 35m -v $(shell go list ./... | grep -v /e2e)
+else
+	go test -race -vet=off -coverprofile=coverage.out -timeout 35m -v ./...
+endif
+
+## e2e: run quality control checks
+.PHONY: e2e-test
+e2e-test:
+	go test -race -vet=off -coverprofile=e2e-coverage.out -timeout 35m -v ./e2e/...
 
 ## charttesting: Run Helm chart unit tests
 .PHONY: charttesting
