@@ -131,6 +131,8 @@ containerSecurityContext:
     type: Unconfined
   readOnlyRootFilesystem: true
   capabilities:
+    drop:
+      - ALL
     add:
       - SYS_ADMIN
       - SYS_CHROOT
