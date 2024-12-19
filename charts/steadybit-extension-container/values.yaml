@@ -131,7 +131,11 @@ containerSecurityContext:
     type: Unconfined
   readOnlyRootFilesystem: true
   capabilities:
+    drop:
+      - ALL
     add:
+      - NET_BIND_SERVICE
+      - KILL
       - SYS_ADMIN
       - SYS_CHROOT
       - SYS_PTRACE
