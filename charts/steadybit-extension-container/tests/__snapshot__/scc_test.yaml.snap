@@ -35,13 +35,13 @@ forced rendering on kubernetes:
     allowedCapabilities:
       - SYS_ADMIN
       - SYS_CHROOT
-      - SYS_RESOURCE
       - SYS_PTRACE
       - NET_ADMIN
       - DAC_OVERRIDE
       - SETUID
       - SETGID
       - AUDIT_WRITE
+      - SYS_RESOURCE
     apiVersion: security.openshift.io/v1
     kind: SecurityContextConstraints
     metadata:
@@ -90,13 +90,13 @@ rendering by default on openshift:
     allowedCapabilities:
       - SYS_ADMIN
       - SYS_CHROOT
-      - SYS_RESOURCE
       - SYS_PTRACE
       - NET_ADMIN
       - DAC_OVERRIDE
       - SETUID
       - SETGID
       - AUDIT_WRITE
+      - SYS_RESOURCE
     apiVersion: security.openshift.io/v1
     kind: SecurityContextConstraints
     metadata:

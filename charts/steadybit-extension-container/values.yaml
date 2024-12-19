@@ -134,14 +134,14 @@ containerSecurityContext:
     add:
       - SYS_ADMIN
       - SYS_CHROOT
-      - SYS_RESOURCE
       - SYS_PTRACE
       - NET_ADMIN
       - DAC_OVERRIDE
       - SETUID
       - SETGID
       - AUDIT_WRITE
-
+      # SYS_RESOURCE is optional. If you remove it is more likely that the stress cpu/io/memory, fill memory attack will more likely be oomkilled
+      - SYS_RESOURCE
 # extraEnv -- Array with extra environment variables to add to the container
 # e.g:
 # extraEnv:

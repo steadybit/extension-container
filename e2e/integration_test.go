@@ -77,6 +77,10 @@ func TestWithMinikube(t *testing.T) {
 			Test: testStressCpu,
 		},
 		{
+			Name: "stress cpu without cap_sys_resource",
+			Test: testStressCpuNoCapSysResource,
+		},
+		{
 			Name: "stress memory",
 			Test: testStressMemory,
 		},
@@ -714,9 +718,11 @@ func testNetworkBlackhole3Containers(t *testing.T, m *e2e.Minikube, e *e2e.Exten
 	for a := range chActions {
 		actions = append(actions, a)
 	}
-	for _, a := range actions {
-		defer func(action client.ActionExecution) { _ = action.Cancel() }(a)
-	}
+	defer func(actions []client.ActionExecution) {
+		for _, a := range actions {
+			_ = a.Cancel()
+		}
+	}(actions)
 
 	require.Empty(t, chErrors)
 
@@ -806,6 +812,15 @@ func testNetworkBlockDns(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 		})
 	}
 	requireAllSidecarsCleanedUp(t, m, e)
+}
+
+func testStressCpuNoCapSysResource(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
+	require.NoError(t, e.Reconfigure(map[string]string{"containerSecurityContext.capabilities.add": "{SYS_ADMIN,SYS_CHROOT,SYS_PTRACE,NET_ADMIN,DAC_OVERRIDE,SETUID,SETGID,AUDIT_WRITE}"}))
+	defer func() {
+		require.NoError(t, e.ResetConfig())
+	}()
+
+	testStressCpu(t, m, e)
 }
 
 func testStressCpu(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
@@ -1156,7 +1171,7 @@ func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			}
 
 			out, _ := m.PodExec(nginx.Pod, "nginx", "ls", pathToFill+"/disk-fill")
-			assert.Contains(t, string(out), "No such file or directory")
+			assert.Contains(t, out, "No such file or directory")
 		})
 	}
 	requireAllSidecarsCleanedUp(t, m, e)
