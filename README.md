@@ -2,8 +2,7 @@
 
 # Steadybit extension-container
 
-This [Steadybit](https://www.steadybit.com/) extension provides a host discovery and the various actions for container
-targets.
+This [Steadybit](https://www.steadybit.com/) extension provides a container discovery and the various actions for container targets.
 
 Learn about the capabilities of this extension in
 our [Reliability Hub](https://hub.steadybit.com/extension/com.steadybit.extension_container).
@@ -33,20 +32,20 @@ When installed as linux package this configuration is in`/etc/steadybit/extensio
 
 The capabilities needed by this extension are: (which are provided by the helm chart)
 
-- SYS_ADMIN
-- SYS_CHROOT
-- SYS_PTRACE
-- NET_ADMIN
-- NET_BIND_SERVICE
-- DAC_OVERRIDE
-- SETUID
-- SETGID
-- KILL
-- AUDIT_WRITE
+- `SYS_ADMIN`
+- `SYS_CHROOT`
+- `SYS_PTRACE`
+- `NET_ADMIN`
+- `NET_BIND_SERVICE`
+- `DAC_OVERRIDE`
+- `SETUID`
+- `SETGID`
+- `KILL`
+- `AUDIT_WRITE`
 
 Optional:
 
-- SYS_RESOURCE
+- `SYS_RESOURCE`
 
 ## Installation
 
@@ -106,37 +105,43 @@ Make sure that the extension is registered with the agent. In most cases this is
 the [documentation](https://docs.steadybit.com/install-and-configure/install-agent/extension-discovery) for more
 information about extension registration and how to verify.
 
-## Anatomy of the extension / Security
+## Security
 
-We try to limit the needed access needed for the extension to the absolute minimum. So the extension itself can run as a
-non-root user on a read-only root file-system and will by default if deployed using the provided helm-chart.
-In order do execute certain actions the extension needs certain capabilities.
+We try to limit the access needed for the extension to the absolute minimum. So the extension itself can run as a
+non-root user on a read-only root file-system and will, by default, if deployed using the provided helm chart.
 
-### discovery / state attacks
+In order to execute certain actions the extension needs extended capabilities, see details below.
 
-For discovery and executing state attacks such as stop or pause container the extension needs access to the container
+### Discovery / state attacks
+
+For discovery and executing state attacks, such as stop or pause container, the extension needs access to the container
 runtime socket.
 
-### resource and network attacks
+### Resource and network attacks
 
-Resource attacks starting stress-ng processes, the network attacks are starting ip or tc processes as runc container
-reusing the target container's linux namespace(s), control group(s) and user.
-This requires the following capabilities: CAP_SYS_CHROOT, CAP_SYS_ADMIN, CAP_SYS_PTRACE, CAP_NET_ADMIN, CAP_NET_BIND_SERVICE
-CAP_DAC_OVERRIDE, CAP_SETUID, CAP_SETGID, CAP_AUDIT_WRITE, CAP_KILL.
-The CAP_SYS_RESOURCE is optional. We'd recommend it to be used otherwise the resource attacks are more likely to be
-oomkilled by the kernel and are failing to carry out the attack.
+Resource attacks start `stress-ng` processes, and network attacks start `ip` or `tc` processes, as runc container (sidecar)
+using the root user (`uid=0`, `gid=0`) and reusing the target container's linux namespace(s) and control group(s). These
+processes are short-lived and terminated after the attack is finished.
+
+This requires the following capabilities:
+`CAP_SYS_CHROOT`, `CAP_SYS_ADMIN`, `CAP_SYS_PTRACE`, `CAP_NET_ADMIN`, `CAP_NET_BIND_SERVICE`
+`CAP_DAC_OVERRIDE`, `CAP_SETUID`, `CAP_SETGID`, `CAP_AUDIT_WRITE`, `CAP_KILL`.
+
+The `CAP_SYS_RESOURCE` is optional. We'd recommend it to be used, otherwise the resource attacks are more likely to be
+oomkilled by the kernel and fail to carry out the attack.
+
 The needed binaries are included in the extension container image.
 
-### mark resources as "do not discover"
+### Mark resources as "do not discover"
 
 to exclude container from discovery you can add the label `LABEL "steadybit.com.discovery-disabled"="true"` to the
 container Dockerfile.
 
 ## Troubleshooting
 
-When the host is using cgroups v2 and the cgroup filesystem is mounted using the `nsdelegate` option will prevent that
-the action running processces in other cgroups (e.g. stress cpu/memory, disk fill) will fail.
-In that case you need to remount the cgroup filesystem without the `nsdelegate` option.
+Using cgroups v2 on the host and `nsdelegate` to mount the cgroup filesystem will prevent
+the action from running processes in other cgroups (e.g. stress cpu/memory, disk fill).
+In this case you need to remount the cgroup filesystem without the `nsdelegate` option.
 
 ```sh
 sudo mount -o remount,rw,nosuid,nodev,noexec,relatime -t cgroup2 none /sys/fs/cgroup
