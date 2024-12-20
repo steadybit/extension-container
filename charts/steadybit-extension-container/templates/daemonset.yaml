@@ -48,7 +48,9 @@ spec:
       securityContext:
       {{- toYaml . | nindent 8 }}
       {{- end }}
+      hostNetwork: true
       hostPID: true
+      dnsPolicy: ClusterFirstWithHostNet
       containers:
         - image: {{ .Values.image.name }}:{{ default .Chart.AppVersion .Values.image.tag }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
@@ -82,10 +84,6 @@ spec:
             - name: STEADYBIT_EXTENSION_RUNC_DEBUG
               value: "true"
             {{- end }}
-            - name: STEADYBIT_EXTENSION_HOSTNAME
-              valueFrom:
-                fieldRef:
-                  fieldPath: spec.nodeName
             {{- include "extensionlib.deployment.env" (list .) | nindent 12 }}
             {{- with .Values.extraEnv }}
               {{- toYaml . | nindent 12 }}

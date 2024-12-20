@@ -29,21 +29,21 @@ forced rendering on kubernetes:
         namespace: NAMESPACE
   3: |
     allowHostDirVolumePlugin: true
+    allowHostNetwork: true
     allowHostPID: true
     allowHostPorts: true
     allowPrivilegeEscalation: true
     allowedCapabilities:
-      - NET_BIND_SERVICE
-      - KILL
       - SYS_ADMIN
       - SYS_CHROOT
+      - SYS_RESOURCE
       - SYS_PTRACE
+      - KILL
       - NET_ADMIN
       - DAC_OVERRIDE
       - SETUID
       - SETGID
       - AUDIT_WRITE
-      - SYS_RESOURCE
     apiVersion: security.openshift.io/v1
     kind: SecurityContextConstraints
     metadata:
@@ -86,21 +86,21 @@ rendering by default on openshift:
         namespace: NAMESPACE
   3: |
     allowHostDirVolumePlugin: true
+    allowHostNetwork: true
     allowHostPID: true
     allowHostPorts: true
     allowPrivilegeEscalation: true
     allowedCapabilities:
-      - NET_BIND_SERVICE
-      - KILL
       - SYS_ADMIN
       - SYS_CHROOT
+      - SYS_RESOURCE
       - SYS_PTRACE
+      - KILL
       - NET_ADMIN
       - DAC_OVERRIDE
       - SETUID
       - SETGID
       - AUDIT_WRITE
-      - SYS_RESOURCE
     apiVersion: security.openshift.io/v1
     kind: SecurityContextConstraints
     metadata:
