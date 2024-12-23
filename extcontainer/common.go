@@ -38,12 +38,12 @@ const (
 var (
 	targetSelectionTemplates = []action_kit_api.TargetSelectionTemplate{
 		{
-			Label:       "by host and name",
+			Label:       "host and name",
 			Description: extutil.Ptr("Find container by the host and the container name."),
 			Query:       "container.host=\"\" and container.name=\"\"",
 		},
 		{
-			Label:       "by kubernetes deployment",
+			Label:       "kubernetes deployment",
 			Description: extutil.Ptr("Find container by kubernetes deployment."),
 			Query:       "k8s.cluster-name=\"\" and k8s.namespace=\"\" and k8s.deployment=\"\"",
 		},
