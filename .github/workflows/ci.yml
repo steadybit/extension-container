@@ -53,6 +53,15 @@ jobs:
           echo 'exec in a new sell for the group change to take effect'
           sudo -u $USER env "PATH=$PATH" "E2E_RUNTIMES=${{ matrix.e2e-runtime }}"  make e2e-test
 
+      - name: Upload test coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-coverage-${{ matrix.e2e-runtime }}
+          path: |
+            e2e/e2e-coverage-*.out
+          if-no-files-found: error
+          retention-days: 3
+
   extension-ci:
     uses: steadybit/extension-kit/.github/workflows/reusable-extension-ci.yml@main
     needs: [e2e-tests]
@@ -60,6 +69,7 @@ jobs:
       go_version: '1.23'
       build_linux_packages: true
       VERSION_BUMPER_APPID: ${{ vars.GH_APP_STEADYBIT_APP_ID }}
+      coverage_artifacts_pattern: e2e-coverage-*
     secrets:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
       PAT_TOKEN_EXTENSION_DEPLOYER: ${{ secrets.PAT_TOKEN_EXTENSION_DEPLOYER }}
