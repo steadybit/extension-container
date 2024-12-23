@@ -57,8 +57,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: e2e-coverage-${{ matrix.e2e-runtime }}
-          path: |
-            e2e/e2e-coverage-*.out
+          path: e2e/e2e-coverage-*.out
           if-no-files-found: error
           retention-days: 3
 
@@ -69,7 +68,6 @@ jobs:
       go_version: '1.23'
       build_linux_packages: true
       VERSION_BUMPER_APPID: ${{ vars.GH_APP_STEADYBIT_APP_ID }}
-      coverage_artifacts_pattern: e2e-coverage-*
     secrets:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
       PAT_TOKEN_EXTENSION_DEPLOYER: ${{ secrets.PAT_TOKEN_EXTENSION_DEPLOYER }}
