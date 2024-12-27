@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.4.0
+
+- Remove host network usage
+- Drop all unneeded capabilities
+- Make CAP_SYS_RESOURCE optional
+
 ## v1.3.30
 
 - Use uid instead of name for user statement in Dockerfile

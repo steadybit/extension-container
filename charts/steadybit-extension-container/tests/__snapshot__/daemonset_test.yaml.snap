@@ -34,6 +34,10 @@ manifest should match snapshot using containerd and using resource limits:
                   value: "8082"
                 - name: STEADYBIT_EXTENSION_RUNC_DEBUG
                   value: "true"
+                - name: STEADYBIT_EXTENSION_HOSTNAME
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: spec.nodeName
                 - name: STEADYBIT_LOG_LEVEL
                   value: INFO
                 - name: STEADYBIT_LOG_FORMAT
@@ -74,16 +78,19 @@ manifest should match snapshot using containerd and using resource limits:
               securityContext:
                 capabilities:
                   add:
+                    - NET_BIND_SERVICE
+                    - KILL
                     - SYS_ADMIN
                     - SYS_CHROOT
-                    - SYS_RESOURCE
                     - SYS_PTRACE
-                    - KILL
                     - NET_ADMIN
                     - DAC_OVERRIDE
                     - SETUID
                     - SETGID
                     - AUDIT_WRITE
+                    - SYS_RESOURCE
+                  drop:
+                    - ALL
                 readOnlyRootFilesystem: true
                 seccompProfile:
                   type: Unconfined
@@ -96,8 +103,6 @@ manifest should match snapshot using containerd and using resource limits:
                   name: runtime-socket
                 - mountPath: /run/containerd/runc/k8s.io
                   name: runtime-runc-root
-          dnsPolicy: ClusterFirstWithHostNet
-          hostNetwork: true
           hostPID: true
           securityContext:
             runAsNonRoot: true
@@ -159,6 +164,10 @@ manifest should match snapshot using crio using podAnnotations and Labels:
                   value: "8086"
                 - name: STEADYBIT_EXTENSION_HEALTH_PORT
                   value: "8082"
+                - name: STEADYBIT_EXTENSION_HOSTNAME
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: spec.nodeName
                 - name: STEADYBIT_LOG_LEVEL
                   value: INFO
                 - name: STEADYBIT_LOG_FORMAT
@@ -199,16 +208,19 @@ manifest should match snapshot using crio using podAnnotations and Labels:
               securityContext:
                 capabilities:
                   add:
+                    - NET_BIND_SERVICE
+                    - KILL
                     - SYS_ADMIN
                     - SYS_CHROOT
-                    - SYS_RESOURCE
                     - SYS_PTRACE
-                    - KILL
                     - NET_ADMIN
                     - DAC_OVERRIDE
                     - SETUID
                     - SETGID
                     - AUDIT_WRITE
+                    - SYS_RESOURCE
+                  drop:
+                    - ALL
                 readOnlyRootFilesystem: true
                 seccompProfile:
                   type: Unconfined
@@ -221,8 +233,6 @@ manifest should match snapshot using crio using podAnnotations and Labels:
                   name: runtime-socket
                 - mountPath: /run/runc
                   name: runtime-runc-root
-          dnsPolicy: ClusterFirstWithHostNet
-          hostNetwork: true
           hostPID: true
           securityContext:
             runAsNonRoot: true
@@ -282,6 +292,10 @@ manifest should match snapshot using docker:
                   value: "8086"
                 - name: STEADYBIT_EXTENSION_HEALTH_PORT
                   value: "8082"
+                - name: STEADYBIT_EXTENSION_HOSTNAME
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: spec.nodeName
                 - name: STEADYBIT_LOG_LEVEL
                   value: INFO
                 - name: STEADYBIT_LOG_FORMAT
@@ -322,16 +336,19 @@ manifest should match snapshot using docker:
               securityContext:
                 capabilities:
                   add:
+                    - NET_BIND_SERVICE
+                    - KILL
                     - SYS_ADMIN
                     - SYS_CHROOT
-                    - SYS_RESOURCE
                     - SYS_PTRACE
-                    - KILL
                     - NET_ADMIN
                     - DAC_OVERRIDE
                     - SETUID
                     - SETGID
                     - AUDIT_WRITE
+                    - SYS_RESOURCE
+                  drop:
+                    - ALL
                 readOnlyRootFilesystem: true
                 seccompProfile:
                   type: Unconfined
@@ -344,8 +361,6 @@ manifest should match snapshot using docker:
                   name: runtime-socket
                 - mountPath: /run/docker/runtime-runc/moby
                   name: runtime-runc-root
-          dnsPolicy: ClusterFirstWithHostNet
-          hostNetwork: true
           hostPID: true
           securityContext:
             runAsNonRoot: true
@@ -405,6 +420,10 @@ manifest should match snapshot with TLS:
                   value: "8086"
                 - name: STEADYBIT_EXTENSION_HEALTH_PORT
                   value: "8082"
+                - name: STEADYBIT_EXTENSION_HOSTNAME
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: spec.nodeName
                 - name: STEADYBIT_LOG_LEVEL
                   value: INFO
                 - name: STEADYBIT_LOG_FORMAT
@@ -449,16 +468,19 @@ manifest should match snapshot with TLS:
               securityContext:
                 capabilities:
                   add:
+                    - NET_BIND_SERVICE
+                    - KILL
                     - SYS_ADMIN
                     - SYS_CHROOT
-                    - SYS_RESOURCE
                     - SYS_PTRACE
-                    - KILL
                     - NET_ADMIN
                     - DAC_OVERRIDE
                     - SETUID
                     - SETGID
                     - AUDIT_WRITE
+                    - SYS_RESOURCE
+                  drop:
+                    - ALL
                 readOnlyRootFilesystem: true
                 seccompProfile:
                   type: Unconfined
@@ -474,8 +496,6 @@ manifest should match snapshot with TLS:
                 - mountPath: /etc/extension/certificates/server-cert
                   name: certificate-server-cert
                   readOnly: true
-          dnsPolicy: ClusterFirstWithHostNet
-          hostNetwork: true
           hostPID: true
           securityContext:
             runAsNonRoot: true
@@ -538,6 +558,10 @@ manifest should match snapshot with appArmorProfile for k8s >= 1.30:
                   value: "8086"
                 - name: STEADYBIT_EXTENSION_HEALTH_PORT
                   value: "8082"
+                - name: STEADYBIT_EXTENSION_HOSTNAME
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: spec.nodeName
                 - name: STEADYBIT_LOG_LEVEL
                   value: INFO
                 - name: STEADYBIT_LOG_FORMAT
@@ -580,16 +604,19 @@ manifest should match snapshot with appArmorProfile for k8s >= 1.30:
                   type: Unconfined
                 capabilities:
                   add:
+                    - NET_BIND_SERVICE
+                    - KILL
                     - SYS_ADMIN
                     - SYS_CHROOT
-                    - SYS_RESOURCE
                     - SYS_PTRACE
-                    - KILL
                     - NET_ADMIN
                     - DAC_OVERRIDE
                     - SETUID
                     - SETGID
                     - AUDIT_WRITE
+                    - SYS_RESOURCE
+                  drop:
+                    - ALL
                 readOnlyRootFilesystem: true
                 seccompProfile:
                   type: Unconfined
@@ -602,8 +629,6 @@ manifest should match snapshot with appArmorProfile for k8s >= 1.30:
                   name: runtime-socket
                 - mountPath: /run/containerd/runc/k8s.io
                   name: runtime-runc-root
-          dnsPolicy: ClusterFirstWithHostNet
-          hostNetwork: true
           hostPID: true
           securityContext:
             runAsNonRoot: true
@@ -663,6 +688,10 @@ manifest should match snapshot with different containerPorts:
                   value: "9090"
                 - name: STEADYBIT_EXTENSION_HEALTH_PORT
                   value: "9091"
+                - name: STEADYBIT_EXTENSION_HOSTNAME
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: spec.nodeName
                 - name: STEADYBIT_LOG_LEVEL
                   value: INFO
                 - name: STEADYBIT_LOG_FORMAT
@@ -703,16 +732,19 @@ manifest should match snapshot with different containerPorts:
               securityContext:
                 capabilities:
                   add:
+                    - NET_BIND_SERVICE
+                    - KILL
                     - SYS_ADMIN
                     - SYS_CHROOT
-                    - SYS_RESOURCE
                     - SYS_PTRACE
-                    - KILL
                     - NET_ADMIN
                     - DAC_OVERRIDE
                     - SETUID
                     - SETGID
                     - AUDIT_WRITE
+                    - SYS_RESOURCE
+                  drop:
+                    - ALL
                 readOnlyRootFilesystem: true
                 seccompProfile:
                   type: Unconfined
@@ -725,8 +757,6 @@ manifest should match snapshot with different containerPorts:
                   name: runtime-socket
                 - mountPath: /run/containerd/runc/k8s.io
                   name: runtime-runc-root
-          dnsPolicy: ClusterFirstWithHostNet
-          hostNetwork: true
           hostPID: true
           securityContext:
             runAsNonRoot: true
@@ -788,6 +818,10 @@ manifest should match snapshot with discover all deployments:
                   value: "8082"
                 - name: STEADYBIT_EXTENSION_DISABLE_DISCOVERY_EXCLUDES
                   value: "true"
+                - name: STEADYBIT_EXTENSION_HOSTNAME
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: spec.nodeName
                 - name: STEADYBIT_LOG_LEVEL
                   value: INFO
                 - name: STEADYBIT_LOG_FORMAT
@@ -828,16 +862,19 @@ manifest should match snapshot with discover all deployments:
               securityContext:
                 capabilities:
                   add:
+                    - NET_BIND_SERVICE
+                    - KILL
                     - SYS_ADMIN
                     - SYS_CHROOT
-                    - SYS_RESOURCE
                     - SYS_PTRACE
-                    - KILL
                     - NET_ADMIN
                     - DAC_OVERRIDE
                     - SETUID
                     - SETGID
                     - AUDIT_WRITE
+                    - SYS_RESOURCE
+                  drop:
+                    - ALL
                 readOnlyRootFilesystem: true
                 seccompProfile:
                   type: Unconfined
@@ -850,8 +887,6 @@ manifest should match snapshot with discover all deployments:
                   name: runtime-socket
                 - mountPath: /run/containerd/runc/k8s.io
                   name: runtime-runc-root
-          dnsPolicy: ClusterFirstWithHostNet
-          hostNetwork: true
           hostPID: true
           securityContext:
             runAsNonRoot: true
@@ -911,6 +946,10 @@ manifest should match snapshot with extra env vars:
                   value: "8086"
                 - name: STEADYBIT_EXTENSION_HEALTH_PORT
                   value: "8082"
+                - name: STEADYBIT_EXTENSION_HOSTNAME
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: spec.nodeName
                 - name: STEADYBIT_LOG_LEVEL
                   value: INFO
                 - name: STEADYBIT_LOG_FORMAT
@@ -958,16 +997,19 @@ manifest should match snapshot with extra env vars:
               securityContext:
                 capabilities:
                   add:
+                    - NET_BIND_SERVICE
+                    - KILL
                     - SYS_ADMIN
                     - SYS_CHROOT
-                    - SYS_RESOURCE
                     - SYS_PTRACE
-                    - KILL
                     - NET_ADMIN
                     - DAC_OVERRIDE
                     - SETUID
                     - SETGID
                     - AUDIT_WRITE
+                    - SYS_RESOURCE
+                  drop:
+                    - ALL
                 readOnlyRootFilesystem: true
                 seccompProfile:
                   type: Unconfined
@@ -980,8 +1022,6 @@ manifest should match snapshot with extra env vars:
                   name: runtime-socket
                 - mountPath: /run/containerd/runc/k8s.io
                   name: runtime-runc-root
-          dnsPolicy: ClusterFirstWithHostNet
-          hostNetwork: true
           hostPID: true
           securityContext:
             runAsNonRoot: true
@@ -1043,6 +1083,10 @@ manifest should match snapshot with extra labels:
                   value: "8086"
                 - name: STEADYBIT_EXTENSION_HEALTH_PORT
                   value: "8082"
+                - name: STEADYBIT_EXTENSION_HOSTNAME
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: spec.nodeName
                 - name: STEADYBIT_LOG_LEVEL
                   value: INFO
                 - name: STEADYBIT_LOG_FORMAT
@@ -1083,16 +1127,19 @@ manifest should match snapshot with extra labels:
               securityContext:
                 capabilities:
                   add:
+                    - NET_BIND_SERVICE
+                    - KILL
                     - SYS_ADMIN
                     - SYS_CHROOT
-                    - SYS_RESOURCE
                     - SYS_PTRACE
-                    - KILL
                     - NET_ADMIN
                     - DAC_OVERRIDE
                     - SETUID
                     - SETGID
                     - AUDIT_WRITE
+                    - SYS_RESOURCE
+                  drop:
+                    - ALL
                 readOnlyRootFilesystem: true
                 seccompProfile:
                   type: Unconfined
@@ -1105,8 +1152,6 @@ manifest should match snapshot with extra labels:
                   name: runtime-socket
                 - mountPath: /run/containerd/runc/k8s.io
                   name: runtime-runc-root
-          dnsPolicy: ClusterFirstWithHostNet
-          hostNetwork: true
           hostPID: true
           securityContext:
             runAsNonRoot: true
@@ -1166,6 +1211,10 @@ manifest should match snapshot with mutual TLS:
                   value: "8086"
                 - name: STEADYBIT_EXTENSION_HEALTH_PORT
                   value: "8082"
+                - name: STEADYBIT_EXTENSION_HOSTNAME
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: spec.nodeName
                 - name: STEADYBIT_LOG_LEVEL
                   value: INFO
                 - name: STEADYBIT_LOG_FORMAT
@@ -1212,16 +1261,19 @@ manifest should match snapshot with mutual TLS:
               securityContext:
                 capabilities:
                   add:
+                    - NET_BIND_SERVICE
+                    - KILL
                     - SYS_ADMIN
                     - SYS_CHROOT
-                    - SYS_RESOURCE
                     - SYS_PTRACE
-                    - KILL
                     - NET_ADMIN
                     - DAC_OVERRIDE
                     - SETUID
                     - SETGID
                     - AUDIT_WRITE
+                    - SYS_RESOURCE
+                  drop:
+                    - ALL
                 readOnlyRootFilesystem: true
                 seccompProfile:
                   type: Unconfined
@@ -1240,8 +1292,6 @@ manifest should match snapshot with mutual TLS:
                 - mountPath: /etc/extension/certificates/server-cert
                   name: certificate-server-cert
                   readOnly: true
-          dnsPolicy: ClusterFirstWithHostNet
-          hostNetwork: true
           hostPID: true
           securityContext:
             runAsNonRoot: true
@@ -1309,6 +1359,10 @@ manifest should match snapshot with mutual TLS using containerPaths:
                   value: "8086"
                 - name: STEADYBIT_EXTENSION_HEALTH_PORT
                   value: "8082"
+                - name: STEADYBIT_EXTENSION_HOSTNAME
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: spec.nodeName
                 - name: STEADYBIT_LOG_LEVEL
                   value: INFO
                 - name: STEADYBIT_LOG_FORMAT
@@ -1355,16 +1409,19 @@ manifest should match snapshot with mutual TLS using containerPaths:
               securityContext:
                 capabilities:
                   add:
+                    - NET_BIND_SERVICE
+                    - KILL
                     - SYS_ADMIN
                     - SYS_CHROOT
-                    - SYS_RESOURCE
                     - SYS_PTRACE
-                    - KILL
                     - NET_ADMIN
                     - DAC_OVERRIDE
                     - SETUID
                     - SETGID
                     - AUDIT_WRITE
+                    - SYS_RESOURCE
+                  drop:
+                    - ALL
                 readOnlyRootFilesystem: true
                 seccompProfile:
                   type: Unconfined
@@ -1377,8 +1434,6 @@ manifest should match snapshot with mutual TLS using containerPaths:
                   name: runtime-socket
                 - mountPath: /run/containerd/runc/k8s.io
                   name: runtime-runc-root
-          dnsPolicy: ClusterFirstWithHostNet
-          hostNetwork: true
           hostPID: true
           securityContext:
             runAsNonRoot: true
@@ -1438,6 +1493,10 @@ manifest should match snapshot with podSecurityContext:
                   value: "8086"
                 - name: STEADYBIT_EXTENSION_HEALTH_PORT
                   value: "8082"
+                - name: STEADYBIT_EXTENSION_HOSTNAME
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: spec.nodeName
                 - name: STEADYBIT_LOG_LEVEL
                   value: INFO
                 - name: STEADYBIT_LOG_FORMAT
@@ -1478,16 +1537,19 @@ manifest should match snapshot with podSecurityContext:
               securityContext:
                 capabilities:
                   add:
+                    - NET_BIND_SERVICE
+                    - KILL
                     - SYS_ADMIN
                     - SYS_CHROOT
-                    - SYS_RESOURCE
                     - SYS_PTRACE
-                    - KILL
                     - NET_ADMIN
                     - DAC_OVERRIDE
                     - SETUID
                     - SETGID
                     - AUDIT_WRITE
+                    - SYS_RESOURCE
+                  drop:
+                    - ALL
                 readOnlyRootFilesystem: true
                 seccompProfile:
                   type: Unconfined
@@ -1500,8 +1562,6 @@ manifest should match snapshot with podSecurityContext:
                   name: runtime-socket
                 - mountPath: /run/containerd/runc/k8s.io
                   name: runtime-runc-root
-          dnsPolicy: ClusterFirstWithHostNet
-          hostNetwork: true
           hostPID: true
           securityContext:
             runAsNonRoot: true
@@ -1562,6 +1622,10 @@ manifest should match snapshot with priority class:
                   value: "8086"
                 - name: STEADYBIT_EXTENSION_HEALTH_PORT
                   value: "8082"
+                - name: STEADYBIT_EXTENSION_HOSTNAME
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: spec.nodeName
                 - name: STEADYBIT_LOG_LEVEL
                   value: INFO
                 - name: STEADYBIT_LOG_FORMAT
@@ -1602,16 +1666,19 @@ manifest should match snapshot with priority class:
               securityContext:
                 capabilities:
                   add:
+                    - NET_BIND_SERVICE
+                    - KILL
                     - SYS_ADMIN
                     - SYS_CHROOT
-                    - SYS_RESOURCE
                     - SYS_PTRACE
-                    - KILL
                     - NET_ADMIN
                     - DAC_OVERRIDE
                     - SETUID
                     - SETGID
                     - AUDIT_WRITE
+                    - SYS_RESOURCE
+                  drop:
+                    - ALL
                 readOnlyRootFilesystem: true
                 seccompProfile:
                   type: Unconfined
@@ -1624,8 +1691,6 @@ manifest should match snapshot with priority class:
                   name: runtime-socket
                 - mountPath: /run/containerd/runc/k8s.io
                   name: runtime-runc-root
-          dnsPolicy: ClusterFirstWithHostNet
-          hostNetwork: true
           hostPID: true
           priorityClassName: my-priority-class
           securityContext:
@@ -1686,6 +1751,10 @@ manifest should match snapshot with update strategy:
                   value: "8086"
                 - name: STEADYBIT_EXTENSION_HEALTH_PORT
                   value: "8082"
+                - name: STEADYBIT_EXTENSION_HOSTNAME
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: spec.nodeName
                 - name: STEADYBIT_LOG_LEVEL
                   value: INFO
                 - name: STEADYBIT_LOG_FORMAT
@@ -1726,16 +1795,19 @@ manifest should match snapshot with update strategy:
               securityContext:
                 capabilities:
                   add:
+                    - NET_BIND_SERVICE
+                    - KILL
                     - SYS_ADMIN
                     - SYS_CHROOT
-                    - SYS_RESOURCE
                     - SYS_PTRACE
-                    - KILL
                     - NET_ADMIN
                     - DAC_OVERRIDE
                     - SETUID
                     - SETGID
                     - AUDIT_WRITE
+                    - SYS_RESOURCE
+                  drop:
+                    - ALL
                 readOnlyRootFilesystem: true
                 seccompProfile:
                   type: Unconfined
@@ -1748,8 +1820,6 @@ manifest should match snapshot with update strategy:
                   name: runtime-socket
                 - mountPath: /run/containerd/runc/k8s.io
                   name: runtime-runc-root
-          dnsPolicy: ClusterFirstWithHostNet
-          hostNetwork: true
           hostPID: true
           securityContext:
             runAsNonRoot: true
