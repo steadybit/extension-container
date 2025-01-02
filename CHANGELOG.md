@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.4.1
+
+- Respect the container memory limit for stress-ng based actions
+
 ## v1.4.0
 
 - Remove host network usage
