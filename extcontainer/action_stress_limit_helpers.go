@@ -19,26 +19,24 @@ import (
 )
 
 var cgroupV1MemUnlimited = (math.MaxInt64 / os.Getpagesize()) * os.Getpagesize()
+var osFs = osFileSystem{}
 
 func readAndAdaptToContainerLimits(_ context.Context, cGroupPath string, opts *stress.Opts) {
-	if opts.CpuWorkers == nil {
-		return
-	}
-
 	cpuLimitInMilliCpu := -1
 	memLimitInBytes := -1
+
 	if isCGroupV1() {
-		cpuLimitInMilliCpu = readCGroupV1CpuLimit(cGroupPath, osFileSystem{})
-		memLimitInBytes = readCGroupV1MemLimit(cGroupPath, osFileSystem{})
+		cpuLimitInMilliCpu = readCGroupV1CpuLimit(cGroupPath, osFs)
+		memLimitInBytes = readCGroupV1MemLimit(cGroupPath, osFs)
 	} else {
-		cpuLimitInMilliCpu = readCGroupV2CpuLimit(cGroupPath, osFileSystem{})
-		memLimitInBytes = readCGroupV2MemLimit(cGroupPath, osFileSystem{})
+		cpuLimitInMilliCpu = readCGroupV2CpuLimit(cGroupPath, osFs)
+		memLimitInBytes = readCGroupV2MemLimit(cGroupPath, osFs)
 	}
 
-	if cpuLimitInMilliCpu >= 0 {
+	if opts.CpuWorkers != nil && cpuLimitInMilliCpu >= 0 {
 		adaptToCpuContainerLimits(cpuLimitInMilliCpu, runtime.NumCPU(), opts)
 	}
-	if memLimitInBytes >= 0 {
+	if opts.VmWorkers != nil && memLimitInBytes >= 0 {
 		adaptToMemContainerLimits(memLimitInBytes, opts)
 	}
 }
