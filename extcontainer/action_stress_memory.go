@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// SPDX-FileCopyrightText: 2023 Steadybit GmbH
+// SPDX-FileCopyrightText: 2025 Steadybit GmbH
 
 package extcontainer
 
@@ -37,7 +37,7 @@ func getStressMemoryDescription() action_kit_api.ActionDescription {
 			{
 				Name:         "percentage",
 				Label:        "Load on Container Memory",
-				Description:  extutil.Ptr("How much of the total memory should be allocated?"),
+				Description:  extutil.Ptr("How much of the total container memory should be allocated?"),
 				Type:         action_kit_api.Percentage,
 				DefaultValue: extutil.Ptr("200"),
 				Required:     extutil.Ptr(true),
@@ -47,7 +47,7 @@ func getStressMemoryDescription() action_kit_api.ActionDescription {
 			{
 				Name:         "duration",
 				Label:        "Duration",
-				Description:  extutil.Ptr("How long should memory be wasted?"),
+				Description:  extutil.Ptr("How long should container memory be wasted?"),
 				Type:         action_kit_api.Duration,
 				DefaultValue: extutil.Ptr("30s"),
 				Required:     extutil.Ptr(true),
