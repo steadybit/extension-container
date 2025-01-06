@@ -13,6 +13,7 @@ import (
 	"github.com/steadybit/action-kit/go/action_kit_commons/runc"
 	"github.com/steadybit/action-kit/go/action_kit_sdk"
 	"github.com/steadybit/extension-container/config"
+	"github.com/steadybit/extension-container/extcontainer/container/types"
 	"github.com/steadybit/extension-kit"
 	"github.com/steadybit/extension-kit/extbuild"
 	"github.com/steadybit/extension-kit/extutil"
@@ -24,6 +25,7 @@ import (
 
 type fillMemoryAction struct {
 	runc     runc.Runc
+	client   types.Client
 	memfills syncmap.Map
 }
 
@@ -41,9 +43,10 @@ var _ action_kit_sdk.Action[FillMemoryActionState] = (*fillMemoryAction)(nil)
 var _ action_kit_sdk.ActionWithStop[FillMemoryActionState] = (*fillMemoryAction)(nil)
 var _ action_kit_sdk.ActionWithStatus[FillMemoryActionState] = (*fillMemoryAction)(nil)
 
-func NewFillMemoryContainerAction(r runc.Runc) action_kit_sdk.Action[FillMemoryActionState] {
+func NewFillMemoryContainerAction(r runc.Runc, c types.Client) action_kit_sdk.Action[FillMemoryActionState] {
 	return &fillMemoryAction{
-		runc: r,
+		runc:   r,
+		client: c,
 	}
 }
 
@@ -148,12 +151,13 @@ func fillMemoryOpts(request action_kit_api.PrepareActionRequestBody) (memfill.Op
 }
 
 func (a *fillMemoryAction) Prepare(ctx context.Context, state *FillMemoryActionState, request action_kit_api.PrepareActionRequestBody) (*action_kit_api.PrepareResult, error) {
-	containerId := request.Target.Attributes["container.id"]
-	if len(containerId) == 0 {
-		return nil, extension_kit.ToError("Target is missing the 'container.id' attribute.", nil)
+	container, label, err := getContainerTarget(ctx, a.client, *request.Target)
+	if err != nil {
+		return nil, extension_kit.ToError("Failed to get target container", err)
 	}
-	state.ContainerID = containerId[0]
-	state.TargetLabel = getTargetLabel(*request.Target)
+
+	state.ContainerID = container.Id()
+	state.TargetLabel = label
 
 	opts, err := fillMemoryOpts(request)
 	if err != nil {

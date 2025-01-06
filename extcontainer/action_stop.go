@@ -83,14 +83,14 @@ func (a *stopAction) Describe() action_kit_api.ActionDescription {
 	}
 }
 
-func (a *stopAction) Prepare(_ context.Context, state *StopActionState, request action_kit_api.PrepareActionRequestBody) (*action_kit_api.PrepareResult, error) {
-	containerId := request.Target.Attributes["container.id"]
-	if len(containerId) == 0 {
-		return nil, extension_kit.ToError("Target is missing the 'container.id' attribute.", nil)
+func (a *stopAction) Prepare(ctx context.Context, state *StopActionState, request action_kit_api.PrepareActionRequestBody) (*action_kit_api.PrepareResult, error) {
+	container, label, err := getContainerTarget(ctx, a.client, *request.Target)
+	if err != nil {
+		return nil, extension_kit.ToError("Failed to get target container", err)
 	}
 
-	state.ContainerId = containerId[0]
-	state.TargetLabel = getTargetLabel(*request.Target)
+	state.ContainerId = container.Id()
+	state.TargetLabel = label
 
 	state.Graceful = extutil.ToBool(request.Config["graceful"])
 	state.ExecutionId = request.ExecutionId

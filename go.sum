@@ -98,6 +98,8 @@ github.com/go-task/slim-sprig/v3 v3.0.0 h1:sUs3vkvUymDpBKi3qH1YSqBQk9+9D/8M2mN1v
 github.com/go-task/slim-sprig/v3 v3.0.0/go.mod h1:W848ghGpv3Qj3dhTPRyJypKRiqCdHZiAzKg9hl15HA8=
 github.com/go-test/deep v1.0.8 h1:TDsG77qcSprGbC6vTN8OuXp5g+J+b5Pcguhf7Zt61VM=
 github.com/go-test/deep v1.0.8/go.mod h1:5C2ZWiW0ErCdrYzpqxLbTX7MG14M9iiw8DgHncVwcsE=
+github.com/gobwas/glob v0.2.3 h1:A4xDbljILXROh+kObIiy5kIaPYD8e96x1tgBhUI5J+Y=
+github.com/gobwas/glob v0.2.3/go.mod h1:d3Ez4x06l9bZtSvzIay5+Yzi0fmZzPgnTbPcKjJAkT8=
 github.com/godbus/dbus/v5 v5.0.4/go.mod h1:xhWf0FNVPg57R7Z0UbKHbJfkEywrmjJnf7w5xrFpKfA=
 github.com/godbus/dbus/v5 v5.1.0 h1:4KLkAxT3aOY8Li4FRJe/KvhoNFFxo0m6fNuFUO8QJUk=
 github.com/godbus/dbus/v5 v5.1.0/go.mod h1:xhWf0FNVPg57R7Z0UbKHbJfkEywrmjJnf7w5xrFpKfA=
@@ -269,8 +271,6 @@ github.com/spf13/pflag v1.0.5/go.mod h1:McXfInJRrz4CZXVZOBLb0bTZqETkiAhM9Iw0y3An
 github.com/spkg/bom v0.0.0-20160624110644-59b7046e48ad/go.mod h1:qLr4V1qq6nMqFKkMo8ZTx3f+BZEkzsRUY10Xsm2mwU0=
 github.com/steadybit/action-kit/go/action_kit_api/v2 v2.9.6 h1:Qci7Numf66mjCIRo7KDwHUimIxUZzq+GBfyv/1f/QCU=
 github.com/steadybit/action-kit/go/action_kit_api/v2 v2.9.6/go.mod h1:ycF2RLgRsB8I/jD52aE+dKZKVru1GIEtmkcRcIR3vXk=
-github.com/steadybit/action-kit/go/action_kit_commons v1.2.14 h1:9sGm4L8cVeXUMRp4gBWW93LMsEBJQw42mlyJLzj8Cdw=
-github.com/steadybit/action-kit/go/action_kit_commons v1.2.14/go.mod h1:Fyz7eekZhKf3j9br2aoT77kx292bpXdWzJ/m+dGwqDM=
 github.com/steadybit/action-kit/go/action_kit_commons v1.2.15-0.20250106104450-84c7275c49f5 h1:tOyb2mlcf5gw2Z9iB817KYEd0+NXOB1P1EC6g5lTpac=
 github.com/steadybit/action-kit/go/action_kit_commons v1.2.15-0.20250106104450-84c7275c49f5/go.mod h1:Fyz7eekZhKf3j9br2aoT77kx292bpXdWzJ/m+dGwqDM=
 github.com/steadybit/action-kit/go/action_kit_sdk v1.1.14 h1:x94RX+vh9Iyc0tS6BhiSpvknj+xE36AV0Nc3D5Yuub0=

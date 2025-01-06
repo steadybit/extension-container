@@ -86,6 +86,14 @@ func (c *client) List(ctx context.Context) ([]types.Container, error) {
 	return result, nil
 }
 
+func (c *client) Info(ctx context.Context, id string) (types.Container, error) {
+	r, err := c.cri.ContainerStatus(ctx, &criapi.ContainerStatusRequest{ContainerId: id})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get CRI-O container %s: %w", id, err)
+	}
+	return newContainerFromStatus(r.Status), nil
+}
+
 func (c *client) GetPid(ctx context.Context, containerId string) (int, error) {
 	res, err := c.cri.ContainerStatus(ctx, &criapi.ContainerStatusRequest{
 		ContainerId: containerId,

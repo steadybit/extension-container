@@ -79,6 +79,15 @@ func (c *client) List(ctx context.Context) ([]types.Container, error) {
 	}
 }
 
+func (c *client) Info(ctx context.Context, id string) (types.Container, error) {
+	containers := containersapi.NewContainersClient(c.containerd.Conn())
+	r, err := containers.Get(ctx, &containersapi.GetContainerRequest{ID: id})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get container %s: %w", id, errgrpc.ToNative(err))
+	}
+	return newContainer(r.Container), nil
+}
+
 func isContainerAlive(ctx context.Context, tasks tasksapi.TasksClient, id string) bool {
 	status, err := getStatus(ctx, tasks, id)
 	if err != nil && !errdefs.IsNotFound(err) {

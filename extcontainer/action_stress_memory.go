@@ -9,13 +9,14 @@ import (
 	"github.com/steadybit/action-kit/go/action_kit_commons/runc"
 	"github.com/steadybit/action-kit/go/action_kit_commons/stress"
 	"github.com/steadybit/action-kit/go/action_kit_sdk"
+	"github.com/steadybit/extension-container/extcontainer/container/types"
 	"github.com/steadybit/extension-kit/extbuild"
 	"github.com/steadybit/extension-kit/extutil"
 	"time"
 )
 
-func NewStressMemoryContainerAction(r runc.Runc) action_kit_sdk.Action[StressActionState] {
-	return newStressAction(r, getStressMemoryDescription, stressMemory)
+func NewStressMemoryContainerAction(r runc.Runc, c types.Client) action_kit_sdk.Action[StressActionState] {
+	return newStressAction(r, c, getStressMemoryDescription, stressMemory)
 }
 
 func getStressMemoryDescription() action_kit_api.ActionDescription {

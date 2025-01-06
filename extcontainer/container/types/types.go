@@ -35,6 +35,8 @@ type Runtime string
 type Client interface {
 	// List returns a list of all running containers
 	List(ctx context.Context) ([]Container, error)
+	// Info returns the info of the given container
+	Info(ctx context.Context, id string) (Container, error)
 	Stop(ctx context.Context, id string, graceful bool) error
 	// Pause pauses the given container
 	Pause(ctx context.Context, id string) error

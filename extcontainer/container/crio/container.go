@@ -22,6 +22,15 @@ func newContainer(c *runtime.Container) *container {
 	}
 }
 
+func newContainerFromStatus(c *runtime.ContainerStatus) *container {
+	return &container{
+		id:        c.Id,
+		name:      c.Metadata.Name,
+		imageName: c.Image.Image,
+		labels:    c.Labels,
+	}
+}
+
 func (c *container) Id() string {
 	return c.id
 }
