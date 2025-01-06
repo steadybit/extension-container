@@ -149,15 +149,19 @@ func (d *containerDiscovery) DiscoverTargets(ctx context.Context) ([]discovery_k
 func ignoreContainer(container types.Container) bool {
 	labels := container.Labels()
 
-	if label := labels["io.cri-containerd.kind"]; label == "sandbox" {
+	if hasDisallowedK8sNamespaceLabel(labels) {
 		return true
 	}
 
-	if label := labels["io.kubernetes.docker.type"]; label == "podsandbox" {
+	if labels["io.cri-containerd.kind"] == "sandbox" {
 		return true
 	}
 
-	if label := labels["com.amazonaws.ecs.container-name"]; label == "~internal~ecs~pause" {
+	if labels["io.kubernetes.docker.type"] == "podsandbox" {
+		return true
+	}
+
+	if labels["com.amazonaws.ecs.container-name"] == "~internal~ecs~pause" {
 		return true
 	}
 
@@ -165,15 +169,15 @@ func ignoreContainer(container types.Container) bool {
 		return false
 	}
 
-	if label := labels["steadybit.com.discovery-disabled"]; label == "true" {
+	if labels["steadybit.com.discovery-disabled"] == "true" {
 		return true
 	}
 
-	if label := labels["steadybit.com/discovery-disabled"]; label == "true" {
+	if labels["steadybit.com/discovery-disabled"] == "true" {
 		return true
 	}
 
-	if label := labels["com.steadybit.agent"]; label == "true" {
+	if labels["com.steadybit.agent"] == "true" {
 		return true
 	}
 

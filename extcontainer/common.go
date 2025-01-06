@@ -9,6 +9,7 @@ import (
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
 	"github.com/steadybit/action-kit/go/action_kit_commons/runc"
 	"github.com/steadybit/extension-container/extcontainer/container/types"
+	extension_kit "github.com/steadybit/extension-kit"
 	"github.com/steadybit/extension-kit/extutil"
 	"strings"
 )
@@ -64,13 +65,27 @@ func AddPrefix(containerId string, runtime types.Runtime) string {
 	return containerId
 }
 
-func getTargetLabel(target action_kit_api.Target) string {
-	containerId := target.Attributes["container.id"][0]
-	if len(target.Attributes["steadybit.label"]) > 0 {
-		return fmt.Sprintf("%s (%s)", target.Attributes["steadybit.label"][0], RemovePrefix(containerId)[0:8])
-	} else {
-		return containerId
+func getContainerTarget(ctx context.Context, client types.Client, target action_kit_api.Target) (types.Container, string, error) {
+	containerId := target.Attributes["container.id"]
+	if len(containerId) == 0 {
+		return nil, "", extension_kit.ToError("Target is missing the 'container.id' attribute.", nil)
 	}
+
+	container, err := client.Info(ctx, RemovePrefix(containerId[0]))
+	if err != nil {
+		return nil, "", extension_kit.ToError("Failed to get container info", err)
+	}
+
+	if hasDisallowedK8sNamespaceLabel(container.Labels()) {
+		return nil, "", extension_kit.ToError("Container is in a namespace disallowed for attacks", nil)
+	}
+
+	label := container.Id()
+	if len(target.Attributes["steadybit.label"]) > 0 {
+		label = fmt.Sprintf("%s (%s)", target.Attributes["steadybit.label"][0], RemovePrefix(container.Id())[0:8])
+	}
+
+	return container, label, nil
 }
 
 func getRestrictedEndpoints(request action_kit_api.PrepareActionRequestBody) []action_kit_api.RestrictedEndpoint {

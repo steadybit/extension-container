@@ -11,16 +11,18 @@ import (
 	"github.com/steadybit/action-kit/go/action_kit_commons/network"
 	"github.com/steadybit/action-kit/go/action_kit_commons/runc"
 	"github.com/steadybit/action-kit/go/action_kit_sdk"
+	"github.com/steadybit/extension-container/extcontainer/container/types"
 	"github.com/steadybit/extension-kit/extbuild"
 	"github.com/steadybit/extension-kit/extutil"
 )
 
-func NewNetworkCorruptPackagesContainerAction(r runc.Runc) action_kit_sdk.Action[NetworkActionState] {
+func NewNetworkCorruptPackagesContainerAction(r runc.Runc, client types.Client) action_kit_sdk.Action[NetworkActionState] {
 	return &networkAction{
 		optsProvider: corruptPackages(r),
 		optsDecoder:  corruptPackagesDecode,
 		description:  getNetworkCorruptPackagesDescription(),
 		runc:         r,
+		client:       client,
 	}
 }
 

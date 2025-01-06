@@ -11,6 +11,7 @@ import (
 	"github.com/steadybit/action-kit/go/action_kit_commons/diskfill"
 	"github.com/steadybit/action-kit/go/action_kit_commons/runc"
 	"github.com/steadybit/action-kit/go/action_kit_sdk"
+	"github.com/steadybit/extension-container/extcontainer/container/types"
 	"github.com/steadybit/extension-kit"
 	"github.com/steadybit/extension-kit/extbuild"
 	"github.com/steadybit/extension-kit/extutil"
@@ -20,6 +21,7 @@ import (
 
 type fillDiskAction struct {
 	runc      runc.Runc
+	client    types.Client
 	diskfills syncmap.Map
 }
 
@@ -35,9 +37,10 @@ type FillDiskActionState struct {
 var _ action_kit_sdk.Action[FillDiskActionState] = (*fillDiskAction)(nil)
 var _ action_kit_sdk.ActionWithStop[FillDiskActionState] = (*fillDiskAction)(nil)
 
-func NewFillDiskContainerAction(r runc.Runc) action_kit_sdk.Action[FillDiskActionState] {
+func NewFillDiskContainerAction(r runc.Runc, c types.Client) action_kit_sdk.Action[FillDiskActionState] {
 	return &fillDiskAction{
-		runc: r,
+		runc:   r,
+		client: c,
 	}
 }
 
@@ -178,12 +181,13 @@ func fillDiskOpts(request action_kit_api.PrepareActionRequestBody) (diskfill.Opt
 }
 
 func (a *fillDiskAction) Prepare(ctx context.Context, state *FillDiskActionState, request action_kit_api.PrepareActionRequestBody) (*action_kit_api.PrepareResult, error) {
-	containerId := request.Target.Attributes["container.id"]
-	if len(containerId) == 0 {
-		return nil, extension_kit.ToError("Target is missing the 'container.id' attribute.", nil)
+	container, label, err := getContainerTarget(ctx, a.client, *request.Target)
+	if err != nil {
+		return nil, extension_kit.ToError("Failed to get target container", err)
 	}
-	state.ContainerID = containerId[0]
-	state.TargetLabel = getTargetLabel(*request.Target)
+
+	state.ContainerID = container.Id()
+	state.TargetLabel = label
 
 	opts, err := fillDiskOpts(request)
 	if err != nil {
