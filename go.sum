@@ -271,8 +271,8 @@ github.com/spf13/pflag v1.0.5/go.mod h1:McXfInJRrz4CZXVZOBLb0bTZqETkiAhM9Iw0y3An
 github.com/spkg/bom v0.0.0-20160624110644-59b7046e48ad/go.mod h1:qLr4V1qq6nMqFKkMo8ZTx3f+BZEkzsRUY10Xsm2mwU0=
 github.com/steadybit/action-kit/go/action_kit_api/v2 v2.9.6 h1:Qci7Numf66mjCIRo7KDwHUimIxUZzq+GBfyv/1f/QCU=
 github.com/steadybit/action-kit/go/action_kit_api/v2 v2.9.6/go.mod h1:ycF2RLgRsB8I/jD52aE+dKZKVru1GIEtmkcRcIR3vXk=
-github.com/steadybit/action-kit/go/action_kit_commons v1.2.14 h1:9sGm4L8cVeXUMRp4gBWW93LMsEBJQw42mlyJLzj8Cdw=
-github.com/steadybit/action-kit/go/action_kit_commons v1.2.14/go.mod h1:Fyz7eekZhKf3j9br2aoT77kx292bpXdWzJ/m+dGwqDM=
+github.com/steadybit/action-kit/go/action_kit_commons v1.2.15-0.20250107131442-de914a9a4da5 h1:ghScsvdLOk2bIyuMKVtxBnGEVgKsA0d/zvK/RbzstLo=
+github.com/steadybit/action-kit/go/action_kit_commons v1.2.15-0.20250107131442-de914a9a4da5/go.mod h1:Fyz7eekZhKf3j9br2aoT77kx292bpXdWzJ/m+dGwqDM=
 github.com/steadybit/action-kit/go/action_kit_sdk v1.1.14 h1:x94RX+vh9Iyc0tS6BhiSpvknj+xE36AV0Nc3D5Yuub0=
 github.com/steadybit/action-kit/go/action_kit_sdk v1.1.14/go.mod h1:Tp/klK5b7k+BCvb3JTSDZSNcnpFBaHauhndzOarnMW4=
 github.com/steadybit/action-kit/go/action_kit_test v1.3.2 h1:DFDznoWEbTGv+fiGYiRaq7tq5es9VTScjrWusRAbS08=
