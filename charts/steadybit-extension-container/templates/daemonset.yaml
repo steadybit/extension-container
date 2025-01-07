@@ -31,6 +31,9 @@ spec:
         {{- with .Values.podLabels }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
+        {{if eq .Values.platform "gke-autopilot" -}}
+        cloud.google.com/matching-allowlist: steadybit-extension-container-v1.0.0
+        {{- end}}
       annotations:
         {{- if semverCompare "<1.30-0" .Capabilities.KubeVersion.Version}}
         "container.apparmor.security.beta.kubernetes.io/{{ include "extensionlib.names.name" . }}": unconfined
@@ -60,6 +63,11 @@ spec:
               memory: {{ .Values.resources.limits.memory }}
               cpu: {{ .Values.resources.limits.cpu }}
           name: {{ include "extensionlib.names.name" . }}
+          {{if eq .Values.platform "gke-autopilot" -}}
+          args:
+            - "-disallowHostNetwork"
+            - "-disallowK8sNamespaces=kube-system,gke-gmp-system,composer-system,gke-managed-*"
+          {{- end}}
           ports:
             - name: http
               containerPort: {{ .Values.containerPorts.http }}

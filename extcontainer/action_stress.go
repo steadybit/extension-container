@@ -12,6 +12,7 @@ import (
 	"github.com/steadybit/action-kit/go/action_kit_commons/runc"
 	"github.com/steadybit/action-kit/go/action_kit_commons/stress"
 	"github.com/steadybit/action-kit/go/action_kit_sdk"
+	"github.com/steadybit/extension-container/extcontainer/container/types"
 	"github.com/steadybit/extension-kit"
 	"github.com/steadybit/extension-kit/extutil"
 	"golang.org/x/sync/syncmap"
@@ -23,6 +24,7 @@ type stressOptsProvider func(request action_kit_api.PrepareActionRequestBody) (s
 
 type stressAction struct {
 	runc         runc.Runc
+	client       types.Client
 	description  action_kit_api.ActionDescription
 	optsProvider stressOptsProvider
 	stresses     syncmap.Map
@@ -44,6 +46,7 @@ var _ action_kit_sdk.ActionWithStop[StressActionState] = (*stressAction)(nil)
 
 func newStressAction(
 	runc runc.Runc,
+	client types.Client,
 	description func() action_kit_api.ActionDescription,
 	optsProvider stressOptsProvider,
 ) action_kit_sdk.Action[StressActionState] {
@@ -51,6 +54,7 @@ func newStressAction(
 		description:  description(),
 		optsProvider: optsProvider,
 		runc:         runc,
+		client:       client,
 		stresses:     syncmap.Map{},
 	}
 }
@@ -64,12 +68,13 @@ func (a *stressAction) Describe() action_kit_api.ActionDescription {
 }
 
 func (a *stressAction) Prepare(ctx context.Context, state *StressActionState, request action_kit_api.PrepareActionRequestBody) (*action_kit_api.PrepareResult, error) {
-	containerId := request.Target.Attributes["container.id"]
-	if len(containerId) == 0 {
-		return nil, extension_kit.ToError("Target is missing the 'container.id' attribute.", nil)
+	container, label, err := getContainerTarget(ctx, a.client, *request.Target)
+	if err != nil {
+		return nil, extension_kit.ToError("Failed to get target container", err)
 	}
-	state.ContainerID = containerId[0]
-	state.TargetLabel = getTargetLabel(*request.Target)
+
+	state.ContainerID = container.Id()
+	state.TargetLabel = label
 
 	processInfo, err := getProcessInfoForContainer(ctx, a.runc, RemovePrefix(state.ContainerID))
 	if err != nil {

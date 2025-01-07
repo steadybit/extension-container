@@ -10,6 +10,7 @@ import (
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
 	"github.com/steadybit/action-kit/go/action_kit_commons/network"
 	"github.com/steadybit/action-kit/go/action_kit_commons/runc"
+	"github.com/steadybit/extension-container/extcontainer/container/types"
 	"github.com/steadybit/extension-kit/extconversion"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -29,6 +30,7 @@ func Test_should_revert_event_when_namespace_is_missing(t *testing.T) {
 	//given a started network action
 	action := &networkAction{
 		runc:        newMockedRunc(),
+		client:      newMockedContainerClient().addContainer("test-container", nil),
 		description: action_kit_api.ActionDescription{},
 		optsProvider: func(ctx context.Context, sidecar network.SidecarOpts, request action_kit_api.PrepareActionRequestBody) (network.Opts, action_kit_api.Messages, error) {
 			port := uint16(rand.IntN(65535))
@@ -199,4 +201,83 @@ func (m *MockBundle) ContainerId() string {
 func (m *MockBundle) Remove() error {
 	args := m.Called()
 	return args.Error(0)
+}
+
+func newMockedContainerClient() *MockedClient {
+	return &MockedClient{}
+}
+
+type MockedClient struct {
+	c []mockedContainer
+}
+
+func (c *MockedClient) addContainer(id string, labels map[string]string) *MockedClient {
+	c.c = append(c.c, mockedContainer{id: id, labels: labels})
+	return c
+}
+
+func (c *MockedClient) List(_ context.Context) ([]types.Container, error) {
+	panic("implement me")
+}
+
+func (c *MockedClient) Info(_ context.Context, id string) (types.Container, error) {
+	for _, container := range c.c {
+		if container.id == id {
+			return container, nil
+		}
+	}
+	return nil, fmt.Errorf("container not found")
+}
+
+func (c *MockedClient) Stop(_ context.Context, _ string, _ bool) error {
+	panic("implement me")
+}
+
+func (c *MockedClient) Pause(_ context.Context, _ string) error {
+	panic("implement me")
+}
+
+func (c *MockedClient) Unpause(_ context.Context, _ string) error {
+	panic("implement me")
+}
+
+func (c *MockedClient) Version(_ context.Context) (string, error) {
+	panic("implement me")
+}
+
+func (c *MockedClient) GetPid(_ context.Context, _ string) (int, error) {
+	panic("implement me")
+}
+
+func (c *MockedClient) Close() error {
+	panic("implement me")
+}
+
+func (c *MockedClient) Runtime() types.Runtime {
+	panic("implement me")
+}
+
+func (c *MockedClient) Socket() string {
+	panic("implement me")
+}
+
+type mockedContainer struct {
+	id     string
+	labels map[string]string
+}
+
+func (m mockedContainer) Id() string {
+	return m.id
+}
+
+func (m mockedContainer) Name() string {
+	return fmt.Sprintf("mocked-%s", m.id)
+}
+
+func (m mockedContainer) ImageName() string {
+	return "mocked-image-name"
+}
+
+func (m mockedContainer) Labels() map[string]string {
+	return m.labels
 }

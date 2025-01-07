@@ -179,3 +179,6 @@ discovery:
   attributes:
     # discovery.attributes.excludes -- List of attributes to exclude from container discovery.
     excludes: []
+
+# platform -- The platform the extension is running on. Valid values are: kubernetes, gke-autopilot
+platform: kubernetes

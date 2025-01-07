@@ -56,6 +56,14 @@ func (c *client) List(ctx context.Context) ([]types.Container, error) {
 	return result, nil
 }
 
+func (c *client) Info(ctx context.Context, id string) (types.Container, error) {
+	r, err := c.docker.ContainerInspect(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get docker container %s: %w", id, err)
+	}
+	return newContainerFromInspect(r), nil
+}
+
 func (c *client) GetPid(ctx context.Context, containerId string) (int, error) {
 	info, err := c.docker.ContainerInspect(ctx, extcontainer.RemovePrefix(containerId))
 	if err != nil {

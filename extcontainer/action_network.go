@@ -16,9 +16,11 @@ import (
 	"github.com/steadybit/action-kit/go/action_kit_commons/runc"
 	"github.com/steadybit/action-kit/go/action_kit_sdk"
 	"github.com/steadybit/extension-container/config"
+	"github.com/steadybit/extension-container/extcontainer/container/types"
 	"github.com/steadybit/extension-kit"
 	"github.com/steadybit/extension-kit/extutil"
 	"net"
+	"slices"
 	"strings"
 )
 
@@ -28,6 +30,7 @@ type networkOptsDecoder func(data json.RawMessage) (network.Opts, error)
 
 type networkAction struct {
 	runc         runc.Runc
+	client       types.Client
 	description  action_kit_api.ActionDescription
 	optsProvider networkOptsProvider
 	optsDecoder  networkOptsDecoder
@@ -102,12 +105,13 @@ func (a *networkAction) Describe() action_kit_api.ActionDescription {
 }
 
 func (a *networkAction) Prepare(ctx context.Context, state *NetworkActionState, request action_kit_api.PrepareActionRequestBody) (*action_kit_api.PrepareResult, error) {
-	containerId := request.Target.Attributes["container.id"]
-	if len(containerId) == 0 {
-		return nil, extension_kit.ToError("Target is missing the 'container.id' attribute.", nil)
+	container, label, err := getContainerTarget(ctx, a.client, *request.Target)
+	if err != nil {
+		return nil, extension_kit.ToError("Failed to get target container", err)
 	}
-	state.ContainerID = containerId[0]
-	state.TargetLabel = getTargetLabel(*request.Target)
+
+	state.ContainerID = container.Id()
+	state.TargetLabel = label
 
 	processInfo, err := getProcessInfoForContainer(ctx, a.runc, RemovePrefix(state.ContainerID))
 	if err != nil {
@@ -119,13 +123,24 @@ func (a *networkAction) Prepare(ctx context.Context, state *NetworkActionState, 
 		IdSuffix:      RemovePrefix(state.ContainerID)[:8],
 	}
 
-	if extutil.ToBool(request.Config["failOnHostNetwork"]) && isUsingHostNetwork(processInfo.Namespaces) {
-		return &action_kit_api.PrepareResult{
-			Error: &action_kit_api.ActionKitError{
-				Title:  "Container is using host network and failOnHostNetwork = true.",
-				Status: extutil.Ptr(action_kit_api.Failed),
-			},
-		}, nil
+	if isUsingHostNetwork(processInfo.Namespaces) {
+		if config.Config.DisallowHostNetwork {
+			return &action_kit_api.PrepareResult{
+				Error: &action_kit_api.ActionKitError{
+					Title:  "Container is using host network. This is disallowed by your system administrators.",
+					Status: extutil.Ptr(action_kit_api.Failed),
+				},
+			}, nil
+		}
+
+		if extutil.ToBool(request.Config["failOnHostNetwork"]) {
+			return &action_kit_api.PrepareResult{
+				Error: &action_kit_api.ActionKitError{
+					Title:  "Container is using host network and failOnHostNetwork = true.",
+					Status: extutil.Ptr(action_kit_api.Failed),
+				},
+			}, nil
+		}
 	}
 
 	opts, messages, err := a.optsProvider(ctx, state.Sidecar, request)
@@ -141,6 +156,17 @@ func (a *networkAction) Prepare(ctx context.Context, state *NetworkActionState, 
 	state.NetworkOpts = rawOpts
 	state.ExecutionId = request.ExecutionId
 	return &action_kit_api.PrepareResult{Messages: &messages}, nil
+}
+
+func hasDisallowedK8sNamespaceLabel(labels map[string]string) bool {
+	ns, ok := labels["io.kubernetes.pod.namespace"]
+	if !ok {
+		return false
+	}
+
+	return slices.ContainsFunc(config.Config.DisallowK8sNamespaces, func(d config.DisallowedName) bool {
+		return d.Match(ns)
+	})
 }
 
 func isUsingHostNetwork(ns []runc.LinuxNamespace) bool {

@@ -10,16 +10,18 @@ import (
 	"github.com/steadybit/action-kit/go/action_kit_commons/network"
 	"github.com/steadybit/action-kit/go/action_kit_commons/runc"
 	"github.com/steadybit/action-kit/go/action_kit_sdk"
+	"github.com/steadybit/extension-container/extcontainer/container/types"
 	"github.com/steadybit/extension-kit/extbuild"
 	"github.com/steadybit/extension-kit/extutil"
 )
 
-func NewNetworkBlockDnsContainerAction(r runc.Runc) action_kit_sdk.Action[NetworkActionState] {
+func NewNetworkBlockDnsContainerAction(r runc.Runc, client types.Client) action_kit_sdk.Action[NetworkActionState] {
 	return &networkAction{
 		optsProvider: blockDns(r),
 		optsDecoder:  blackholeDecode,
 		description:  getNetworkBlockDnsDescription(),
 		runc:         r,
+		client:       client,
 	}
 }
 
