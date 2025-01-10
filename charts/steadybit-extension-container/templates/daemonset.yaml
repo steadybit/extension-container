@@ -90,12 +90,6 @@ spec:
             - name: STEADYBIT_EXTENSION_RUNC_DEBUG
               value: "true"
             {{- end }}
-            {{- if .Values.containerRuntimes.containerd.socket }}
-            - name: STEADYBIT_EXTENSION_CONTAINER_RUNTIME
-              value: "containerd"
-            - name: STEADYBIT_EXTENSION_CONTAINER_SOCKET
-              value: {{ .Values.containerRuntimes.containerd.socket | quote }}
-            {{- end }}
             - name: STEADYBIT_EXTENSION_HOSTNAME
               valueFrom:
                 fieldRef:
