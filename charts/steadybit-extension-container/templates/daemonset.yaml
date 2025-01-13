@@ -40,6 +40,9 @@ spec:
         {{- end }}
         {{- include "extensionlib.annotation" (list . .Values.containerPorts.http (list "ACTION" "DISCOVERY") ) | nindent 8 }}
         oneagent.dynatrace.com/injection: "false"
+        {{if eq .Values.platform "gke-autopilot" -}}
+        "autopilot.gke.io/no-connect": "true"
+        {{- end}}
         {{- with .Values.podAnnotations }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
@@ -156,4 +159,7 @@ spec:
           {{- with .Values.topologySpreadConstraints }}
       topologySpreadConstraints:
           {{- toYaml . | nindent 8 }}
-          {{- end }}
+
+utopilot:
+  gke:
+    io/no-connect:true: {{- end }}

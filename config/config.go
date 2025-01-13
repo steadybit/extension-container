@@ -9,7 +9,6 @@ import (
 	"github.com/kelseyhightower/envconfig"
 	"github.com/rs/zerolog/log"
 	"os"
-	"slices"
 	"strings"
 )
 
@@ -62,9 +61,7 @@ func parseArgs(cfg *Specification) error {
 		if err := d.Decode(s); err != nil {
 			return err
 		}
-		if !slices.Contains(cfg.DisallowK8sNamespaces, d) {
-			cfg.DisallowK8sNamespaces = append(cfg.DisallowK8sNamespaces, d)
-		}
+		cfg.DisallowK8sNamespaces = append(cfg.DisallowK8sNamespaces, d)
 	}
 
 	return nil
@@ -77,7 +74,12 @@ func ValidateConfiguration() {
 }
 
 type DisallowedName struct {
+	p string
 	g glob.Glob
+}
+
+func (d DisallowedName) String() string {
+	return d.p
 }
 
 func (d DisallowedName) Match(value string) bool {
@@ -90,5 +92,6 @@ func (d *DisallowedName) Decode(value string) error {
 		return err
 	}
 	d.g = g
+	d.p = value
 	return nil
 }
