@@ -57,6 +57,7 @@ func Test_parseArgs(t *testing.T) {
 
 func mustParseDisallowedName(s string) DisallowedName {
 	return DisallowedName{
+		p: s,
 		g: glob.MustCompile(s),
 	}
 }
