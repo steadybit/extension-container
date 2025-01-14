@@ -1477,6 +1477,7 @@ manifest should match snapshot with platform gke-autopilot:
       template:
         metadata:
           annotations:
+            autopilot.gke.io/no-connect: "true"
             container.apparmor.security.beta.kubernetes.io/steadybit-extension-container: unconfined
             oneagent.dynatrace.com/injection: "false"
             steadybit.com/extension-auto-discovery: |
