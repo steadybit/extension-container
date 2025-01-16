@@ -3,6 +3,8 @@
 ## v1.4.1
 
 - Respect the container memory limit for stress-ng based actions
+- Add option to disallow containers in certain namespaces
+- Update dependencies
 
 ## v1.4.0
 
