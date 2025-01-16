@@ -84,6 +84,7 @@ func (a *stressAction) Prepare(ctx context.Context, state *StressActionState, re
 	state.Sidecar = stress.SidecarOpts{
 		TargetProcess: processInfo,
 		IdSuffix:      RemovePrefix(state.ContainerID)[:8],
+		ExecutionId:   request.ExecutionId,
 	}
 
 	opts, err := a.optsProvider(request)
