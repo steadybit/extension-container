@@ -121,6 +121,7 @@ func (a *networkAction) Prepare(ctx context.Context, state *NetworkActionState, 
 	state.Sidecar = network.SidecarOpts{
 		TargetProcess: processInfo,
 		IdSuffix:      RemovePrefix(state.ContainerID)[:8],
+		ExecutionId:   request.ExecutionId,
 	}
 
 	if isUsingHostNetwork(processInfo.Namespaces) {
