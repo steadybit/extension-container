@@ -20,6 +20,8 @@ manifest should match snapshot using containerd and using resource limits:
             oneagent.dynatrace.com/injection: "false"
             steadybit.com/extension-auto-discovery: |
               {"extensions":[{"port":8086,"protocol":"http","types":["ACTION","DISCOVERY"]}]}
+            steadybit.com/extension-auto-registration: |
+              {"extensions":[{"port":8086,"protocol":"http"}]}
           labels:
             app: steadybit-extension-container
             app.kubernetes.io/name: steadybit-extension-container
@@ -151,6 +153,8 @@ manifest should match snapshot using crio using podAnnotations and Labels:
             some-annotation: some-annotation-value
             steadybit.com/extension-auto-discovery: |
               {"extensions":[{"port":8086,"protocol":"http","types":["ACTION","DISCOVERY"]}]}
+            steadybit.com/extension-auto-registration: |
+              {"extensions":[{"port":8086,"protocol":"http"}]}
           labels:
             app: steadybit-extension-container
             app.kubernetes.io/name: steadybit-extension-container
@@ -280,6 +284,8 @@ manifest should match snapshot using docker:
             oneagent.dynatrace.com/injection: "false"
             steadybit.com/extension-auto-discovery: |
               {"extensions":[{"port":8086,"protocol":"http","types":["ACTION","DISCOVERY"]}]}
+            steadybit.com/extension-auto-registration: |
+              {"extensions":[{"port":8086,"protocol":"http"}]}
           labels:
             app: steadybit-extension-container
             app.kubernetes.io/name: steadybit-extension-container
@@ -408,6 +414,8 @@ manifest should match snapshot with TLS:
             oneagent.dynatrace.com/injection: "false"
             steadybit.com/extension-auto-discovery: |
               {"extensions":[{"port":8086,"protocol":"https","types":["ACTION","DISCOVERY"]}]}
+            steadybit.com/extension-auto-registration: |
+              {"extensions":[{"port":8086,"protocol":"https"}]}
           labels:
             app: steadybit-extension-container
             app.kubernetes.io/name: steadybit-extension-container
@@ -546,6 +554,8 @@ manifest should match snapshot with appArmorProfile for k8s >= 1.30:
             oneagent.dynatrace.com/injection: "false"
             steadybit.com/extension-auto-discovery: |
               {"extensions":[{"port":8086,"protocol":"http","types":["ACTION","DISCOVERY"]}]}
+            steadybit.com/extension-auto-registration: |
+              {"extensions":[{"port":8086,"protocol":"http"}]}
           labels:
             app: steadybit-extension-container
             app.kubernetes.io/name: steadybit-extension-container
@@ -676,6 +686,8 @@ manifest should match snapshot with different containerPorts:
             oneagent.dynatrace.com/injection: "false"
             steadybit.com/extension-auto-discovery: |
               {"extensions":[{"port":9090,"protocol":"http","types":["ACTION","DISCOVERY"]}]}
+            steadybit.com/extension-auto-registration: |
+              {"extensions":[{"port":9090,"protocol":"http"}]}
           labels:
             app: steadybit-extension-container
             app.kubernetes.io/name: steadybit-extension-container
@@ -804,6 +816,8 @@ manifest should match snapshot with discover all deployments:
             oneagent.dynatrace.com/injection: "false"
             steadybit.com/extension-auto-discovery: |
               {"extensions":[{"port":8086,"protocol":"http","types":["ACTION","DISCOVERY"]}]}
+            steadybit.com/extension-auto-registration: |
+              {"extensions":[{"port":8086,"protocol":"http"}]}
           labels:
             app: steadybit-extension-container
             app.kubernetes.io/name: steadybit-extension-container
@@ -934,6 +948,8 @@ manifest should match snapshot with extra env vars:
             oneagent.dynatrace.com/injection: "false"
             steadybit.com/extension-auto-discovery: |
               {"extensions":[{"port":8086,"protocol":"http","types":["ACTION","DISCOVERY"]}]}
+            steadybit.com/extension-auto-registration: |
+              {"extensions":[{"port":8086,"protocol":"http"}]}
           labels:
             app: steadybit-extension-container
             app.kubernetes.io/name: steadybit-extension-container
@@ -1070,6 +1086,8 @@ manifest should match snapshot with extra labels:
             oneagent.dynatrace.com/injection: "false"
             steadybit.com/extension-auto-discovery: |
               {"extensions":[{"port":8086,"protocol":"http","types":["ACTION","DISCOVERY"]}]}
+            steadybit.com/extension-auto-registration: |
+              {"extensions":[{"port":8086,"protocol":"http"}]}
           labels:
             app: steadybit-extension-container
             app.kubernetes.io/name: steadybit-extension-container
@@ -1199,6 +1217,8 @@ manifest should match snapshot with mutual TLS:
             oneagent.dynatrace.com/injection: "false"
             steadybit.com/extension-auto-discovery: |
               {"extensions":[{"port":8086,"protocol":"https","types":["ACTION","DISCOVERY"]}]}
+            steadybit.com/extension-auto-registration: |
+              {"extensions":[{"port":8086,"protocol":"https"}]}
           labels:
             app: steadybit-extension-container
             app.kubernetes.io/name: steadybit-extension-container
@@ -1347,6 +1367,8 @@ manifest should match snapshot with mutual TLS using containerPaths:
             oneagent.dynatrace.com/injection: "false"
             steadybit.com/extension-auto-discovery: |
               {"extensions":[{"port":8086,"protocol":"https","types":["ACTION","DISCOVERY"]}]}
+            steadybit.com/extension-auto-registration: |
+              {"extensions":[{"port":8086,"protocol":"https"}]}
           labels:
             app: steadybit-extension-container
             app.kubernetes.io/name: steadybit-extension-container
@@ -1482,6 +1504,8 @@ manifest should match snapshot with platform gke-autopilot:
             oneagent.dynatrace.com/injection: "false"
             steadybit.com/extension-auto-discovery: |
               {"extensions":[{"port":8086,"protocol":"http","types":["ACTION","DISCOVERY"]}]}
+            steadybit.com/extension-auto-registration: |
+              {"extensions":[{"port":8086,"protocol":"http"}]}
           labels:
             app: steadybit-extension-container
             app.kubernetes.io/name: steadybit-extension-container
@@ -1614,6 +1638,8 @@ manifest should match snapshot with podSecurityContext:
             oneagent.dynatrace.com/injection: "false"
             steadybit.com/extension-auto-discovery: |
               {"extensions":[{"port":8086,"protocol":"http","types":["ACTION","DISCOVERY"]}]}
+            steadybit.com/extension-auto-registration: |
+              {"extensions":[{"port":8086,"protocol":"http"}]}
           labels:
             app: steadybit-extension-container
             app.kubernetes.io/name: steadybit-extension-container
@@ -1743,6 +1769,8 @@ manifest should match snapshot with priority class:
             oneagent.dynatrace.com/injection: "false"
             steadybit.com/extension-auto-discovery: |
               {"extensions":[{"port":8086,"protocol":"http","types":["ACTION","DISCOVERY"]}]}
+            steadybit.com/extension-auto-registration: |
+              {"extensions":[{"port":8086,"protocol":"http"}]}
           labels:
             app: steadybit-extension-container
             app.kubernetes.io/name: steadybit-extension-container
@@ -1872,6 +1900,8 @@ manifest should match snapshot with update strategy:
             oneagent.dynatrace.com/injection: "false"
             steadybit.com/extension-auto-discovery: |
               {"extensions":[{"port":8086,"protocol":"http","types":["ACTION","DISCOVERY"]}]}
+            steadybit.com/extension-auto-registration: |
+              {"extensions":[{"port":8086,"protocol":"http"}]}
           labels:
             app: steadybit-extension-container
             app.kubernetes.io/name: steadybit-extension-container
