@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.4.2
+-
+- fix: improve container id to be unique by adding the execution id
+
 ## v1.4.1
 
 - Respect the container memory limit for stress-ng based actions
