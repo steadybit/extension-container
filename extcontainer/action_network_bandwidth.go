@@ -29,8 +29,8 @@ func NewNetworkLimitBandwidthContainerAction(runc runc.Runc, client types.Client
 func getNetworkLimitBandwidthDescription() action_kit_api.ActionDescription {
 	return action_kit_api.ActionDescription{
 		Id:          fmt.Sprintf("%s.network_bandwidth", BaseActionID),
-		Label:       "Limit Bandwidth",
-		Description: "Limit available network bandwidth.",
+		Label:       "Limit Outgoing Bandwidth",
+		Description: "Limit available egress network bandwidth.",
 		Version:     extbuild.GetSemverVersionStringOrUnknown(),
 		Icon:        extutil.Ptr(bandwidthIcon),
 		TargetSelection: &action_kit_api.TargetSelection{
