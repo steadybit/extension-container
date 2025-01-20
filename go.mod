@@ -32,7 +32,7 @@ require (
 	golang.org/x/sync v0.10.0
 	google.golang.org/grpc v1.69.4
 	k8s.io/api v0.32.0
-	k8s.io/apimachinery v0.32.0
+	k8s.io/apimachinery v0.32.1
 	k8s.io/client-go v0.32.0
 	k8s.io/cri-api v0.32.0
 )
