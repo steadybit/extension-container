@@ -1,8 +1,9 @@
 # Changelog
 
-## v1.4.3 (Next Release)
+## v1.4.3
 
 - Rename some network actions to explicitly contain the term "outgoing"
+- Use runc binary from the opencontainers/runc project
 
 ## v1.4.2
 
