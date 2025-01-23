@@ -25,9 +25,9 @@ RUN --mount=type=cache,target="/root/.cache/go-build" GOCACHE=/root/.cache/go-bu
 
 # As of today the runc binary from debian is built using golang 1.19.8 and will be flagged by CVE scanners as vulnerable to several CVEs.
 # We are dowonloading the runc binary from the official github release page and will use it instead of the one from the debian package.
-RUN curl -sfL https://github.com/opencontainers/runc/releases/download/$RUNC_VERSION/runc.$TARGETARCH -o ./runc \
-    && curl -sfL -o - https://raw.githubusercontent.com/opencontainers/runc/refs/heads/main/runc.keyring | gpg --import \
-    && curl -sfL -o - https://github.com/opencontainers/runc/releases/download/$RUNC_VERSION/runc.$TARGETARCH.asc | gpg --verify - ./runc \
+RUN curl --proto "=https" -sfL https://github.com/opencontainers/runc/releases/download/$RUNC_VERSION/runc.$TARGETARCH -o ./runc \
+    && curl --proto "=https" -sfL -o - https://raw.githubusercontent.com/opencontainers/runc/refs/heads/main/runc.keyring | gpg --import \
+    && curl --proto "=https" -sfL -o - https://github.com/opencontainers/runc/releases/download/$RUNC_VERSION/runc.$TARGETARCH.asc | gpg --verify - ./runc \
     && chmod a+x ./runc
 
 ##
