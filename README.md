@@ -112,25 +112,32 @@ non-root user on a read-only root file-system and will, by default, if deployed 
 
 In order to execute certain actions the extension needs extended capabilities, see details below.
 
-### Discovery / state attacks
+### Discovery / State attacks
 
 For discovery and executing state attacks, such as stop or pause container, the extension needs access to the container
 runtime socket.
 
-### Resource and network attacks
+### Resource Attacks
 
-Resource attacks start `stress-ng` processes, and network attacks start `ip` or `tc` processes, as runc container (sidecar)
-using the root user (`uid=0`, `gid=0`) and reusing the target container's linux namespace(s) and control group(s). These
-processes are short-lived and terminated after the attack is finished.
+The resource attacks are starting processes in the target containers cgroup/namespaces using [runc (APL2.0)](https://github.com/opencontainers/runc) for this the following capabilities are needed: `CAP_SYS_CHROOT`, `CAP_SYS_ADMIN`, `CAP_SYS_PTRACE`, `CAP_NET_BIND_SERVICE`, `CAP_DAC_OVERRIDE`, `CAP_SETUID`, `CAP_SETGID`, `CAP_AUDIT_WRITE`, `CAP_KILL`.
+These processes are executed with the root user, but are short-lived and terminated after the attack is finished.
 
-This requires the following capabilities:
-`CAP_SYS_CHROOT`, `CAP_SYS_ADMIN`, `CAP_SYS_PTRACE`, `CAP_NET_ADMIN`, `CAP_NET_BIND_SERVICE`
-`CAP_DAC_OVERRIDE`, `CAP_SETUID`, `CAP_SETGID`, `CAP_AUDIT_WRITE`, `CAP_KILL`.
+The resource attacks optionally need `CAP_SYS_RESOURCE`. We'd recommend it to be used, otherwise the resource attacks are more likely to be oom-killed by the kernel and fail to carry out the attack.
 
-The `CAP_SYS_RESOURCE` is optional. We'd recommend it to be used, otherwise the resource attacks are more likely to be
-oomkilled by the kernel and fail to carry out the attack.
+Under the hood [stress-ng (GPL2.0)](https://github.com/ColinIanKing/stress-ng) is used to perform the stress attacks.
+For the fill disk `dd` or `fallocate`  and [nsmount (MIT)](https://github.com/steadybit/nsmount) is used.
+For the fill memory [memfill (MIT)](https://github.com/steadybit/memfill) is used.
 
-The needed binaries are included in the extension container image.
+All needed binaries are included in the extension container image.
+
+### Network Attacks
+
+The network attacks are starting processes in the target containers network namespaces using [runc (APL2.0)](https://github.com/opencontainers/runc) for this the following capabilities are needed: `CAP_NET_ADMIN`,  `CAP_SYS_CHROOT`, `CAP_SYS_ADMIN`, `CAP_SYS_PTRACE`, `CAP_NET_BIND_SERVICE`, `CAP_DAC_OVERRIDE`, `CAP_SETUID`, `CAP_SETGID`, `CAP_AUDIT_WRITE`, `CAP_KILL`.
+These processes are executed with the root user, but are short-lived and terminated after the attack is finished.
+
+Under the hood start `ip` or `tc` is used to reconfigure the network stack and `dig` is used in case the hostnames need to be resolved.
+
+All needed binaries are included in the extension container image.
 
 ### Mark resources as "do not discover"
 
