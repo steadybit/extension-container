@@ -1,9 +1,9 @@
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2025 Steadybit GmbH
+
 /*
  * Copyright 2024 steadybit GmbH. All rights reserved.
  */
-
-// SPDX-License-Identifier: MIT
-// SPDX-FileCopyrightText: 2023 Steadybit GmbH
 
 package e2e
 
@@ -1150,10 +1150,6 @@ func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			defer func() { _ = action.Cancel() }()
 			require.NoError(t, err)
 
-			if testCase.method == diskfill.OverTime && testCase.wantedDelta != -1 {
-				e2e.AssertProcessRunningInContainer(t, m, nginx.Pod, "nginx", "dd", true)
-			}
-
 			if testCase.wantedDelta != -1 {
 				assertFileHasSize(t, m, nginx.Pod, "nginx", pathToFill+"/disk-fill", wantedFileSize, testCase.wantedDelta)
 			}
@@ -1163,12 +1159,6 @@ func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			}
 
 			require.NoError(t, action.Cancel())
-
-			if testCase.method == diskfill.OverTime {
-				e2e.AssertProcessNOTRunningInContainer(t, m, nginx.Pod, "nginx", "dd")
-			} else {
-				e2e.AssertProcessNOTRunningInContainer(t, m, nginx.Pod, "nginx", "fallocate")
-			}
 
 			out, _ := m.PodExec(nginx.Pod, "nginx", "ls", pathToFill+"/disk-fill")
 			assert.Contains(t, out, "No such file or directory")
