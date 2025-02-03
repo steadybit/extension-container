@@ -17,7 +17,7 @@ concurrency:
 jobs:
   e2e-tests:
     name: E2E Tests (${{ matrix.e2e-runtime }})
-    runs-on: steadybit_runner_ubuntu_latest_4cores_16GB_ARM
+    runs-on: steadybit_runner_ubuntu_latest_4cores_16GB
     timeout-minutes: 60
     strategy:
       fail-fast: false
