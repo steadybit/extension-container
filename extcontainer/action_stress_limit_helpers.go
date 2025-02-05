@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// SPDX-FileCopyrightText: 2024 Steadybit GmbH
+// SPDX-FileCopyrightText: 2025 Steadybit GmbH
 
 package extcontainer
 
@@ -8,12 +8,13 @@ import (
 	"fmt"
 	"github.com/kataras/iris/v12/x/mathx"
 	"github.com/rs/zerolog/log"
+	"github.com/steadybit/action-kit/go/action_kit_commons/runc"
 	"github.com/steadybit/action-kit/go/action_kit_commons/stress"
+	"github.com/steadybit/action-kit/go/action_kit_commons/utils"
 	"github.com/steadybit/extension-kit/extutil"
 	"math"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strconv"
 	"strings"
 )
@@ -21,23 +22,39 @@ import (
 var cgroupV1MemUnlimited = (math.MaxInt64 / os.Getpagesize()) * os.Getpagesize()
 var osFs = osFileSystem{}
 
-func readAndAdaptToContainerLimits(_ context.Context, cGroupPath string, opts *stress.Opts) {
+func readAndAdaptToContainerLimits(_ context.Context, p runc.LinuxProcessInfo, opts *stress.Opts) {
 	cpuLimitInMilliCpu := -1
 	memLimitInBytes := -1
 
 	if isCGroupV1() {
-		cpuLimitInMilliCpu = readCGroupV1CpuLimit(cGroupPath, osFs)
-		memLimitInBytes = readCGroupV1MemLimit(cGroupPath, osFs)
+		cpuLimitInMilliCpu = readCGroupV1CpuLimit(p.CGroupPath, osFs)
+		memLimitInBytes = readCGroupV1MemLimit(p.CGroupPath, osFs)
 	} else {
-		cpuLimitInMilliCpu = readCGroupV2CpuLimit(cGroupPath, osFs)
-		memLimitInBytes = readCGroupV2MemLimit(cGroupPath, osFs)
+		cpuLimitInMilliCpu = readCGroupV2CpuLimit(p.CGroupPath, osFs)
+		memLimitInBytes = readCGroupV2MemLimit(p.CGroupPath, osFs)
 	}
 
-	if opts.CpuWorkers != nil && cpuLimitInMilliCpu >= 0 {
-		adaptToCpuContainerLimits(cpuLimitInMilliCpu, runtime.NumCPU(), opts)
+	if opts.CpuWorkers != nil {
+		if cpuLimitInMilliCpu >= 0 {
+			adaptToCpuContainerLimits(cpuLimitInMilliCpu, opts)
+		} else if *opts.CpuWorkers == 0 {
+			//there might be no limit set but the process to be restricted to certain CPUs or some CPUs programmatically turned off.
+			//In this case we need to read for the allowed list of CPUs for the process and pass this to the stress command as stress-ng
+			//always uses configured CPUs and not online CPUs
+			adaptToAllowedCpus(p.Pid, opts)
+		}
 	}
+
 	if opts.VmWorkers != nil && memLimitInBytes >= 0 {
 		adaptToMemContainerLimits(memLimitInBytes, opts)
+	}
+}
+
+func adaptToAllowedCpus(pid int, opts *stress.Opts) {
+	if cpuCount, err := utils.ReadCpusAllowedCount(fmt.Sprintf("/proc/%d/status", pid)); err != nil {
+		opts.CpuWorkers = extutil.Ptr(cpuCount)
+	} else {
+		log.Debug().Err(err).Msg("failed to read cpus_allowed count.")
 	}
 }
 
@@ -55,9 +72,9 @@ func adaptToMemContainerLimits(memLimitInBytes int, opts *stress.Opts) {
 	log.Info().Msgf("container memory limit is %dK. Starting %d workers with memory consumption of %s each", memLimitInBytes/1024, *opts.VmWorkers, opts.VmBytes)
 }
 
-func adaptToCpuContainerLimits(cpuLimitInMilliCpu int, cpuCount int, opts *stress.Opts) {
+func adaptToCpuContainerLimits(cpuLimitInMilliCpu int, opts *stress.Opts) {
 	cpuLoadInMillis := cpuLimitInMilliCpu * opts.CpuLoad / 100
-	log.Debug().Int("cpuCount", cpuCount).Int("cpuLoad", opts.CpuLoad).Int("cpuLoadInMillis", cpuLoadInMillis).Msg("adapting to container cpu limit")
+	log.Debug().Int("cpuLoad", opts.CpuLoad).Int("cpuLoadInMillis", cpuLoadInMillis).Msg("adapting to container cpu limit")
 
 	if *opts.CpuWorkers == 0 {
 		// user didn't specify the number of workers. we start as many workers as we need to reach the desired cpu consumption
