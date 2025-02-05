@@ -51,7 +51,7 @@ func readAndAdaptToContainerLimits(_ context.Context, p runc.LinuxProcessInfo, o
 }
 
 func adaptToAllowedCpus(pid int, opts *stress.Opts) {
-	if cpuCount, err := utils.ReadCpusAllowedCount(fmt.Sprintf("/proc/%d/status", pid)); err != nil {
+	if cpuCount, err := utils.ReadCpusAllowedCount(fmt.Sprintf("/proc/%d/status", pid)); err == nil {
 		opts.CpuWorkers = extutil.Ptr(cpuCount)
 	} else {
 		log.Debug().Err(err).Msg("failed to read cpus_allowed count.")
