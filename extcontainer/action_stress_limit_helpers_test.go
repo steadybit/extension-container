@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2025 Steadybit GmbH
+
 package extcontainer
 
 import (
@@ -10,7 +13,6 @@ import (
 func Test_adaptToCpuContainerLimits(t *testing.T) {
 	type args struct {
 		cpuLimitInMilliCpu int
-		cpuCount           int
 		givenCpuWorkers    int
 		givenCpuLoad       int
 	}
@@ -27,7 +29,6 @@ func Test_adaptToCpuContainerLimits(t *testing.T) {
 			name: "worker-count not specified, desired cpu load can be handled by one worker",
 			args: args{
 				cpuLimitInMilliCpu: 200,
-				cpuCount:           4,
 				givenCpuLoad:       100,
 				givenCpuWorkers:    0,
 			},
@@ -40,7 +41,6 @@ func Test_adaptToCpuContainerLimits(t *testing.T) {
 			name: "worker-count not specified, desired cpu load needs multiple workers",
 			args: args{
 				cpuLimitInMilliCpu: 1500,
-				cpuCount:           4,
 				givenCpuLoad:       100,
 				givenCpuWorkers:    0,
 			},
@@ -53,7 +53,6 @@ func Test_adaptToCpuContainerLimits(t *testing.T) {
 			name: "worker-count not specified, desired 60% cpu fits to single worker",
 			args: args{
 				cpuLimitInMilliCpu: 1500,
-				cpuCount:           4,
 				givenCpuLoad:       60,
 				givenCpuWorkers:    0,
 			},
@@ -66,7 +65,6 @@ func Test_adaptToCpuContainerLimits(t *testing.T) {
 			name: "worker-count specified, desired 60% cpu is spread across workers",
 			args: args{
 				cpuLimitInMilliCpu: 1500,
-				cpuCount:           4,
 				givenCpuLoad:       60,
 				givenCpuWorkers:    3,
 			},
@@ -82,7 +80,7 @@ func Test_adaptToCpuContainerLimits(t *testing.T) {
 				CpuWorkers: &tt.args.givenCpuWorkers,
 				CpuLoad:    tt.args.givenCpuLoad,
 			}
-			adaptToCpuContainerLimits(tt.args.cpuLimitInMilliCpu, tt.args.cpuCount, &opts)
+			adaptToCpuContainerLimits(tt.args.cpuLimitInMilliCpu, &opts)
 			assert.Equal(t, tt.expected.adaptedCpuWorkers, *opts.CpuWorkers)
 			assert.Equal(t, tt.expected.adaptedCpuLoad, opts.CpuLoad)
 		})

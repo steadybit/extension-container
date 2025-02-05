@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// SPDX-FileCopyrightText: 2024 Steadybit GmbH
+// SPDX-FileCopyrightText: 2025 Steadybit GmbH
 
 package extcontainer
 
@@ -92,7 +92,7 @@ func (a *stressAction) Prepare(ctx context.Context, state *StressActionState, re
 		return nil, err
 	}
 
-	readAndAdaptToContainerLimits(ctx, processInfo.CGroupPath, &opts)
+	readAndAdaptToContainerLimits(ctx, processInfo, &opts)
 
 	state.StressOpts = opts
 	state.ExecutionId = request.ExecutionId
