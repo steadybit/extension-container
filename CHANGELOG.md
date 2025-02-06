@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.4.5
+
+- fix: stress cpu attack uses all configured CPUs not all CPUs available for the target container
+
 ## v1.4.4
 
 - chore: update dependecies (CVE-2024-11187 & CVE-2024-12705)
