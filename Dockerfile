@@ -3,7 +3,7 @@
 ##
 ## Build
 ##
-FROM --platform=$BUILDPLATFORM golang:1.23-bookworm AS build
+FROM --platform=$BUILDPLATFORM golang:1.24-bookworm AS build
 
 ARG TARGETOS TARGETARCH
 ARG BUILD_WITH_COVERAGE
