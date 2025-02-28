@@ -214,16 +214,12 @@ func (a *networkAction) Stop(ctx context.Context, state *NetworkActionState) (*a
 		return nil, extension_kit.ToError("Failed to deserialize network settings.", err)
 	}
 
-	if err := network.Revert(ctx, a.runc, state.Sidecar, opts); err == nil {
-		return nil, nil
-	} else if nsExistsErr := runc.NamespacesExists(ctx, state.Sidecar.TargetProcess.Namespaces, specs.NetworkNamespace); nsExistsErr == nil {
-		return nil, extension_kit.ToError("Failed to revert network settings.", err)
-	} else {
+	// Skip the rollback if the target network namespace is not present anymore and hence don't need to be reverted.
+	if nsExistsErr := runc.NamespacesExists(ctx, state.Sidecar.TargetProcess.Namespaces, specs.NetworkNamespace); nsExistsErr != nil {
 		log.Info().
+			Err(nsExistsErr).
 			Str("containerId", state.ContainerID).
-			AnErr("reason", nsExistsErr).
-			AnErr("err", err).
-			Msg("ignoring error from revert network config")
+			Msg("target network namespace does not exist anymore, no revert necessary")
 
 		return &action_kit_api.StopResult{
 			Messages: &[]action_kit_api.Message{
@@ -234,6 +230,11 @@ func (a *networkAction) Stop(ctx context.Context, state *NetworkActionState) (*a
 			},
 		}, nil
 	}
+
+	if err := network.Revert(ctx, a.runc, state.Sidecar, opts); err != nil {
+		return nil, extension_kit.ToError("Failed to revert network settings.", err)
+	}
+	return nil, nil
 }
 
 func parsePortRanges(raw []string) ([]network.PortRange, error) {
