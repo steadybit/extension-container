@@ -1,12 +1,17 @@
 # Changelog
 
+## v1.4.6
+
+- fix: correctly handle missing network namespaces during stop action
+- chore: update dependencies
+
 ## v1.4.5
 
 - fix: stress cpu attack uses all configured CPUs not all CPUs available for the target container
 
 ## v1.4.4
 
-- chore: update dependecies (CVE-2024-11187 & CVE-2024-12705)
+- chore: update dependencies (CVE-2024-11187 & CVE-2024-12705)
 
 ## v1.4.3
 
