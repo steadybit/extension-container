@@ -3,6 +3,8 @@
 ## v1.4.7 (next release)
 
 - Update dependencies
+- fix: fill disk fails when file permissions disallow write
+- fix: stress io fails when file permissions disallow write
 
 ## v1.4.6
 
