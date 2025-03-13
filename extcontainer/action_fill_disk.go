@@ -5,6 +5,7 @@ package extcontainer
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
@@ -36,6 +37,7 @@ type FillDiskActionState struct {
 // Make sure fillDiskAction implements all required interfaces
 var _ action_kit_sdk.Action[FillDiskActionState] = (*fillDiskAction)(nil)
 var _ action_kit_sdk.ActionWithStop[FillDiskActionState] = (*fillDiskAction)(nil)
+var _ action_kit_sdk.ActionWithStatus[FillDiskActionState] = (*fillDiskAction)(nil)
 
 func NewFillDiskContainerAction(r runc.Runc, c types.Client) action_kit_sdk.Action[FillDiskActionState] {
 	return &fillDiskAction{
@@ -241,26 +243,48 @@ func (a *fillDiskAction) Start(ctx context.Context, state *FillDiskActionState) 
 	}, nil
 }
 
-func (a *fillDiskAction) Stop(_ context.Context, state *FillDiskActionState) (*action_kit_api.StopResult, error) {
-	messages := make([]action_kit_api.Message, 0)
+func (a *fillDiskAction) Status(_ context.Context, state *FillDiskActionState) (*action_kit_api.StatusResult, error) {
+	if _, err := a.fillDiskContainerExited(state.ExecutionId); err == nil {
+		return &action_kit_api.StatusResult{Completed: false}, nil
+	} else {
+		return &action_kit_api.StatusResult{
+			Completed: true,
+			Error: &action_kit_api.ActionKitError{
+				Status: extutil.Ptr(action_kit_api.Failed),
+				Title:  fmt.Sprintf("Failed to fill memory on host: %s", err.Error()),
+			},
+		}, nil
+	}
+}
 
-	if a.stopFillDiskContainer(state.ExecutionId) {
-		messages = append(messages, action_kit_api.Message{
-			Level:   extutil.Ptr(action_kit_api.Info),
-			Message: fmt.Sprintf("Canceled fill disk in container %s", state.TargetLabel),
-		})
+func (a *fillDiskAction) Stop(_ context.Context, state *FillDiskActionState) (*action_kit_api.StopResult, error) {
+	if err := a.stopFillDiskContainer(state.ExecutionId); err != nil {
+		return nil, extension_kit.ToError("Failed to stop fill disk on container", err)
 	}
 
 	return &action_kit_api.StopResult{
-		Messages: &messages,
+		Messages: &[]action_kit_api.Message{
+			{
+				Level:   extutil.Ptr(action_kit_api.Info),
+				Message: "Canceled fill disk on container",
+			},
+		},
 	}, nil
 }
 
-func (a *fillDiskAction) stopFillDiskContainer(executionId uuid.UUID) bool {
+func (a *fillDiskAction) stopFillDiskContainer(executionId uuid.UUID) error {
 	s, ok := a.diskfills.LoadAndDelete(executionId)
 	if !ok {
-		return false
+		return errors.New("no diskfill container found")
 	}
-	err := s.(*diskfill.DiskFill).Stop()
-	return err == nil
+
+	return s.(*diskfill.DiskFill).Stop()
+}
+
+func (a *fillDiskAction) fillDiskContainerExited(executionId uuid.UUID) (bool, error) {
+	s, ok := a.diskfills.Load(executionId)
+	if !ok {
+		return false, errors.New("no diskfill container found")
+	}
+	return s.(*diskfill.DiskFill).Exited()
 }

@@ -1014,6 +1014,8 @@ func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	pathToFill := "/host-tmp/filldisk"
 	_, err = m.PodExec(nginx.Pod, "nginx", "mkdir", "-p", pathToFill)
 	require.NoError(t, err)
+	_, err = m.PodExec(nginx.Pod, "nginx", "chmod", "a-w", pathToFill)
+	require.NoError(t, err)
 
 	target, err := nginx.Target()
 	require.NoError(t, err)
