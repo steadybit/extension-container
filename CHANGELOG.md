@@ -1,17 +1,21 @@
 # Changelog
 
+## v1.4.7 (next release)
+
+- Update dependencies
+
 ## v1.4.6
 
-- fix: correctly handle missing network namespaces during stop action
-- chore: update dependencies
+- Correctly handle missing network namespaces during stop action
+- Update dependencies
 
 ## v1.4.5
 
-- fix: stress cpu attack uses all configured CPUs not all CPUs available for the target container
+- Stress cpu attack uses all configured CPUs not all CPUs available for the target container
 
 ## v1.4.4
 
-- chore: update dependencies (CVE-2024-11187 & CVE-2024-12705)
+- Update dependencies (CVE-2024-11187 & CVE-2024-12705)
 
 ## v1.4.3
 
@@ -20,7 +24,7 @@
 
 ## v1.4.2
 
-- fix: improve container id to be unique by adding the execution id
+- Improve container id to be unique by adding the execution id
 
 ## v1.4.1
 
@@ -40,7 +44,7 @@
 
 ## v1.3.29
 
-- chore: update dependencies
+- Update dependencies
 
 ## v1.3.28
 
