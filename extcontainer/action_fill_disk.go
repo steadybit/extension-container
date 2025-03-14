@@ -251,7 +251,7 @@ func (a *fillDiskAction) Status(_ context.Context, state *FillDiskActionState) (
 			Completed: true,
 			Error: &action_kit_api.ActionKitError{
 				Status: extutil.Ptr(action_kit_api.Failed),
-				Title:  fmt.Sprintf("Failed to fill memory on host: %s", err.Error()),
+				Title:  fmt.Sprintf("Failed to fill dik on container: %s", err.Error()),
 			},
 		}, nil
 	}
