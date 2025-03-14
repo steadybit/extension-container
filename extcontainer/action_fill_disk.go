@@ -284,7 +284,7 @@ func (a *fillDiskAction) stopFillDiskContainer(executionId uuid.UUID) error {
 func (a *fillDiskAction) fillDiskContainerExited(executionId uuid.UUID) (bool, error) {
 	s, ok := a.diskfills.Load(executionId)
 	if !ok {
-		return false, errors.New("no diskfill container found")
+		return true, nil
 	}
 	return s.(*diskfill.DiskFill).Exited()
 }
