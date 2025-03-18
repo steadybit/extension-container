@@ -5,10 +5,13 @@
 ##
 FROM --platform=$BUILDPLATFORM golang:1.24-bookworm AS build
 
-ARG TARGETOS TARGETARCH
+ARG TARGETOS
+ARG TARGETARCH
 ARG BUILD_WITH_COVERAGE
 ARG BUILD_SNAPSHOT=true
 ARG SKIP_LICENSES_REPORT=false
+ARG VERSION=unknown
+ARG REVISION=unknown
 ARG RUNC_VERSION=v1.1.15
 
 WORKDIR /app
@@ -35,7 +38,13 @@ RUN curl --proto "=https" -sfL https://github.com/opencontainers/runc/releases/d
 ##
 FROM debian:bookworm-slim
 
+ARG VERSION=unknown
+ARG REVISION=unknown
+
 LABEL "steadybit.com.discovery-disabled"="true"
+LABEL "version"="${VERSION}"
+LABEL "revision"="${REVISION}"
+RUN echo "$VERSION" > /version.txt && echo "$REVISION" > /revision.txt
 
 ARG USERNAME=steadybit
 ARG USER_UID=10000
