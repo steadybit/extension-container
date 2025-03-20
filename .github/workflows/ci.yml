@@ -55,7 +55,7 @@ jobs:
     uses: steadybit/extension-kit/.github/workflows/reusable-extension-ci.yml@main
     needs: [e2e-tests]
     with:
-      go_version: '1.23'
+      go_version: '1.24'
       build_linux_packages: true
       VERSION_BUMPER_APPID: ${{ vars.GH_APP_STEADYBIT_APP_ID }}
     secrets:
