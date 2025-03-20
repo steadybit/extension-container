@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.4.7 (next)
+
+- Updated dependencies
+
 ## v1.4.7 (next release)
 
 - Update dependencies
