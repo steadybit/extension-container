@@ -3,7 +3,9 @@
 
 package docker
 
-import "github.com/docker/docker/api/types"
+import (
+	typecontainer "github.com/docker/docker/api/types/container"
+)
 
 // container implements the types.Container interface for Docker
 type container struct {
@@ -13,7 +15,7 @@ type container struct {
 	labels    map[string]string
 }
 
-func newContainer(c types.Container) *container {
+func newContainer(c typecontainer.Summary) *container {
 	return &container{
 		id:        c.ID,
 		names:     c.Names,
@@ -22,7 +24,7 @@ func newContainer(c types.Container) *container {
 	}
 }
 
-func newContainerFromInspect(c types.ContainerJSON) *container {
+func newContainerFromInspect(c typecontainer.InspectResponse) *container {
 	return &container{
 		id:        c.ID,
 		names:     []string{c.Name},
