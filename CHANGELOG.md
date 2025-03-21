@@ -1,10 +1,6 @@
 # Changelog
 
-## v1.4.7 (next)
-
-- Updated dependencies
-
-## v1.4.7 (next release)
+## v1.4.7
 
 - Update dependencies
 - fix: fill disk fails when file permissions disallow write
