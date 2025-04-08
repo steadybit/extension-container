@@ -78,7 +78,7 @@ func (a *fillDiskAction) Describe() action_kit_api.ActionDescription {
 			{
 				Name:         "mode",
 				Label:        "Mode",
-				Description:  extutil.Ptr("How would you like to specify the amount of data to be filled?"),
+				Description:  extutil.Ptr("Decide how to specify the amount to fill the disk:\n\noverall percentage of filled disk space in percent,\n\nMegabytes to write,\n\nMegabytes to leave free on disk"),
 				Required:     extutil.Ptr(true),
 				Order:        extutil.Ptr(2),
 				DefaultValue: extutil.Ptr("PERCENTAGE"),
