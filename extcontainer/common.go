@@ -48,6 +48,16 @@ var (
 			Description: extutil.Ptr("Find container by kubernetes deployment."),
 			Query:       "k8s.cluster-name=\"\" and k8s.namespace=\"\" and k8s.deployment=\"\"",
 		},
+		{
+			Label:       "kubernetes statefulset",
+			Description: extutil.Ptr("Find container by kubernetes statefulset."),
+			Query:       "k8s.cluster-name=\"\" and k8s.namespace=\"\" and k8s.statefulset=\"\"",
+		},
+		{
+			Label:       "kubernetes daemonset",
+			Description: extutil.Ptr("Find container by kubernetes daemonset."),
+			Query:       "k8s.cluster-name=\"\" and k8s.namespace=\"\" and k8s.daemonset=\"\"",
+		},
 	}
 )
 
