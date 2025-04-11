@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.4.8 (next)
+
+- add more prefill-queries
+- remove dependency to lsns
+
 ## v1.4.7
 
 - Update dependencies
