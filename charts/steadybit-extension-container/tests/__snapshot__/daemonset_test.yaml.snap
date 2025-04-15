@@ -36,6 +36,12 @@ manifest should match snapshot using containerd and using resource limits:
                   value: "8082"
                 - name: STEADYBIT_EXTENSION_RUNC_DEBUG
                   value: "true"
+                - name: STEADYBIT_EXTENSION_RUNC_ROOT
+                  value: /run/containerd/runc/k8s.io
+                - name: STEADYBIT_EXTENSION_CONTAINER_SOCKET
+                  value: /run/containerd/containerd.sock
+                - name: STEADYBIT_EXTENSION_CONTAINER_VALID
+                  value: containerd
                 - name: STEADYBIT_EXTENSION_HOSTNAME
                   valueFrom:
                     fieldRef:
@@ -168,6 +174,12 @@ manifest should match snapshot using crio using podAnnotations and Labels:
                   value: "8086"
                 - name: STEADYBIT_EXTENSION_HEALTH_PORT
                   value: "8082"
+                - name: STEADYBIT_EXTENSION_RUNC_ROOT
+                  value: /run/runc
+                - name: STEADYBIT_EXTENSION_CONTAINER_SOCKET
+                  value: /var/run/crio/crio.sock
+                - name: STEADYBIT_EXTENSION_CONTAINER_VALID
+                  value: cri-o
                 - name: STEADYBIT_EXTENSION_HOSTNAME
                   valueFrom:
                     fieldRef:
@@ -298,6 +310,12 @@ manifest should match snapshot using docker:
                   value: "8086"
                 - name: STEADYBIT_EXTENSION_HEALTH_PORT
                   value: "8082"
+                - name: STEADYBIT_EXTENSION_RUNC_ROOT
+                  value: /run/docker/runtime-runc/moby
+                - name: STEADYBIT_EXTENSION_CONTAINER_SOCKET
+                  value: /var/run/docker.sock
+                - name: STEADYBIT_EXTENSION_CONTAINER_VALID
+                  value: docker
                 - name: STEADYBIT_EXTENSION_HOSTNAME
                   valueFrom:
                     fieldRef:
@@ -428,6 +446,12 @@ manifest should match snapshot with TLS:
                   value: "8086"
                 - name: STEADYBIT_EXTENSION_HEALTH_PORT
                   value: "8082"
+                - name: STEADYBIT_EXTENSION_RUNC_ROOT
+                  value: /run/docker/runtime-runc/moby
+                - name: STEADYBIT_EXTENSION_CONTAINER_SOCKET
+                  value: /var/run/docker.sock
+                - name: STEADYBIT_EXTENSION_CONTAINER_VALID
+                  value: docker
                 - name: STEADYBIT_EXTENSION_HOSTNAME
                   valueFrom:
                     fieldRef:
@@ -568,6 +592,12 @@ manifest should match snapshot with appArmorProfile for k8s >= 1.30:
                   value: "8086"
                 - name: STEADYBIT_EXTENSION_HEALTH_PORT
                   value: "8082"
+                - name: STEADYBIT_EXTENSION_RUNC_ROOT
+                  value: /run/containerd/runc/k8s.io
+                - name: STEADYBIT_EXTENSION_CONTAINER_SOCKET
+                  value: /run/containerd/containerd.sock
+                - name: STEADYBIT_EXTENSION_CONTAINER_VALID
+                  value: containerd
                 - name: STEADYBIT_EXTENSION_HOSTNAME
                   valueFrom:
                     fieldRef:
@@ -700,6 +730,12 @@ manifest should match snapshot with different containerPorts:
                   value: "9090"
                 - name: STEADYBIT_EXTENSION_HEALTH_PORT
                   value: "9091"
+                - name: STEADYBIT_EXTENSION_RUNC_ROOT
+                  value: /run/containerd/runc/k8s.io
+                - name: STEADYBIT_EXTENSION_CONTAINER_SOCKET
+                  value: /run/containerd/containerd.sock
+                - name: STEADYBIT_EXTENSION_CONTAINER_VALID
+                  value: containerd
                 - name: STEADYBIT_EXTENSION_HOSTNAME
                   valueFrom:
                     fieldRef:
@@ -832,6 +868,12 @@ manifest should match snapshot with discover all deployments:
                   value: "8082"
                 - name: STEADYBIT_EXTENSION_DISABLE_DISCOVERY_EXCLUDES
                   value: "true"
+                - name: STEADYBIT_EXTENSION_RUNC_ROOT
+                  value: /run/containerd/runc/k8s.io
+                - name: STEADYBIT_EXTENSION_CONTAINER_SOCKET
+                  value: /run/containerd/containerd.sock
+                - name: STEADYBIT_EXTENSION_CONTAINER_VALID
+                  value: containerd
                 - name: STEADYBIT_EXTENSION_HOSTNAME
                   valueFrom:
                     fieldRef:
@@ -962,6 +1004,12 @@ manifest should match snapshot with extra env vars:
                   value: "8086"
                 - name: STEADYBIT_EXTENSION_HEALTH_PORT
                   value: "8082"
+                - name: STEADYBIT_EXTENSION_RUNC_ROOT
+                  value: /run/containerd/runc/k8s.io
+                - name: STEADYBIT_EXTENSION_CONTAINER_SOCKET
+                  value: /run/containerd/containerd.sock
+                - name: STEADYBIT_EXTENSION_CONTAINER_VALID
+                  value: containerd
                 - name: STEADYBIT_EXTENSION_HOSTNAME
                   valueFrom:
                     fieldRef:
@@ -1101,6 +1149,12 @@ manifest should match snapshot with extra labels:
                   value: "8086"
                 - name: STEADYBIT_EXTENSION_HEALTH_PORT
                   value: "8082"
+                - name: STEADYBIT_EXTENSION_RUNC_ROOT
+                  value: /run/containerd/runc/k8s.io
+                - name: STEADYBIT_EXTENSION_CONTAINER_SOCKET
+                  value: /run/containerd/containerd.sock
+                - name: STEADYBIT_EXTENSION_CONTAINER_VALID
+                  value: containerd
                 - name: STEADYBIT_EXTENSION_HOSTNAME
                   valueFrom:
                     fieldRef:
@@ -1231,6 +1285,12 @@ manifest should match snapshot with mutual TLS:
                   value: "8086"
                 - name: STEADYBIT_EXTENSION_HEALTH_PORT
                   value: "8082"
+                - name: STEADYBIT_EXTENSION_RUNC_ROOT
+                  value: /run/docker/runtime-runc/moby
+                - name: STEADYBIT_EXTENSION_CONTAINER_SOCKET
+                  value: /var/run/docker.sock
+                - name: STEADYBIT_EXTENSION_CONTAINER_VALID
+                  value: docker
                 - name: STEADYBIT_EXTENSION_HOSTNAME
                   valueFrom:
                     fieldRef:
@@ -1381,6 +1441,12 @@ manifest should match snapshot with mutual TLS using containerPaths:
                   value: "8086"
                 - name: STEADYBIT_EXTENSION_HEALTH_PORT
                   value: "8082"
+                - name: STEADYBIT_EXTENSION_RUNC_ROOT
+                  value: /run/containerd/runc/k8s.io
+                - name: STEADYBIT_EXTENSION_CONTAINER_SOCKET
+                  value: /run/containerd/containerd.sock
+                - name: STEADYBIT_EXTENSION_CONTAINER_VALID
+                  value: containerd
                 - name: STEADYBIT_EXTENSION_HOSTNAME
                   valueFrom:
                     fieldRef:
@@ -1522,6 +1588,12 @@ manifest should match snapshot with platform gke-autopilot:
                   value: "8086"
                 - name: STEADYBIT_EXTENSION_HEALTH_PORT
                   value: "8082"
+                - name: STEADYBIT_EXTENSION_RUNC_ROOT
+                  value: /run/containerd/runc/k8s.io
+                - name: STEADYBIT_EXTENSION_CONTAINER_SOCKET
+                  value: /run/containerd/containerd.sock
+                - name: STEADYBIT_EXTENSION_CONTAINER_VALID
+                  value: containerd
                 - name: STEADYBIT_EXTENSION_HOSTNAME
                   valueFrom:
                     fieldRef:
@@ -1652,6 +1724,12 @@ manifest should match snapshot with podSecurityContext:
                   value: "8086"
                 - name: STEADYBIT_EXTENSION_HEALTH_PORT
                   value: "8082"
+                - name: STEADYBIT_EXTENSION_RUNC_ROOT
+                  value: /run/containerd/runc/k8s.io
+                - name: STEADYBIT_EXTENSION_CONTAINER_SOCKET
+                  value: /run/containerd/containerd.sock
+                - name: STEADYBIT_EXTENSION_CONTAINER_VALID
+                  value: containerd
                 - name: STEADYBIT_EXTENSION_HOSTNAME
                   valueFrom:
                     fieldRef:
@@ -1783,6 +1861,12 @@ manifest should match snapshot with priority class:
                   value: "8086"
                 - name: STEADYBIT_EXTENSION_HEALTH_PORT
                   value: "8082"
+                - name: STEADYBIT_EXTENSION_RUNC_ROOT
+                  value: /run/containerd/runc/k8s.io
+                - name: STEADYBIT_EXTENSION_CONTAINER_SOCKET
+                  value: /run/containerd/containerd.sock
+                - name: STEADYBIT_EXTENSION_CONTAINER_VALID
+                  value: containerd
                 - name: STEADYBIT_EXTENSION_HOSTNAME
                   valueFrom:
                     fieldRef:
@@ -1914,6 +1998,12 @@ manifest should match snapshot with update strategy:
                   value: "8086"
                 - name: STEADYBIT_EXTENSION_HEALTH_PORT
                   value: "8082"
+                - name: STEADYBIT_EXTENSION_RUNC_ROOT
+                  value: /run/containerd/runc/k8s.io
+                - name: STEADYBIT_EXTENSION_CONTAINER_SOCKET
+                  value: /run/containerd/containerd.sock
+                - name: STEADYBIT_EXTENSION_CONTAINER_VALID
+                  value: containerd
                 - name: STEADYBIT_EXTENSION_HOSTNAME
                   valueFrom:
                     fieldRef:
