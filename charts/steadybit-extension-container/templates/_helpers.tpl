@@ -14,33 +14,22 @@ checks the .Values.containerRuntime for valid values
 
 
 {{- /*
-containerRuntime.volumeMounts will render pod volume mounts(without indentation) for the selected container runtime
+containerRuntime.runcRoot will render the runcRoot for the selected container runtime
 */}}
-{{- define "containerRuntime.volumeMounts" -}}
+{{- define "containerRuntime.runcRoot" -}}
 {{- $runtime := (include "containerRuntime.valid" . )  -}}
 {{- $runtimeValues := get .Values.containerRuntimes $runtime  -}}
-- name: "runtime-socket"
-  mountPath: "{{ $runtimeValues.socket }}"
-- name: "runtime-runc-root"
-  mountPath: "{{ $runtimeValues.runcRoot }}"
+{{- $runtimeValues.runcRoot -}}
 {{- end -}}
 
 {{- /*
-containerRuntime.volumes will render pod volumes (without indentation) for the selected container runtime
+containerRuntime.socket will render the socket for the selected container runtime
 */}}
-{{- define "containerRuntime.volumes" -}}
+{{- define "containerRuntime.socket" -}}
 {{- $runtime := (include "containerRuntime.valid" . )  -}}
 {{- $runtimeValues := get .Values.containerRuntimes $runtime  -}}
-- name: "runtime-socket"
-  hostPath:
-    path: "{{ $runtimeValues.socket }}"
-    type: Socket
-- name: "runtime-runc-root"
-  hostPath:
-    path: "{{ $runtimeValues.runcRoot }}"
-    type: Directory
+{{- $runtimeValues.socket -}}
 {{- end -}}
-
 
 {{- /*
 will omit attribute from the passed in object depending on the KubeVersion

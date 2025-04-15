@@ -42,7 +42,7 @@ spec:
         oneagent.dynatrace.com/injection: "false"
         {{if eq .Values.platform "gke-autopilot" -}}
         "autopilot.gke.io/no-connect": "true"
-        {{- end}}
+        {{- end }}
         {{- with .Values.podAnnotations }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
@@ -70,7 +70,7 @@ spec:
           args:
             - "-disallowHostNetwork"
             - "-disallowK8sNamespaces=kube-system,gke-gmp-system,composer-system,gke-managed-*"
-          {{- end}}
+          {{- end }}
           ports:
             - name: http
               containerPort: {{ .Values.containerPorts.http }}
@@ -93,6 +93,12 @@ spec:
             - name: STEADYBIT_EXTENSION_RUNC_DEBUG
               value: "true"
             {{- end }}
+            - name: STEADYBIT_EXTENSION_RUNC_ROOT
+              value: {{ include "containerRuntime.runcRoot" . }}
+            - name: STEADYBIT_EXTENSION_CONTAINER_SOCKET
+              value: {{ include "containerRuntime.socket" . }}
+            - name: STEADYBIT_EXTENSION_CONTAINER_VALID
+              value: {{ include "containerRuntime.valid" . }}
             - name: STEADYBIT_EXTENSION_HOSTNAME
               valueFrom:
                 fieldRef:
@@ -110,7 +116,10 @@ spec:
               mountPath: /tmp
             - name: cgroup-root
               mountPath: /sys/fs/cgroup
-            {{- include "containerRuntime.volumeMounts" . | nindent 12 }}
+            - name: "runtime-socket"
+              mountPath: {{ include "containerRuntime.socket" . | quote }}
+            - name: "runtime-runc-root"
+              mountPath: {{ include "containerRuntime.runcRoot" . | quote }}
             {{- include "extensionlib.deployment.volumeMounts" (list .) | nindent 12 }}
           livenessProbe:
             initialDelaySeconds: {{ .Values.probes.liveness.initialDelaySeconds }}
@@ -141,8 +150,15 @@ spec:
           hostPath:
             path: /sys/fs/cgroup
             type: Directory
-            {{- include "containerRuntime.volumes" . | nindent 8 }}
-            {{- include "extensionlib.deployment.volumes" (list .) | nindent 8 }}
+        - name: "runtime-socket"
+          hostPath:
+            path: {{ include "containerRuntime.socket" . | quote }}
+            type: Socket
+        - name: "runtime-runc-root"
+          hostPath:
+            path: {{ include "containerRuntime.runcRoot" . | quote }}
+            type: Directory
+        {{- include "extensionlib.deployment.volumes" (list .) | nindent 8 }}
       serviceAccountName: {{ .Values.serviceAccount.name }}
           {{- with .Values.nodeSelector }}
       nodeSelector:
@@ -159,7 +175,4 @@ spec:
           {{- with .Values.topologySpreadConstraints }}
       topologySpreadConstraints:
           {{- toYaml . | nindent 8 }}
-
-utopilot:
-  gke:
-    io/no-connect:true: {{- end }}
+          {{- end }}
