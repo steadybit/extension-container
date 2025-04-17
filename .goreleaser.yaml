@@ -108,7 +108,7 @@ nfpms:
           - /usr/sbin/ip
           - /usr/bin/dig
           - runc
-          - /usr/sbin/capsh
+          - libcap
           - /usr/bin/cgexec
         recommends:
           - kernel-modules-extra
