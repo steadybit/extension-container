@@ -1,9 +1,11 @@
 # Changelog
 
-## v1.4.8 (next)
+## v1.4.8
 
 - add more prefill-queries
 - remove dependency to lsns
+- update depdendencies
+- require iproute-tc and libcap instead of /usr/sbin/tc and /usr/sbin/capsh
 
 ## v1.4.7
 
