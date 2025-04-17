@@ -104,7 +104,7 @@ nfpms:
         dependencies:
           - /usr/bin/ps
           - /usr/bin/stress-ng
-          - /usr/sbin/tc
+          - iproute-tc
           - /usr/sbin/ip
           - /usr/bin/dig
           - runc
