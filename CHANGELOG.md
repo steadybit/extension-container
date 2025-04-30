@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.4.9
+
+- update depdendencies
+
 ## v1.4.8
 
 - add more prefill-queries
