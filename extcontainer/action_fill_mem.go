@@ -80,9 +80,9 @@ func (a *fillMemoryAction) Describe() action_kit_api.ActionDescription {
 				Order:        extutil.Ptr(1),
 			},
 			{
-				Name:         "mode",
-				Label:        "Mode",
-				Description:  extutil.Ptr("*Fill and meet specified usage:* Fill up the memory until the desired usage is met. Memory allocation will be adjusted constantly to meet the target." +
+				Name:  "mode",
+				Label: "Mode",
+				Description: extutil.Ptr("*Fill and meet specified usage:* Fill up the memory until the desired usage is met. Memory allocation will be adjusted constantly to meet the target." +
 					"\n\n" +
 					"*Fill the specified amount:* Allocate and hold the specified amount of Memory."),
 				Type:         action_kit_api.String,
@@ -105,7 +105,7 @@ func (a *fillMemoryAction) Describe() action_kit_api.ActionDescription {
 				Label:        "Size",
 				Description:  extutil.Ptr("How much of the *total container memory* should be used to stress the memory?\n\nThe used memory percentage is calculated based on the memory limit of the container (or the host memory if no limit is set)."),
 				Type:         action_kit_api.Integer,
-				DefaultValue: extutil.Ptr("100"),
+				DefaultValue: extutil.Ptr("80"),
 				Required:     extutil.Ptr(true),
 				Order:        extutil.Ptr(3),
 			},

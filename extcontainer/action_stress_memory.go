@@ -40,7 +40,7 @@ func getStressMemoryDescription() action_kit_api.ActionDescription {
 				Label:        "Load on Container Memory",
 				Description:  extutil.Ptr("How much of the total container memory should be allocated?"),
 				Type:         action_kit_api.Percentage,
-				DefaultValue: extutil.Ptr("200"),
+				DefaultValue: extutil.Ptr("80"),
 				Required:     extutil.Ptr(true),
 				Order:        extutil.Ptr(0),
 				MinValue:     extutil.Ptr(1),

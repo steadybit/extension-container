@@ -40,7 +40,7 @@ func getStressCpuDescription() action_kit_api.ActionDescription {
 				Label:        "Load on Container CPU",
 				Description:  extutil.Ptr("How much CPU load should be inflicted?"),
 				Type:         action_kit_api.Percentage,
-				DefaultValue: extutil.Ptr("100"),
+				DefaultValue: extutil.Ptr("80"),
 				Required:     extutil.Ptr(true),
 				Order:        extutil.Ptr(0),
 				MinValue:     extutil.Ptr(1),
