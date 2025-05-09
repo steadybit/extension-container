@@ -22,7 +22,7 @@ func NewStressMemoryContainerAction(r runc.Runc, c types.Client) action_kit_sdk.
 func getStressMemoryDescription() action_kit_api.ActionDescription {
 	return action_kit_api.ActionDescription{
 		Id:          fmt.Sprintf("%s.stress_mem", BaseActionID),
-		Label:       "Stress Container Memory",
+		Label:       "Stress Memory",
 		Description: "Stresses memory in the container cgroup for the given duration.",
 		Version:     extbuild.GetSemverVersionStringOrUnknown(),
 		Icon:        extutil.Ptr(stressMemoryIcon),

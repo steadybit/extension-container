@@ -30,7 +30,7 @@ const (
 func getStressIoDescription() action_kit_api.ActionDescription {
 	return action_kit_api.ActionDescription{
 		Id:          fmt.Sprintf("%s.stress_io", BaseActionID),
-		Label:       "Stress Container IO",
+		Label:       "Stress IO",
 		Description: "Stresses IO in the container using read/write/flush operations for the given duration.",
 		Version:     extbuild.GetSemverVersionStringOrUnknown(),
 		Icon:        extutil.Ptr(stressIOIcon),
