@@ -42,6 +42,7 @@ prepare_audit:
 ## audit: run quality control checks - in CI we run the e2e tests separate
 .PHONY: audit
 audit:
+	gofmt -l .
 	go vet ./...
 	go run honnef.co/go/tools/cmd/staticcheck@latest -checks=all,-SA1019,-ST1000,-U1000,-ST1003 ./...
 	go mod verify
