@@ -1,7 +1,9 @@
 # Changelog
 
-## v1.4.9
+## v1.4.10
 
+- safe defaults for stress-attacks
+- action name inconsistencies
 - update depdendencies
 
 ## v1.4.8
