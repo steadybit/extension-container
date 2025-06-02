@@ -7,7 +7,7 @@ toolchain go1.24.1
 require (
 	github.com/KimMachineGun/automemlimit v0.7.2
 	github.com/containerd/containerd v1.7.27
-	github.com/containerd/containerd/api v1.8.0
+	github.com/containerd/containerd/api v1.9.0
 	github.com/containerd/errdefs v1.0.0
 	github.com/containerd/errdefs/pkg v0.3.0
 	github.com/docker/docker v28.2.2+incompatible
