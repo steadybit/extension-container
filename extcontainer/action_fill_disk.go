@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/google/uuid"
+	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
 	"github.com/steadybit/action-kit/go/action_kit_commons/diskfill"
 	"github.com/steadybit/action-kit/go/action_kit_commons/runc"
@@ -196,7 +197,7 @@ func (a *fillDiskAction) Prepare(ctx context.Context, state *FillDiskActionState
 		return nil, err
 	}
 
-	processInfo, err := getProcessInfoForContainer(ctx, a.runc, RemovePrefix(state.ContainerID))
+	processInfo, err := getProcessInfoForContainer(ctx, a.runc, RemovePrefix(state.ContainerID), specs.PIDNamespace)
 	if err != nil {
 		return nil, extension_kit.ToError("Failed to prepare fill disk settings.", err)
 	}

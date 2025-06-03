@@ -113,7 +113,7 @@ func (a *networkAction) Prepare(ctx context.Context, state *NetworkActionState, 
 	state.ContainerID = container.Id()
 	state.TargetLabel = label
 
-	processInfo, err := getProcessInfoForContainer(ctx, a.runc, RemovePrefix(state.ContainerID))
+	processInfo, err := getProcessInfoForContainer(ctx, a.runc, RemovePrefix(state.ContainerID), specs.NetworkNamespace)
 	if err != nil {
 		return nil, extension_kit.ToError("Failed to read target process info", err)
 	}

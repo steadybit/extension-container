@@ -6,6 +6,7 @@ package extcontainer
 import (
 	"context"
 	"fmt"
+	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
 	"github.com/steadybit/action-kit/go/action_kit_commons/runc"
 	"github.com/steadybit/extension-container/extcontainer/container/types"
@@ -108,11 +109,11 @@ func getRestrictedEndpoints(request action_kit_api.PrepareActionRequestBody) []a
 
 var getProcessInfoForContainer = getProcessInfoForContainerImpl
 
-func getProcessInfoForContainerImpl(ctx context.Context, r runc.Runc, containerId string) (runc.LinuxProcessInfo, error) {
+func getProcessInfoForContainerImpl(ctx context.Context, r runc.Runc, containerId string, nsTypes ...specs.LinuxNamespaceType) (runc.LinuxProcessInfo, error) {
 	state, err := r.State(ctx, containerId)
 	if err != nil {
 		return runc.LinuxProcessInfo{}, fmt.Errorf("failed to read state of target container %s: %w", containerId, err)
 	}
 
-	return runc.ReadLinuxProcessInfo(ctx, state.Pid)
+	return runc.ReadLinuxProcessInfo(ctx, state.Pid, nsTypes...)
 }
