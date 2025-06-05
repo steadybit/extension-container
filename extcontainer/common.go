@@ -115,5 +115,12 @@ func getProcessInfoForContainerImpl(ctx context.Context, r runc.Runc, containerI
 		return runc.LinuxProcessInfo{}, fmt.Errorf("failed to read state of target container %s: %w", containerId, err)
 	}
 
+	// use the sandbox id for a fast-path lookup if available
+	if sandboxId, ok := state.Annotations["io.kubernetes.cri.sandbox-id"]; ok && sandboxId != state.ID {
+		if sandboxState, err := r.State(ctx, sandboxId); err == nil {
+			ctx = runc.WithNamespaceCandidates(ctx, sandboxState.Pid)
+		}
+	}
+
 	return runc.ReadLinuxProcessInfo(ctx, state.Pid, nsTypes...)
 }

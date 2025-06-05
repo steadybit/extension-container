@@ -157,8 +157,7 @@ func (c *client) Unpause(ctx context.Context, id string) error {
 	return task.Resume(ctx)
 }
 
-func (c *client) Stop(_ context.Context, id string, graceful bool) error {
-	ctx := context.Background() // don't use the context as the action should be stopped even if the request context is cancelled
+func (c *client) Stop(ctx context.Context, id string, graceful bool) error {
 	container, err := c.containerd.LoadContainer(ctx, id)
 	if err != nil {
 		return fmt.Errorf("failed to load container %s: %w", id, err)

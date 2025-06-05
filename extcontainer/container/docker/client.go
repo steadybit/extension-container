@@ -80,8 +80,7 @@ func (c *client) Unpause(ctx context.Context, id string) error {
 	return c.docker.ContainerUnpause(ctx, id)
 }
 
-func (c *client) Stop(_ context.Context, id string, graceful bool) error {
-	ctx := context.Background() // don't use the context as the action should be stopped even if the request context is cancelled
+func (c *client) Stop(ctx context.Context, id string, graceful bool) error {
 	opt := dcontainer.StopOptions{}
 	if !graceful {
 		opt.Timeout = extutil.Ptr(0)
