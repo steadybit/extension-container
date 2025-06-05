@@ -173,6 +173,7 @@ func hasDisallowedK8sNamespaceLabel(labels map[string]string) bool {
 func isUsingHostNetwork(ns []runc.LinuxNamespace) bool {
 	for _, n := range ns {
 		if n.Type == specs.NetworkNamespace {
+			log.Warn().Str("path", n.Path).Msg("XXX Checking if container is using host network")
 			return n.Path == "/proc/1/ns/net"
 		}
 	}
