@@ -124,7 +124,8 @@ func (c *client) Unpause(_ context.Context, _ string) error {
 	return fmt.Errorf("not supported")
 }
 
-func (c *client) Stop(ctx context.Context, id string, graceful bool) error {
+func (c *client) Stop(_ context.Context, id string, graceful bool) error {
+	ctx := context.Background() // don't use the context as the action should be stopped even if the request context is cancelled
 	timeout := 10
 	if !graceful {
 		timeout = 0
