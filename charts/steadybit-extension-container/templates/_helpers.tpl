@@ -2,33 +2,33 @@
 {{/*
 checks the .Values.containerRuntime for valid values
 */}}
-{{- define "containerRuntime.valid" -}}
-{{- $valid := keys .Values.containerRuntimes | sortAlpha -}}
-{{- $runtime := .Values.container.runtime -}}
-{{- if has $runtime $valid -}}
-{{- $runtime  -}}
+{{- define "containerEngine.valid" -}}
+{{- $valid := keys .Values.containerEngines | sortAlpha -}}
+{{- if has .Values.container.runtime $valid -}}
+{{- .Values.container.runtime  -}}
+{{- else if has .Values.container.engine $valid -}}
+{{- .Values.container.engine  -}}
 {{- else -}}
-{{- fail (printf "unknown container runtime: %v (must be one of %s)" $runtime (join ", " $valid)) -}}
+{{- fail (printf "unknown container.engine: %v (must be one of %s)" .Values.container.engine (join ", " $valid)) -}}
 {{- end -}}
-{{- end -}}
-
-
-{{- /*
-containerRuntime.runcRoot will render the runcRoot for the selected container runtime
-*/}}
-{{- define "containerRuntime.runcRoot" -}}
-{{- $runtime := (include "containerRuntime.valid" . )  -}}
-{{- $runtimeValues := get .Values.containerRuntimes $runtime  -}}
-{{- $runtimeValues.runcRoot -}}
 {{- end -}}
 
 {{- /*
-containerRuntime.socket will render the socket for the selected container runtime
+ociRuntime.root will render the root for the selected container runtime
 */}}
-{{- define "containerRuntime.socket" -}}
-{{- $runtime := (include "containerRuntime.valid" . )  -}}
-{{- $runtimeValues := get .Values.containerRuntimes $runtime  -}}
-{{- $runtimeValues.socket -}}
+{{- define "ociRuntime.get" -}}
+{{- $engine := (include "containerEngine.valid" (index . 0) )  -}}
+{{- $engineValues := get .Values.containerEngines $engine  -}}
+{{- index $engineValues.ociRuntime (index . 1) -}}
+{{- end -}}
+
+{{- /*
+containerEngines.socket will render the socket for the selected container runtime
+*/}}
+{{- define "containerEngine.socket" -}}
+{{- $engine := (include "containerEngine.valid" . )  -}}
+{{- $engineValues := get .Values.containerEngines $engine  -}}
+{{- $engineValues.socket -}}
 {{- end -}}
 
 {{- /*

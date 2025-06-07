@@ -47,10 +47,9 @@ func TestWithMinikube(t *testing.T) {
 		Port: 8086,
 		ExtraArgs: func(m *e2e.Minikube) []string {
 			return []string{
-				"--set", fmt.Sprintf("container.runtime=%s", m.Runtime),
+				"--set", fmt.Sprintf("container.engine=%s", m.Runtime),
 				"--set", "logging.level=DEBUG",
 				"--set", "discovery.attributes.excludes={container.label.*}",
-				"--set", "container.runcDebug=true",
 			}
 		},
 	}
