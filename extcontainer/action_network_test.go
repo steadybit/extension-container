@@ -9,7 +9,7 @@ import (
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
 	"github.com/steadybit/action-kit/go/action_kit_commons/network"
-	"github.com/steadybit/action-kit/go/action_kit_commons/runc"
+	"github.com/steadybit/action-kit/go/action_kit_commons/ociruntime"
 	"github.com/steadybit/extension-container/extcontainer/container/types"
 	"github.com/steadybit/extension-kit/extconversion"
 	"github.com/stretchr/testify/mock"
@@ -29,7 +29,7 @@ func Test_should_revert_event_when_namespace_is_missing(t *testing.T) {
 
 	//given a started network action
 	action := &networkAction{
-		runc:        newMockedRunc(),
+		ociRuntime:  newMockedRunc(),
 		client:      newMockedContainerClient().addContainer("test-container", nil),
 		description: action_kit_api.ActionDescription{},
 		optsProvider: func(ctx context.Context, sidecar network.SidecarOpts, request action_kit_api.PrepareActionRequestBody) (network.Opts, action_kit_api.Messages, error) {
@@ -49,10 +49,10 @@ func Test_should_revert_event_when_namespace_is_missing(t *testing.T) {
 	state := &NetworkActionState{}
 
 	target := action_kit_api.Target{Attributes: map[string][]string{"container.id": {"test-container"}}}
-	getProcessInfoForContainer = func(ctx context.Context, r runc.Runc, containerId string, nsTypes ...specs.LinuxNamespaceType) (runc.LinuxProcessInfo, error) {
-		return runc.LinuxProcessInfo{
+	getProcessInfoForContainer = func(ctx context.Context, r ociruntime.OciRuntime, containerId string, nsTypes ...specs.LinuxNamespaceType) (ociruntime.LinuxProcessInfo, error) {
+		return ociruntime.LinuxProcessInfo{
 			Pid: 123,
-			Namespaces: []runc.LinuxNamespace{
+			Namespaces: []ociruntime.LinuxNamespace{
 				{
 					Type:  specs.NetworkNamespace,
 					Path:  "/some-path",
@@ -75,10 +75,10 @@ func Test_should_revert_event_when_namespace_is_missing(t *testing.T) {
 	require.NoError(t, err)
 
 	//then we can start attacks again for the same net namespace (in case it is reused)
-	getProcessInfoForContainer = func(ctx context.Context, r runc.Runc, containerId string, nsTypes ...specs.LinuxNamespaceType) (runc.LinuxProcessInfo, error) {
-		return runc.LinuxProcessInfo{
+	getProcessInfoForContainer = func(ctx context.Context, r ociruntime.OciRuntime, containerId string, nsTypes ...specs.LinuxNamespaceType) (ociruntime.LinuxProcessInfo, error) {
+		return ociruntime.LinuxProcessInfo{
 			Pid: 456,
-			Namespaces: []runc.LinuxNamespace{
+			Namespaces: []ociruntime.LinuxNamespace{
 				{
 					Type:  specs.NetworkNamespace,
 					Path:  "/other-path",
@@ -115,7 +115,7 @@ func newMockedRunc() *MockedRunc {
 	runcMock.On("Create", mock.Anything, mock.Anything, mock.Anything).Return(&bundle, nil)
 	runcMock.On("Run", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	runcMock.On("Delete", mock.Anything, mock.Anything, mock.Anything).Return(nil)
-	//runcMock.On("State", mock.Anything, mock.Anything).Return(&runc.ContainerState{
+	//runcMock.On("State", mock.Anything, mock.Anything).Return(&ociRuntime.ContainerState{
 	//	Status: "running",
 	//}, nil)
 	return runcMock
@@ -125,10 +125,10 @@ type MockedRunc struct {
 	mock.Mock
 }
 
-func (m *MockedRunc) State(ctx context.Context, id string) (*runc.ContainerState, error) {
+func (m *MockedRunc) State(ctx context.Context, id string) (*ociruntime.ContainerState, error) {
 	args := m.Called(ctx, id)
 
-	state := args.Get(0).(*runc.ContainerState)
+	state := args.Get(0).(*ociruntime.ContainerState)
 	if state != nil {
 		state.ID = id
 		state.Pid = hash(id)
@@ -146,12 +146,12 @@ func hash(s string) int {
 	return int(h.Sum32())
 }
 
-func (m *MockedRunc) Create(ctx context.Context, image, id string) (runc.ContainerBundle, error) {
+func (m *MockedRunc) Create(ctx context.Context, image, id string) (ociruntime.ContainerBundle, error) {
 	args := m.Called(ctx, image, id)
-	return args.Get(0).(runc.ContainerBundle), args.Error(1)
+	return args.Get(0).(ociruntime.ContainerBundle), args.Error(1)
 }
 
-func (m *MockedRunc) Run(ctx context.Context, container runc.ContainerBundle, ioOpts runc.IoOpts) error {
+func (m *MockedRunc) Run(ctx context.Context, container ociruntime.ContainerBundle, ioOpts ociruntime.IoOpts) error {
 	args := m.Called(ctx, container, ioOpts)
 	return args.Error(0)
 }
@@ -161,7 +161,7 @@ func (m *MockedRunc) Delete(ctx context.Context, id string, force bool) error {
 	return args.Error(0)
 }
 
-func (m *MockedRunc) RunCommand(_ context.Context, _ runc.ContainerBundle) (*exec.Cmd, error) {
+func (m *MockedRunc) RunCommand(_ context.Context, _ ociruntime.ContainerBundle) (*exec.Cmd, error) {
 	panic("implement me")
 }
 
@@ -175,7 +175,7 @@ type MockBundle struct {
 	id   string
 }
 
-func (m *MockBundle) EditSpec(editors ...runc.SpecEditor) error {
+func (m *MockBundle) EditSpec(editors ...ociruntime.SpecEditor) error {
 	args := m.Called(editors)
 	return args.Error(0)
 }

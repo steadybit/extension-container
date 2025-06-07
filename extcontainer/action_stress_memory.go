@@ -6,7 +6,7 @@ package extcontainer
 import (
 	"fmt"
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
-	"github.com/steadybit/action-kit/go/action_kit_commons/runc"
+	"github.com/steadybit/action-kit/go/action_kit_commons/ociruntime"
 	"github.com/steadybit/action-kit/go/action_kit_commons/stress"
 	"github.com/steadybit/action-kit/go/action_kit_sdk"
 	"github.com/steadybit/extension-container/extcontainer/container/types"
@@ -15,7 +15,7 @@ import (
 	"time"
 )
 
-func NewStressMemoryContainerAction(r runc.Runc, c types.Client) action_kit_sdk.Action[StressActionState] {
+func NewStressMemoryContainerAction(r ociruntime.OciRuntime, c types.Client) action_kit_sdk.Action[StressActionState] {
 	return newStressAction(r, c, getStressMemoryDescription, stressMemory)
 }
 

@@ -9,19 +9,19 @@ import (
 	"fmt"
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
 	"github.com/steadybit/action-kit/go/action_kit_commons/network"
-	"github.com/steadybit/action-kit/go/action_kit_commons/runc"
+	"github.com/steadybit/action-kit/go/action_kit_commons/ociruntime"
 	"github.com/steadybit/action-kit/go/action_kit_sdk"
 	"github.com/steadybit/extension-container/extcontainer/container/types"
 	"github.com/steadybit/extension-kit/extbuild"
 	"github.com/steadybit/extension-kit/extutil"
 )
 
-func NewNetworkBlackholeContainerAction(runc runc.Runc, client types.Client) action_kit_sdk.Action[NetworkActionState] {
+func NewNetworkBlackholeContainerAction(r ociruntime.OciRuntime, client types.Client) action_kit_sdk.Action[NetworkActionState] {
 	return &networkAction{
-		optsProvider: blackhole(runc),
+		optsProvider: blackhole(r),
 		optsDecoder:  blackholeDecode,
 		description:  getNetworkBlackholeDescription(),
-		runc:         runc,
+		ociRuntime:   r,
 		client:       client,
 	}
 }
@@ -45,7 +45,7 @@ func getNetworkBlackholeDescription() action_kit_api.ActionDescription {
 	}
 }
 
-func blackhole(r runc.Runc) networkOptsProvider {
+func blackhole(r ociruntime.OciRuntime) networkOptsProvider {
 	return func(ctx context.Context, sidecar network.SidecarOpts, request action_kit_api.PrepareActionRequestBody) (network.Opts, action_kit_api.Messages, error) {
 		filter, messages, err := mapToNetworkFilter(ctx, r, sidecar, request.Config, getRestrictedEndpoints(request))
 		if err != nil {

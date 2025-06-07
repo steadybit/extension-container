@@ -89,16 +89,16 @@ spec:
             - name: STEADYBIT_EXTENSION_DISABLE_DISCOVERY_EXCLUDES
               value: "true"
             {{- end }}
-            {{- if .Values.container.runcDebug }}
-            - name: STEADYBIT_EXTENSION_RUNC_DEBUG
-              value: "true"
-            {{- end }}
-            - name: STEADYBIT_EXTENSION_RUNC_ROOT
-              value: {{ include "containerRuntime.runcRoot" . }}
+            - name: STEADYBIT_EXTENSION_OCIRUNTIME_DEBUG
+              value: {{ include "ociRuntime.get" (list . "debug") | quote }}
+            - name: STEADYBIT_EXTENSION_OCIRUNTIME_ROOT
+              value: {{ include "ociRuntime.get" (list . "root") | quote }}
+            - name: STEADYBIT_EXTENSION_OCIRUNTIME_EXECUTABLE
+              value: {{ include "ociRuntime.get" (list . "executable") | quote }}
             - name: STEADYBIT_EXTENSION_CONTAINER_SOCKET
-              value: {{ include "containerRuntime.socket" . }}
-            - name: STEADYBIT_EXTENSION_CONTAINER_VALID
-              value: {{ include "containerRuntime.valid" . }}
+              value: {{ include "containerEngine.socket" . }}
+            - name: STEADYBIT_EXTENSION_CONTAINER_RUNTIME
+              value: {{ include "containerEngine.valid" . }}
             - name: STEADYBIT_EXTENSION_HOSTNAME
               valueFrom:
                 fieldRef:
@@ -117,9 +117,9 @@ spec:
             - name: cgroup-root
               mountPath: /sys/fs/cgroup
             - name: "runtime-socket"
-              mountPath: {{ include "containerRuntime.socket" . | quote }}
+              mountPath: {{ include "containerEngine.socket" . | quote }}
             - name: "runtime-runc-root"
-              mountPath: {{ include "containerRuntime.runcRoot" . | quote }}
+              mountPath: {{ include "ociRuntime.get" (list . "root") | quote }}
             {{- include "extensionlib.deployment.volumeMounts" (list .) | nindent 12 }}
           livenessProbe:
             initialDelaySeconds: {{ .Values.probes.liveness.initialDelaySeconds }}
@@ -152,11 +152,11 @@ spec:
             type: Directory
         - name: "runtime-socket"
           hostPath:
-            path: {{ include "containerRuntime.socket" . | quote }}
+            path: {{ include "containerEngine.socket" . | quote }}
             type: Socket
         - name: "runtime-runc-root"
           hostPath:
-            path: {{ include "containerRuntime.runcRoot" . | quote }}
+            path: {{ include "ociRuntime.get" (list . "root") | quote }}
             type: Directory
         {{- include "extensionlib.deployment.volumes" (list .) | nindent 8 }}
       serviceAccountName: {{ .Values.serviceAccount.name }}

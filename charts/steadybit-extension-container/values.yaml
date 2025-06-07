@@ -3,9 +3,8 @@
 # Declare variables to be passed into your templates.
 
 container:
-  # container.runtime -- The container runtime to use. Valid values are: docker, containerd, crio
-  runtime: containerd
-  runcDebug: false
+  # container.engine -- The container engine to use. Valid values are: docker, containerd, crio
+  engine: containerd
 
 image:
   # image.name -- The container image to use for the Steadybit container extension.
@@ -144,6 +143,9 @@ containerSecurityContext:
       - SETUID
       - SETGID
       - AUDIT_WRITE
+      # SETPCAP, MKNOD is needed to support the crun OCI runtime. Better performance / needed on openshift clusters >= 4.18
+      - SETPCAP
+      - MKNOD
       # SYS_RESOURCE is optional. If you remove it is more likely that the stress cpu/io/memory, fill memory attack will more likely be oomkilled
       - SYS_RESOURCE
 # extraEnv -- Array with extra environment variables to add to the container
@@ -162,16 +164,25 @@ extraEnv: []
 #    name: env-secrets
 extraEnvFrom: []
 
-containerRuntimes:
+containerEngines:
   docker:
     socket: /var/run/docker.sock
-    runcRoot: /run/docker/runtime-runc/moby
+    ociRuntime:
+      executable: runc
+      root: /run/docker/runtime-runc/moby
+      debug: false
   containerd:
     socket: /run/containerd/containerd.sock
-    runcRoot: /run/containerd/runc/k8s.io
+    ociRuntime:
+      executable: runc
+      root: /run/containerd/runc/k8s.io
+      debug: false
   cri-o:
     socket: /var/run/crio/crio.sock
-    runcRoot: /run/runc
+    ociRuntime:
+      executable: runc
+      root: /run/runc
+      debug: false
 
 discovery:
   # discovery.disableExcludes -- Ignore discovery excludes specified by `steadybit.com/discovery-disabled` (mainly for internal use)

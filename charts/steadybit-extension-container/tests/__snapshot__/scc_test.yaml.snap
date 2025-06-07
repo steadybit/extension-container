@@ -43,6 +43,8 @@ forced rendering on kubernetes:
       - SETUID
       - SETGID
       - AUDIT_WRITE
+      - SETPCAP
+      - MKNOD
       - SYS_RESOURCE
     apiVersion: security.openshift.io/v1
     kind: SecurityContextConstraints
@@ -100,6 +102,8 @@ rendering by default on openshift:
       - SETUID
       - SETGID
       - AUDIT_WRITE
+      - SETPCAP
+      - MKNOD
       - SYS_RESOURCE
     apiVersion: security.openshift.io/v1
     kind: SecurityContextConstraints

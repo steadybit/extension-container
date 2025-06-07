@@ -13,6 +13,7 @@ ARG SKIP_LICENSES_REPORT=false
 ARG VERSION=unknown
 ARG REVISION=unknown
 ARG RUNC_VERSION=v1.1.15
+ARG CRUN_VERSION=1.21
 
 WORKDIR /app
 
@@ -33,6 +34,11 @@ RUN curl --proto "=https" -sfL https://github.com/opencontainers/runc/releases/d
     && curl --proto "=https" -sfL -o - https://github.com/opencontainers/runc/releases/download/$RUNC_VERSION/runc.$TARGETARCH.asc | gpg --verify - ./runc \
     && chmod a+x ./runc
 
+RUN curl --proto "=https" -sfL https://github.com/containers/crun/releases/download/$CRUN_VERSION/crun-$CRUN_VERSION-linux-$TARGETARCH -o ./crun \
+    && curl --proto "=https" -sfL -o - https://github.com/giuseppe.gpg | gpg --import \
+    && curl --proto "=https" -sfL -o - https://github.com/containers/crun/releases/download/$CRUN_VERSION/crun-$CRUN_VERSION-linux-$TARGETARCH.asc | gpg --verify - ./crun \
+    && chmod a+x ./crun
+
 ##
 ## Runtime
 ##
@@ -51,7 +57,7 @@ ARG USER_UID=10000
 ARG USER_GID=$USER_UID
 ARG TARGETARCH
 
-ENV STEADYBIT_EXTENSION_RUNC_NSMOUNT_PATH="/nsmount"
+ENV STEADYBIT_EXTENSION_NSMOUNT_PATH="/nsmount"
 ENV STEADYBIT_EXTENSION_MEMFILL_PATH="/memfill"
 
 RUN groupadd --gid $USER_GID $USERNAME \
@@ -65,6 +71,7 @@ RUN apt-get -qq update \
     && mkdir -p /run/systemd/system /sidecar
 
 COPY --from=build /app/runc /usr/sbin/runc
+COPY --from=build /app/crun /usr/bin/crun
 
 USER $USER_UID
 
