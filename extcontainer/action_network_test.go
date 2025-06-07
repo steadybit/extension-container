@@ -49,7 +49,7 @@ func Test_should_revert_event_when_namespace_is_missing(t *testing.T) {
 	state := &NetworkActionState{}
 
 	target := action_kit_api.Target{Attributes: map[string][]string{"container.id": {"test-container"}}}
-	getProcessInfoForContainer = func(ctx context.Context, r runc.Runc, containerId string) (runc.LinuxProcessInfo, error) {
+	getProcessInfoForContainer = func(ctx context.Context, r runc.Runc, containerId string, nsTypes ...specs.LinuxNamespaceType) (runc.LinuxProcessInfo, error) {
 		return runc.LinuxProcessInfo{
 			Pid: 123,
 			Namespaces: []runc.LinuxNamespace{
@@ -75,7 +75,7 @@ func Test_should_revert_event_when_namespace_is_missing(t *testing.T) {
 	require.NoError(t, err)
 
 	//then we can start attacks again for the same net namespace (in case it is reused)
-	getProcessInfoForContainer = func(ctx context.Context, r runc.Runc, containerId string) (runc.LinuxProcessInfo, error) {
+	getProcessInfoForContainer = func(ctx context.Context, r runc.Runc, containerId string, nsTypes ...specs.LinuxNamespaceType) (runc.LinuxProcessInfo, error) {
 		return runc.LinuxProcessInfo{
 			Pid: 456,
 			Namespaces: []runc.LinuxNamespace{
