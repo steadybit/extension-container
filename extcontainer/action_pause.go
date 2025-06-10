@@ -115,7 +115,8 @@ func (a *pauseAction) Status(ctx context.Context, state *PauseActionState) (*act
 	}, nil
 }
 
-func (a *pauseAction) Stop(ctx context.Context, state *PauseActionState) (*action_kit_api.StopResult, error) {
+func (a *pauseAction) Stop(_ context.Context, state *PauseActionState) (*action_kit_api.StopResult, error) {
+	ctx := context.Background() // don't use the context as the action should be stopped even if the request context is cancelled
 	_, err := a.client.GetPid(ctx, RemovePrefix(state.ContainerId))
 	if err != nil {
 		return &action_kit_api.StopResult{

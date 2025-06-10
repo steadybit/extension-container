@@ -113,7 +113,7 @@ func (a *networkAction) Prepare(ctx context.Context, state *NetworkActionState, 
 	state.ContainerID = container.Id()
 	state.TargetLabel = label
 
-	processInfo, err := getProcessInfoForContainer(ctx, a.runc, RemovePrefix(state.ContainerID))
+	processInfo, err := getProcessInfoForContainer(ctx, a.runc, RemovePrefix(state.ContainerID), specs.NetworkNamespace)
 	if err != nil {
 		return nil, extension_kit.ToError("Failed to read target process info", err)
 	}
@@ -208,7 +208,8 @@ func (a *networkAction) Start(ctx context.Context, state *NetworkActionState) (*
 	return &result, nil
 }
 
-func (a *networkAction) Stop(ctx context.Context, state *NetworkActionState) (*action_kit_api.StopResult, error) {
+func (a *networkAction) Stop(_ context.Context, state *NetworkActionState) (*action_kit_api.StopResult, error) {
+	ctx := context.Background() // don't use the context as the action should be stopped even if the request context is cancelled
 	opts, err := a.optsDecoder(state.NetworkOpts)
 	if err != nil {
 		return nil, extension_kit.ToError("Failed to deserialize network settings.", err)
