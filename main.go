@@ -5,7 +5,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
@@ -37,7 +36,7 @@ func main() {
 	config.ParseConfiguration()
 	config.ValidateConfiguration()
 
-	fmt.Printf("%+v\n", config.Config)
+	log.Debug().Any("config", config.Config).Msg("Configuration loaded.")
 
 	exthealth.SetReady(false)
 	exthealth.StartProbes(int(config.Config.HealthPort))
