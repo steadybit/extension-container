@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.4.11
+
+- Improve perfomance when starting resource/network attacks
+
 ## v1.4.10
 
 - safe defaults for stress-attacks
