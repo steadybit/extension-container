@@ -1,5 +1,4 @@
-// SPDX-License-Identifier: MIT
-// SPDX-FileCopyrightText: 2023 Steadybit GmbH
+// Copyright 2025 steadybit GmbH. All rights reserved.
 
 package config
 
@@ -22,7 +21,6 @@ type Specification struct {
 	Port                        uint16           `json:"port" split_words:"true" required:"false" default:"8086"`
 	HealthPort                  uint16           `json:"healthPort" split_words:"true" required:"false" default:"8082"`
 	LivenessCheckInterval       string           `json:"livenessProbeInterval" split_words:"true" required:"false" default:"30s"` // 0 or empty string disables liveness check
-	MemfillPath                 string           `json:"memfillPath" split_words:"true" required:"true"`
 	Hostname                    string           `json:"hostname" split_words:"true" required:"false"`
 	DisallowHostNetwork         bool             `json:"disallowHostNetwork" split_words:"true" required:"false" default:"false"`
 	DisallowK8sNamespaces       []DisallowedName `json:"disallowK8sNamespaces" split_words:"true" required:"false"`

@@ -213,7 +213,7 @@ func (a *fillDiskAction) Prepare(ctx context.Context, state *FillDiskActionState
 
 func (a *fillDiskAction) Start(ctx context.Context, state *FillDiskActionState) (*action_kit_api.StartResult, error) {
 	copiedOpts := state.FillDiskOpts
-	diskFill, err := diskfill.New(ctx, a.runc, state.Sidecar, copiedOpts)
+	diskFill, err := diskfill.NewDiskfillRunc(ctx, a.runc, state.Sidecar, copiedOpts)
 	if err != nil {
 		return nil, extension_kit.ToError("Failed to fill disk in container", err)
 	}
@@ -231,7 +231,7 @@ func (a *fillDiskAction) Start(ctx context.Context, state *FillDiskActionState) 
 		},
 	}
 
-	if diskFill.Noop {
+	if diskFill.Noop() {
 		messages = append(messages, action_kit_api.Message{
 			Level:   extutil.Ptr(action_kit_api.Info),
 			Message: "Noop mode is enabled. No disk will be filled, because the disk is already filled enough.",
@@ -278,7 +278,7 @@ func (a *fillDiskAction) stopFillDiskContainer(executionId uuid.UUID) error {
 		return errors.New("no diskfill container found")
 	}
 
-	return s.(*diskfill.DiskFill).Stop()
+	return s.(diskfill.Diskfill).Stop()
 }
 
 func (a *fillDiskAction) fillDiskContainerExited(executionId uuid.UUID) (bool, error) {
@@ -286,5 +286,5 @@ func (a *fillDiskAction) fillDiskContainerExited(executionId uuid.UUID) (bool, e
 	if !ok {
 		return true, nil
 	}
-	return s.(*diskfill.DiskFill).Exited()
+	return s.(diskfill.Diskfill).Exited()
 }

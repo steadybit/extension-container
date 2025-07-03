@@ -1,5 +1,4 @@
-// SPDX-License-Identifier: MIT
-// SPDX-FileCopyrightText: 2024 Steadybit GmbH
+// Copyright 2025 steadybit GmbH. All rights reserved.
 
 package extcontainer
 
@@ -7,7 +6,7 @@ import (
 	"context"
 	"fmt"
 	dockerparser "github.com/novln/docker-parser"
-	"github.com/steadybit/action-kit/go/action_kit_commons/runc"
+	"github.com/steadybit/action-kit/go/action_kit_commons/utils"
 	"github.com/steadybit/discovery-kit/go/discovery_kit_api"
 	"github.com/steadybit/discovery-kit/go/discovery_kit_commons"
 	"github.com/steadybit/discovery-kit/go/discovery_kit_sdk"
@@ -319,7 +318,7 @@ func resolveFQDN(ctx context.Context, hostname string) (string, error) {
 }
 
 func getHostnameFromInitProcess() (string, error) {
-	if out, err := runc.RootCommandContext(context.Background(), "nsenter", "-t", "1", "-u", "--", "hostname").CombinedOutput(); err == nil {
+	if out, err := utils.RootCommandContext(context.Background(), "nsenter", "-t", "1", "-u", "--", "hostname").CombinedOutput(); err == nil {
 		return strings.TrimSpace(string(out)), err
 	} else {
 		return "", err

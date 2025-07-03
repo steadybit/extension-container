@@ -1,5 +1,4 @@
-// SPDX-License-Identifier: MIT
-// SPDX-FileCopyrightText: 2023 Steadybit GmbH
+// Copyright 2025 steadybit GmbH. All rights reserved.
 
 package extcontainer
 
@@ -75,7 +74,7 @@ func packageLoss(r runc.Runc) networkOptsProvider {
 
 		interfaces := extutil.ToStringArray(request.Config["networkInterface"])
 		if len(interfaces) == 0 {
-			interfaces, err = network.ListNonLoopbackInterfaceNames(ctx, r, sidecar)
+			interfaces, err = network.ListNonLoopbackInterfaceNames(ctx, network.NewRuncRunner(r, sidecar))
 			if err != nil {
 				return nil, nil, err
 			}

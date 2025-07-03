@@ -12,7 +12,6 @@ import (
 	"github.com/steadybit/action-kit/go/action_kit_commons/memfill"
 	"github.com/steadybit/action-kit/go/action_kit_commons/runc"
 	"github.com/steadybit/action-kit/go/action_kit_sdk"
-	"github.com/steadybit/extension-container/config"
 	"github.com/steadybit/extension-container/extcontainer/container/types"
 	"github.com/steadybit/extension-kit"
 	"github.com/steadybit/extension-kit/extbuild"
@@ -143,11 +142,10 @@ func (a *fillMemoryAction) Describe() action_kit_api.ActionDescription {
 
 func fillMemoryOpts(request action_kit_api.PrepareActionRequestBody) (memfill.Opts, error) {
 	opts := memfill.Opts{
-		BinaryPath: config.Config.MemfillPath,
-		Size:       extutil.ToInt(request.Config["size"]),
-		Mode:       memfill.Mode(request.Config["mode"].(string)),
-		Unit:       memfill.Unit(request.Config["unit"].(string)),
-		Duration:   time.Duration(extutil.ToInt64(request.Config["duration"])) * time.Millisecond,
+		Size:     extutil.ToInt(request.Config["size"]),
+		Mode:     memfill.Mode(request.Config["mode"].(string)),
+		Unit:     memfill.Unit(request.Config["unit"].(string)),
+		Duration: time.Duration(extutil.ToInt64(request.Config["duration"])) * time.Millisecond,
 	}
 	return opts, nil
 }
@@ -183,7 +181,7 @@ func (a *fillMemoryAction) Prepare(ctx context.Context, state *FillMemoryActionS
 
 func (a *fillMemoryAction) Start(_ context.Context, state *FillMemoryActionState) (*action_kit_api.StartResult, error) {
 	copiedOpts := state.FillMemoryOpts
-	memFill, err := memfill.New(state.TargetProcess, copiedOpts)
+	memFill, err := memfill.NewMemfillProcess(state.TargetProcess, copiedOpts)
 	if err != nil {
 		return nil, extension_kit.ToError("Failed to fill memory in container", err)
 	}
@@ -274,7 +272,7 @@ func (a *fillMemoryAction) fillMemoryExited(executionId uuid.UUID) (bool, error)
 	if !ok {
 		return true, nil
 	}
-	return s.(*memfill.MemFill).Exited()
+	return s.(memfill.Memfill).Exited()
 }
 
 func (a *fillMemoryAction) stopFillMemoryContainer(executionId uuid.UUID) bool {
@@ -282,6 +280,6 @@ func (a *fillMemoryAction) stopFillMemoryContainer(executionId uuid.UUID) bool {
 	if !ok {
 		return false
 	}
-	err := s.(*memfill.MemFill).Stop()
+	err := s.(memfill.Memfill).Stop()
 	return err == nil
 }

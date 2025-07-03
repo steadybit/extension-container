@@ -1,5 +1,4 @@
-// SPDX-License-Identifier: MIT
-// SPDX-FileCopyrightText: 2024 Steadybit GmbH
+// Copyright 2025 steadybit GmbH. All rights reserved.
 
 package extcontainer
 
@@ -192,7 +191,7 @@ func (a *networkAction) Start(ctx context.Context, state *NetworkActionState) (*
 		},
 	}}
 
-	err = network.Apply(ctx, a.runc, state.Sidecar, opts)
+	err = network.Apply(ctx, a.runner(state.Sidecar), opts)
 	if err != nil {
 		var toomany *network.ErrTooManyTcCommands
 		if errors.As(err, &toomany) {
@@ -232,10 +231,14 @@ func (a *networkAction) Stop(_ context.Context, state *NetworkActionState) (*act
 		}, nil
 	}
 
-	if err := network.Revert(ctx, a.runc, state.Sidecar, opts); err != nil {
+	if err := network.Revert(ctx, a.runner(state.Sidecar), opts); err != nil {
 		return nil, extension_kit.ToError("Failed to revert network settings.", err)
 	}
 	return nil, nil
+}
+
+func (a *networkAction) runner(sidecar network.SidecarOpts) network.CommandRunner {
+	return network.NewRuncRunner(a.runc, sidecar)
 }
 
 func parsePortRanges(raw []string) ([]network.PortRange, error) {

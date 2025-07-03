@@ -103,7 +103,7 @@ func (a *stressAction) Prepare(ctx context.Context, state *StressActionState, re
 }
 
 func (a *stressAction) Start(ctx context.Context, state *StressActionState) (*action_kit_api.StartResult, error) {
-	s, err := stress.New(ctx, a.runc, state.Sidecar, state.StressOpts)
+	s, err := stress.NewStressRunc(ctx, a.runc, state.Sidecar, state.StressOpts)
 	if err != nil {
 		return nil, extension_kit.ToError("Failed to stess container", err)
 	}
@@ -195,7 +195,7 @@ func (a *stressAction) stressExited(executionId uuid.UUID) (bool, error) {
 	if !ok {
 		return true, nil
 	}
-	return s.(*stress.Stress).Exited()
+	return s.(stress.Stress).Exited()
 }
 
 func (a *stressAction) stopStressContainer(executionId uuid.UUID) bool {
@@ -203,6 +203,6 @@ func (a *stressAction) stopStressContainer(executionId uuid.UUID) bool {
 	if !ok {
 		return false
 	}
-	s.(*stress.Stress).Stop()
+	s.(stress.Stress).Stop()
 	return true
 }
