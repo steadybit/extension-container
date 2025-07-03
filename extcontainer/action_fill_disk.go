@@ -1,5 +1,4 @@
-// SPDX-License-Identifier: MIT
-// SPDX-FileCopyrightText: 2025 Steadybit GmbH
+// Copyright 2025 steadybit GmbH. All rights reserved.
 
 package extcontainer
 
@@ -251,7 +250,7 @@ func (a *fillDiskAction) Status(_ context.Context, state *FillDiskActionState) (
 		return &action_kit_api.StatusResult{
 			Completed: true,
 			Error: &action_kit_api.ActionKitError{
-				Status: extutil.Ptr(action_kit_api.Failed),
+				Status: extutil.Ptr(action_kit_api.Errored),
 				Title:  fmt.Sprintf("Failed to fill dik on container: %s", err.Error()),
 			},
 		}, nil
