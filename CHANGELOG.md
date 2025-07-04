@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.4.12
+
+- If stress/diskfill/memfill exits unexpetedly report this as error and not as failure
+
 ## v1.4.11
 
 - Improve perfomance when starting resource/network attacks
