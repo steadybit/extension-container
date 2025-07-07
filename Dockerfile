@@ -22,7 +22,7 @@ RUN echo 'deb [trusted=yes] https://repo.goreleaser.com/apt/ /' > /etc/apt/sourc
 
 COPY . .
 
-
+#Ambient set of capabilities are not really working, therefore we set the capabilities on the binary directly. More on this: https://github.com/kubernetes/kubernetes/issues/56374
 RUN --mount=type=cache,target="/root/.cache/go-build" GOCACHE=/root/.cache/go-build GOOS=$TARGETOS GOARCH=$TARGETARCH goreleaser build --snapshot="${BUILD_SNAPSHOT}" --single-target -o extension \
     && setcap "cap_setuid,cap_sys_chroot,cap_setgid,cap_sys_admin,cap_dac_override,cap_sys_ptrace+eip" ./extension
 
