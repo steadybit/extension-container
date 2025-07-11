@@ -49,6 +49,8 @@ func getNetworkCorruptPackagesDescription() action_kit_api.ActionDescription {
 				Type:         action_kit_api.Percentage,
 				DefaultValue: extutil.Ptr("15"),
 				Required:     extutil.Ptr(true),
+				MinValue:     extutil.Ptr(0),
+				MaxValue:     extutil.Ptr(100),
 				Order:        extutil.Ptr(1),
 			},
 			action_kit_api.ActionParameter{

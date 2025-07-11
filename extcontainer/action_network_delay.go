@@ -50,6 +50,8 @@ func getNetworkDelayDescription() action_kit_api.ActionDescription {
 				Type:         action_kit_api.Duration,
 				DefaultValue: extutil.Ptr("500ms"),
 				Required:     extutil.Ptr(true),
+				MinValue:     extutil.Ptr(0),
+				MaxValue:     extutil.Ptr(3600000), //1 hour (less then tc limit - 4294967295 usecs)
 				Order:        extutil.Ptr(1),
 			},
 			action_kit_api.ActionParameter{
