@@ -70,7 +70,7 @@ func (a *fillDiskAction) Describe() action_kit_api.ActionDescription {
 				Name:         "duration",
 				Label:        "Duration",
 				Description:  extutil.Ptr("How long should the disk be filled?"),
-				Type:         action_kit_api.Duration,
+				Type:         action_kit_api.ActionParameterTypeDuration,
 				DefaultValue: extutil.Ptr("30s"),
 				Required:     extutil.Ptr(true),
 				Order:        extutil.Ptr(1),
@@ -82,7 +82,7 @@ func (a *fillDiskAction) Describe() action_kit_api.ActionDescription {
 				Required:     extutil.Ptr(true),
 				Order:        extutil.Ptr(2),
 				DefaultValue: extutil.Ptr("PERCENTAGE"),
-				Type:         action_kit_api.String,
+				Type:         action_kit_api.ActionParameterTypeString,
 				Options: extutil.Ptr([]action_kit_api.ParameterOption{
 					action_kit_api.ExplicitParameterOption{
 						Label: "Overall percentage of filled disk space in percent",
@@ -102,7 +102,7 @@ func (a *fillDiskAction) Describe() action_kit_api.ActionDescription {
 				Name:         "size",
 				Label:        "Fill Value (depending on Mode)",
 				Description:  extutil.Ptr("Depending on the mode, specify the percentage of filled disk space or the number of Megabytes to be written or left free."),
-				Type:         action_kit_api.Integer,
+				Type:         action_kit_api.ActionParameterTypeInteger,
 				DefaultValue: extutil.Ptr("80"),
 				Required:     extutil.Ptr(true),
 				Order:        extutil.Ptr(3),
@@ -111,7 +111,7 @@ func (a *fillDiskAction) Describe() action_kit_api.ActionDescription {
 				Name:         "path",
 				Label:        "File Destination",
 				Description:  extutil.Ptr("Where to temporarily write the file for filling the disk. It will be cleaned up afterwards."),
-				Type:         action_kit_api.String,
+				Type:         action_kit_api.ActionParameterTypeString,
 				DefaultValue: extutil.Ptr("/tmp"),
 				Required:     extutil.Ptr(true),
 				Order:        extutil.Ptr(4),
@@ -123,7 +123,7 @@ func (a *fillDiskAction) Describe() action_kit_api.ActionDescription {
 				Required:     extutil.Ptr(true),
 				Order:        extutil.Ptr(5),
 				DefaultValue: extutil.Ptr("AT_ONCE"),
-				Type:         action_kit_api.String,
+				Type:         action_kit_api.ActionParameterTypeString,
 				Advanced:     extutil.Ptr(true),
 				Options: extutil.Ptr([]action_kit_api.ParameterOption{
 					action_kit_api.ExplicitParameterOption{
@@ -140,7 +140,7 @@ func (a *fillDiskAction) Describe() action_kit_api.ActionDescription {
 				Name:         "blocksize",
 				Label:        "Block Size (in MBytes) of the File to Write for method `At Once`",
 				Description:  extutil.Ptr("Define the block size for writing the file with the dd command. If the block size is larger than the fill value, the fill value will be used as block size."),
-				Type:         action_kit_api.Integer,
+				Type:         action_kit_api.ActionParameterTypeInteger,
 				DefaultValue: extutil.Ptr("5"),
 				Required:     extutil.Ptr(true),
 				Order:        extutil.Ptr(6),
