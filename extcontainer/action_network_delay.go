@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
 	"github.com/steadybit/action-kit/go/action_kit_commons/network"
-	"github.com/steadybit/action-kit/go/action_kit_commons/runc"
+	"github.com/steadybit/action-kit/go/action_kit_commons/ociruntime"
 	"github.com/steadybit/action-kit/go/action_kit_sdk"
 	"github.com/steadybit/extension-container/extcontainer/container/types"
 	"github.com/steadybit/extension-kit/extbuild"
@@ -16,12 +16,12 @@ import (
 	"time"
 )
 
-func NewNetworkDelayContainerAction(r runc.Runc, client types.Client) action_kit_sdk.Action[NetworkActionState] {
+func NewNetworkDelayContainerAction(r ociruntime.OciRuntime, client types.Client) action_kit_sdk.Action[NetworkActionState] {
 	return &networkAction{
 		optsProvider: delay(r),
 		optsDecoder:  delayDecode,
 		description:  getNetworkDelayDescription(),
-		runc:         r,
+		ociRuntime:   r,
 		client:       client,
 	}
 }
@@ -75,7 +75,7 @@ func getNetworkDelayDescription() action_kit_api.ActionDescription {
 	}
 }
 
-func delay(r runc.Runc) networkOptsProvider {
+func delay(r ociruntime.OciRuntime) networkOptsProvider {
 	return func(ctx context.Context, sidecar network.SidecarOpts, request action_kit_api.PrepareActionRequestBody) (network.Opts, action_kit_api.Messages, error) {
 		delay := time.Duration(extutil.ToInt64(request.Config["networkDelay"])) * time.Millisecond
 		hasJitter := extutil.ToBool(request.Config["networkDelayJitter"])

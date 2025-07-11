@@ -12,7 +12,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
 	"github.com/steadybit/action-kit/go/action_kit_commons/network"
-	"github.com/steadybit/action-kit/go/action_kit_commons/runc"
+	"github.com/steadybit/action-kit/go/action_kit_commons/ociruntime"
 	"github.com/steadybit/action-kit/go/action_kit_sdk"
 	"github.com/steadybit/extension-container/config"
 	"github.com/steadybit/extension-container/extcontainer/container/types"
@@ -28,7 +28,7 @@ type networkOptsProvider func(ctx context.Context, sidecar network.SidecarOpts, 
 type networkOptsDecoder func(data json.RawMessage) (network.Opts, error)
 
 type networkAction struct {
-	runc         runc.Runc
+	ociRuntime   ociruntime.OciRuntime
 	client       types.Client
 	description  action_kit_api.ActionDescription
 	optsProvider networkOptsProvider
@@ -112,7 +112,7 @@ func (a *networkAction) Prepare(ctx context.Context, state *NetworkActionState, 
 	state.ContainerID = container.Id()
 	state.TargetLabel = label
 
-	processInfo, err := getProcessInfoForContainer(ctx, a.runc, RemovePrefix(state.ContainerID), specs.NetworkNamespace)
+	processInfo, err := getProcessInfoForContainer(ctx, a.ociRuntime, RemovePrefix(state.ContainerID), specs.NetworkNamespace)
 	if err != nil {
 		return nil, extension_kit.ToError("Failed to read target process info", err)
 	}
@@ -169,7 +169,7 @@ func hasDisallowedK8sNamespaceLabel(labels map[string]string) bool {
 	})
 }
 
-func isUsingHostNetwork(ns []runc.LinuxNamespace) bool {
+func isUsingHostNetwork(ns []ociruntime.LinuxNamespace) bool {
 	for _, n := range ns {
 		if n.Type == specs.NetworkNamespace {
 			return n.Path == "/proc/1/ns/net"
@@ -215,7 +215,7 @@ func (a *networkAction) Stop(_ context.Context, state *NetworkActionState) (*act
 	}
 
 	// Skip the rollback if the target network namespace is not present anymore and hence don't need to be reverted.
-	if nsExistsErr := runc.NamespacesExists(ctx, state.Sidecar.TargetProcess.Namespaces, specs.NetworkNamespace); nsExistsErr != nil {
+	if nsExistsErr := ociruntime.NamespacesExists(ctx, state.Sidecar.TargetProcess.Namespaces, specs.NetworkNamespace); nsExistsErr != nil {
 		log.Info().
 			Err(nsExistsErr).
 			Str("containerId", state.ContainerID).
@@ -238,7 +238,7 @@ func (a *networkAction) Stop(_ context.Context, state *NetworkActionState) (*act
 }
 
 func (a *networkAction) runner(sidecar network.SidecarOpts) network.CommandRunner {
-	return network.NewRuncRunner(a.runc, sidecar)
+	return network.NewRuncRunner(a.ociRuntime, sidecar)
 }
 
 func parsePortRanges(raw []string) ([]network.PortRange, error) {
@@ -262,7 +262,7 @@ func parsePortRanges(raw []string) ([]network.PortRange, error) {
 	return ranges, nil
 }
 
-func mapToNetworkFilter(ctx context.Context, r runc.Runc, sidecar network.SidecarOpts, actionConfig map[string]interface{}, restrictedEndpoints []action_kit_api.RestrictedEndpoint) (network.Filter, action_kit_api.Messages, error) {
+func mapToNetworkFilter(ctx context.Context, r ociruntime.OciRuntime, sidecar network.SidecarOpts, actionConfig map[string]interface{}, restrictedEndpoints []action_kit_api.RestrictedEndpoint) (network.Filter, action_kit_api.Messages, error) {
 	includeCidrs, unresolved := network.ParseCIDRs(append(
 		extutil.ToStringArray(actionConfig["ip"]),
 		extutil.ToStringArray(actionConfig["hostname"])...,

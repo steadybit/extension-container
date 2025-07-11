@@ -10,7 +10,7 @@ import (
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
 	"github.com/steadybit/action-kit/go/action_kit_commons/diskfill"
-	"github.com/steadybit/action-kit/go/action_kit_commons/runc"
+	"github.com/steadybit/action-kit/go/action_kit_commons/ociruntime"
 	"github.com/steadybit/action-kit/go/action_kit_sdk"
 	"github.com/steadybit/extension-container/extcontainer/container/types"
 	"github.com/steadybit/extension-kit"
@@ -21,9 +21,9 @@ import (
 )
 
 type fillDiskAction struct {
-	runc      runc.Runc
-	client    types.Client
-	diskfills syncmap.Map
+	ociRuntime ociruntime.OciRuntime
+	client     types.Client
+	diskfills  syncmap.Map
 }
 
 type FillDiskActionState struct {
@@ -39,10 +39,10 @@ var _ action_kit_sdk.Action[FillDiskActionState] = (*fillDiskAction)(nil)
 var _ action_kit_sdk.ActionWithStop[FillDiskActionState] = (*fillDiskAction)(nil)
 var _ action_kit_sdk.ActionWithStatus[FillDiskActionState] = (*fillDiskAction)(nil)
 
-func NewFillDiskContainerAction(r runc.Runc, c types.Client) action_kit_sdk.Action[FillDiskActionState] {
+func NewFillDiskContainerAction(r ociruntime.OciRuntime, c types.Client) action_kit_sdk.Action[FillDiskActionState] {
 	return &fillDiskAction{
-		runc:   r,
-		client: c,
+		ociRuntime: r,
+		client:     c,
 	}
 }
 
@@ -196,7 +196,7 @@ func (a *fillDiskAction) Prepare(ctx context.Context, state *FillDiskActionState
 		return nil, err
 	}
 
-	processInfo, err := getProcessInfoForContainer(ctx, a.runc, RemovePrefix(state.ContainerID), specs.PIDNamespace)
+	processInfo, err := getProcessInfoForContainer(ctx, a.ociRuntime, RemovePrefix(state.ContainerID), specs.PIDNamespace)
 	if err != nil {
 		return nil, extension_kit.ToError("Failed to prepare fill disk settings.", err)
 	}
@@ -213,7 +213,7 @@ func (a *fillDiskAction) Prepare(ctx context.Context, state *FillDiskActionState
 
 func (a *fillDiskAction) Start(ctx context.Context, state *FillDiskActionState) (*action_kit_api.StartResult, error) {
 	copiedOpts := state.FillDiskOpts
-	diskFill, err := diskfill.NewDiskfillRunc(ctx, a.runc, state.Sidecar, copiedOpts)
+	diskFill, err := diskfill.NewDiskfillRunc(ctx, a.ociRuntime, state.Sidecar, copiedOpts)
 	if err != nil {
 		return nil, extension_kit.ToError("Failed to fill disk in container", err)
 	}

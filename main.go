@@ -5,11 +5,10 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
-	"github.com/steadybit/action-kit/go/action_kit_commons/runc"
+	"github.com/steadybit/action-kit/go/action_kit_commons/ociruntime"
 	"github.com/steadybit/action-kit/go/action_kit_sdk"
 	"github.com/steadybit/discovery-kit/go/discovery_kit_api"
 	"github.com/steadybit/discovery-kit/go/discovery_kit_sdk"
@@ -37,7 +36,7 @@ func main() {
 	config.ParseConfiguration()
 	config.ValidateConfiguration()
 
-	fmt.Printf("%+v\n", config.Config)
+	log.Debug().Any("config", config.Config).Msg("Configuration loaded.")
 
 	exthealth.SetReady(false)
 	exthealth.StartProbes(int(config.Config.HealthPort))
@@ -65,11 +64,11 @@ func main() {
 		Str("socket", client.Socket()).
 		Msg("Container runtime client initialized.")
 
-	runcCfg := runc.ConfigFromEnvironment()
-	if runcCfg.Root == "" {
-		runcCfg.Root = client.Runtime().DefaultRuncRoot()
+	ociRuntimeCfg := ociruntime.ConfigFromEnvironment()
+	if ociRuntimeCfg.Root == "" {
+		ociRuntimeCfg.Root = client.Runtime().DefaultRuncRoot()
 	}
-	r := runc.NewRunc(runcCfg)
+	r := ociruntime.NewOciRuntimeWithCrunForSidecars(ociRuntimeCfg)
 
 	discovery_kit_sdk.Register(extcontainer.NewContainerDiscovery(client))
 	action_kit_sdk.RegisterAction(extcontainer.NewPauseContainerAction(client))
