@@ -10,7 +10,7 @@ import (
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
 	"github.com/steadybit/action-kit/go/action_kit_commons/memfill"
-	"github.com/steadybit/action-kit/go/action_kit_commons/runc"
+	"github.com/steadybit/action-kit/go/action_kit_commons/ociruntime"
 	"github.com/steadybit/action-kit/go/action_kit_sdk"
 	"github.com/steadybit/extension-container/extcontainer/container/types"
 	"github.com/steadybit/extension-kit"
@@ -23,16 +23,16 @@ import (
 )
 
 type fillMemoryAction struct {
-	runc     runc.Runc
-	client   types.Client
-	memfills syncmap.Map
+	ociRuntime ociruntime.OciRuntime
+	client     types.Client
+	memfills   syncmap.Map
 }
 
 type FillMemoryActionState struct {
 	ExecutionId     uuid.UUID
 	ContainerID     string
 	TargetLabel     string
-	TargetProcess   runc.LinuxProcessInfo
+	TargetProcess   ociruntime.LinuxProcessInfo
 	FillMemoryOpts  memfill.Opts
 	IgnoreExitCodes []int
 }
@@ -42,10 +42,10 @@ var _ action_kit_sdk.Action[FillMemoryActionState] = (*fillMemoryAction)(nil)
 var _ action_kit_sdk.ActionWithStop[FillMemoryActionState] = (*fillMemoryAction)(nil)
 var _ action_kit_sdk.ActionWithStatus[FillMemoryActionState] = (*fillMemoryAction)(nil)
 
-func NewFillMemoryContainerAction(r runc.Runc, c types.Client) action_kit_sdk.Action[FillMemoryActionState] {
+func NewFillMemoryContainerAction(r ociruntime.OciRuntime, c types.Client) action_kit_sdk.Action[FillMemoryActionState] {
 	return &fillMemoryAction{
-		runc:   r,
-		client: c,
+		ociRuntime: r,
+		client:     c,
 	}
 }
 
@@ -164,7 +164,7 @@ func (a *fillMemoryAction) Prepare(ctx context.Context, state *FillMemoryActionS
 		return nil, err
 	}
 
-	processInfo, err := getProcessInfoForContainer(ctx, a.runc, RemovePrefix(state.ContainerID), specs.PIDNamespace)
+	processInfo, err := getProcessInfoForContainer(ctx, a.ociRuntime, RemovePrefix(state.ContainerID), specs.PIDNamespace)
 	if err != nil {
 		return nil, extension_kit.ToError("Failed to prepare fill memory settings.", err)
 	}

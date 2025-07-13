@@ -9,7 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
-	"github.com/steadybit/action-kit/go/action_kit_commons/runc"
+	"github.com/steadybit/action-kit/go/action_kit_commons/ociruntime"
 	"github.com/steadybit/action-kit/go/action_kit_commons/stress"
 	"github.com/steadybit/action-kit/go/action_kit_sdk"
 	"github.com/steadybit/extension-container/extcontainer/container/types"
@@ -23,7 +23,7 @@ import (
 type stressOptsProvider func(request action_kit_api.PrepareActionRequestBody) (stress.Opts, error)
 
 type stressAction struct {
-	runc         runc.Runc
+	ociRuntime   ociruntime.OciRuntime
 	client       types.Client
 	description  action_kit_api.ActionDescription
 	optsProvider stressOptsProvider
@@ -45,7 +45,7 @@ var _ action_kit_sdk.ActionWithStatus[StressActionState] = (*stressAction)(nil)
 var _ action_kit_sdk.ActionWithStop[StressActionState] = (*stressAction)(nil)
 
 func newStressAction(
-	runc runc.Runc,
+	r ociruntime.OciRuntime,
 	client types.Client,
 	description func() action_kit_api.ActionDescription,
 	optsProvider stressOptsProvider,
@@ -53,7 +53,7 @@ func newStressAction(
 	return &stressAction{
 		description:  description(),
 		optsProvider: optsProvider,
-		runc:         runc,
+		ociRuntime:   r,
 		client:       client,
 		stresses:     syncmap.Map{},
 	}
@@ -76,7 +76,7 @@ func (a *stressAction) Prepare(ctx context.Context, state *StressActionState, re
 	state.ContainerID = container.Id()
 	state.TargetLabel = label
 
-	processInfo, err := getProcessInfoForContainer(ctx, a.runc, RemovePrefix(state.ContainerID), specs.PIDNamespace, specs.CgroupNamespace)
+	processInfo, err := getProcessInfoForContainer(ctx, a.ociRuntime, RemovePrefix(state.ContainerID), specs.PIDNamespace, specs.CgroupNamespace)
 	if err != nil {
 		return nil, extension_kit.ToError("Failed to read target process info", err)
 	}
@@ -103,7 +103,7 @@ func (a *stressAction) Prepare(ctx context.Context, state *StressActionState, re
 }
 
 func (a *stressAction) Start(ctx context.Context, state *StressActionState) (*action_kit_api.StartResult, error) {
-	s, err := stress.NewStressRunc(ctx, a.runc, state.Sidecar, state.StressOpts)
+	s, err := stress.NewStressRunc(ctx, a.ociRuntime, state.Sidecar, state.StressOpts)
 	if err != nil {
 		return nil, extension_kit.ToError("Failed to stess container", err)
 	}

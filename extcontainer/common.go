@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
-	"github.com/steadybit/action-kit/go/action_kit_commons/runc"
+	"github.com/steadybit/action-kit/go/action_kit_commons/ociruntime"
 	"github.com/steadybit/extension-container/extcontainer/container/types"
 	extension_kit "github.com/steadybit/extension-kit"
 	"github.com/steadybit/extension-kit/extutil"
@@ -109,18 +109,18 @@ func getRestrictedEndpoints(request action_kit_api.PrepareActionRequestBody) []a
 
 var getProcessInfoForContainer = getProcessInfoForContainerImpl
 
-func getProcessInfoForContainerImpl(ctx context.Context, r runc.Runc, containerId string, nsTypes ...specs.LinuxNamespaceType) (runc.LinuxProcessInfo, error) {
+func getProcessInfoForContainerImpl(ctx context.Context, r ociruntime.OciRuntime, containerId string, nsTypes ...specs.LinuxNamespaceType) (ociruntime.LinuxProcessInfo, error) {
 	state, err := r.State(ctx, containerId)
 	if err != nil {
-		return runc.LinuxProcessInfo{}, fmt.Errorf("failed to read state of target container %s: %w", containerId, err)
+		return ociruntime.LinuxProcessInfo{}, fmt.Errorf("failed to read state of target container %s: %w", containerId, err)
 	}
 
 	// use the sandbox id for a fast-path lookup if available
 	if sandboxId, ok := state.Annotations["io.kubernetes.cri.sandbox-id"]; ok && sandboxId != state.ID {
 		if sandboxState, err := r.State(ctx, sandboxId); err == nil {
-			ctx = runc.WithNamespaceCandidates(ctx, sandboxState.Pid)
+			ctx = ociruntime.WithNamespaceCandidates(ctx, sandboxState.Pid)
 		}
 	}
 
-	return runc.ReadLinuxProcessInfo(ctx, state.Pid, nsTypes...)
+	return ociruntime.ReadLinuxProcessInfo(ctx, state.Pid, nsTypes...)
 }

@@ -8,19 +8,19 @@ import (
 	"fmt"
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
 	"github.com/steadybit/action-kit/go/action_kit_commons/network"
-	"github.com/steadybit/action-kit/go/action_kit_commons/runc"
+	"github.com/steadybit/action-kit/go/action_kit_commons/ociruntime"
 	"github.com/steadybit/action-kit/go/action_kit_sdk"
 	"github.com/steadybit/extension-container/extcontainer/container/types"
 	"github.com/steadybit/extension-kit/extbuild"
 	"github.com/steadybit/extension-kit/extutil"
 )
 
-func NewNetworkCorruptPackagesContainerAction(r runc.Runc, client types.Client) action_kit_sdk.Action[NetworkActionState] {
+func NewNetworkCorruptPackagesContainerAction(r ociruntime.OciRuntime, client types.Client) action_kit_sdk.Action[NetworkActionState] {
 	return &networkAction{
 		optsProvider: corruptPackages(r),
 		optsDecoder:  corruptPackagesDecode,
 		description:  getNetworkCorruptPackagesDescription(),
-		runc:         r,
+		ociRuntime:   r,
 		client:       client,
 	}
 }
@@ -65,7 +65,7 @@ func getNetworkCorruptPackagesDescription() action_kit_api.ActionDescription {
 	}
 }
 
-func corruptPackages(r runc.Runc) networkOptsProvider {
+func corruptPackages(r ociruntime.OciRuntime) networkOptsProvider {
 	return func(ctx context.Context, sidecar network.SidecarOpts, request action_kit_api.PrepareActionRequestBody) (network.Opts, action_kit_api.Messages, error) {
 		corruption := extutil.ToUInt(request.Config["networkCorruption"])
 

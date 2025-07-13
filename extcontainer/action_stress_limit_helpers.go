@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"github.com/kataras/iris/v12/x/mathx"
 	"github.com/rs/zerolog/log"
-	"github.com/steadybit/action-kit/go/action_kit_commons/runc"
+	"github.com/steadybit/action-kit/go/action_kit_commons/ociruntime"
 	"github.com/steadybit/action-kit/go/action_kit_commons/stress"
 	"github.com/steadybit/action-kit/go/action_kit_commons/utils"
 	"github.com/steadybit/extension-kit/extutil"
@@ -22,7 +22,7 @@ import (
 var cgroupV1MemUnlimited = (math.MaxInt64 / os.Getpagesize()) * os.Getpagesize()
 var osFs = osFileSystem{}
 
-func readAndAdaptToContainerLimits(_ context.Context, p runc.LinuxProcessInfo, opts *stress.Opts) {
+func readAndAdaptToContainerLimits(_ context.Context, p ociruntime.LinuxProcessInfo, opts *stress.Opts) {
 	cpuLimitInMilliCpu := -1
 	memLimitInBytes := -1
 

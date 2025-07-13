@@ -15,14 +15,14 @@ tests:
   - it: manifest should match snapshot using docker
     set:
       container:
-        runtime: docker
+        engine: docker
     asserts:
       - matchSnapshot: { }
   - it: manifest should match snapshot using containerd and using resource limits
     set:
       container:
-        runtime: containerd
-        runcDebug: true
+        engine: containerd
+        ociRuntimeDebug: true
       resources:
         limits:
           cpu: 100m
@@ -35,7 +35,7 @@ tests:
   - it: manifest should match snapshot using crio using podAnnotations and Labels
     set:
       container:
-        runtime: cri-o
+        engine: cri-o
       podAnnotations:
         some-annotation: "some-annotation-value"
       podLabels:
@@ -45,14 +45,14 @@ tests:
   - it: manifest should fail without runtime
     set:
       container:
-        runtime: null
+        engine: null
     asserts:
       - failedTemplate:
-          errorMessage: "unknown container runtime: <nil> (must be one of containerd, cri-o, docker)"
+          errorMessage: "unknown container.engine: <nil> (must be one of containerd, cri-o, docker)"
   - it: manifest should match snapshot with TLS
     set:
       container:
-        runtime: docker
+        engine: docker
       tls:
         server:
           certificate:
@@ -62,7 +62,7 @@ tests:
   - it: manifest should match snapshot with mutual TLS
     set:
       container:
-        runtime: docker
+        engine: docker
       tls:
         server:
           certificate:
