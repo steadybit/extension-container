@@ -120,10 +120,13 @@ runtime socket.
 
 ### Resource Attacks
 
-The resource attacks are starting processes in the target containers cgroup/namespaces using [runc (APL2.0)](https://github.com/opencontainers/runc) for this the following capabilities are needed: `CAP_SYS_CHROOT`, `CAP_SYS_ADMIN`, `CAP_SYS_PTRACE`, `CAP_NET_BIND_SERVICE`, `CAP_DAC_OVERRIDE`, `CAP_SETUID`, `CAP_SETGID`, `CAP_AUDIT_WRITE`, `CAP_KILL`.
+The resource attacks are starting processes in the target containers cgroup/namespaces using [runc (APL2.0)](https://github.com/opencontainers/runc) for this
+the following capabilities are needed: `CAP_SYS_CHROOT`, `CAP_SYS_ADMIN`, `CAP_SYS_PTRACE`, `CAP_NET_BIND_SERVICE`, `CAP_DAC_OVERRIDE`, `CAP_SETUID`,
+`CAP_SETGID`, `CAP_AUDIT_WRITE`, `CAP_KILL`.
 These processes are executed with the root user, but are short-lived and terminated after the attack is finished.
 
-The resource attacks optionally need `CAP_SYS_RESOURCE`. We'd recommend it to be used, otherwise the resource attacks are more likely to be oom-killed by the kernel and fail to carry out the attack.
+The resource attacks optionally need `CAP_SYS_RESOURCE`. We'd recommend it to be used, otherwise the resource attacks are more likely to be oom-killed by the
+kernel and fail to carry out the attack.
 
 Under the hood [stress-ng (GPL2.0)](https://github.com/ColinIanKing/stress-ng) is used to perform the stress attacks.
 For the fill disk `dd` or `fallocate`  and [nsmount (MIT)](https://github.com/steadybit/nsmount) is used.
@@ -133,7 +136,9 @@ All needed binaries are included in the extension container image.
 
 ### Network Attacks
 
-The network attacks are starting processes in the target containers network namespaces using [runc (APL2.0)](https://github.com/opencontainers/runc) for this the following capabilities are needed: `CAP_NET_ADMIN`,  `CAP_SYS_CHROOT`, `CAP_SYS_ADMIN`, `CAP_SYS_PTRACE`, `CAP_NET_BIND_SERVICE`, `CAP_DAC_OVERRIDE`, `CAP_SETUID`, `CAP_SETGID`, `CAP_AUDIT_WRITE`, `CAP_KILL`.
+The network attacks are starting processes in the target containers network namespaces using [runc (APL2.0)](https://github.com/opencontainers/runc) for this
+the following capabilities are needed: `CAP_NET_ADMIN`,  `CAP_SYS_CHROOT`, `CAP_SYS_ADMIN`, `CAP_SYS_PTRACE`, `CAP_NET_BIND_SERVICE`, `CAP_DAC_OVERRIDE`,
+`CAP_SETUID`, `CAP_SETGID`, `CAP_AUDIT_WRITE`, `CAP_KILL`.
 These processes are executed with the root user, but are short-lived and terminated after the attack is finished.
 
 Under the hood start `ip` or `tc` is used to reconfigure the network stack and `dig` is used in case the hostnames need to be resolved.
@@ -155,9 +160,15 @@ In this case you need to remount the cgroup filesystem without the `nsdelegate` 
 sudo mount -o remount,rw,nosuid,nodev,noexec,relatime -t cgroup2 none /sys/fs/cgroup
 ```
 
+## OpenShift >= 4.18 (using crun)
+
+For OpenShift >= 4.18 the extension needs to be configured to use `crun` as the OCI runtime.
+By setting the helm value `containerEngines.cri-o.ociRuntime.path=crun` or for non-Kubernetes the environment variable `STEADYBIT_EXTENSION_OCIRUNTIME_PATH=crun`
+
 ## Version and Revision
 
 The version and revision of the extension:
+
 - are printed during the startup of the extension
 - are added as a Docker label to the image
 - are available via the `version.txt`/`revision.txt` files in the root of the image

@@ -38,7 +38,7 @@ manifest should match snapshot using containerd and using resource limits:
                   value: "false"
                 - name: STEADYBIT_EXTENSION_OCIRUNTIME_ROOT
                   value: /run/containerd/runc/k8s.io
-                - name: STEADYBIT_EXTENSION_OCIRUNTIME_EXECUTABLE
+                - name: STEADYBIT_EXTENSION_OCIRUNTIME_PATH
                   value: runc
                 - name: STEADYBIT_EXTENSION_CONTAINER_SOCKET
                   value: /run/containerd/containerd.sock
@@ -182,7 +182,7 @@ manifest should match snapshot using crio using podAnnotations and Labels:
                   value: "false"
                 - name: STEADYBIT_EXTENSION_OCIRUNTIME_ROOT
                   value: /run/runc
-                - name: STEADYBIT_EXTENSION_OCIRUNTIME_EXECUTABLE
+                - name: STEADYBIT_EXTENSION_OCIRUNTIME_PATH
                   value: runc
                 - name: STEADYBIT_EXTENSION_CONTAINER_SOCKET
                   value: /var/run/crio/crio.sock
@@ -324,7 +324,7 @@ manifest should match snapshot using docker:
                   value: "false"
                 - name: STEADYBIT_EXTENSION_OCIRUNTIME_ROOT
                   value: /run/docker/runtime-runc/moby
-                - name: STEADYBIT_EXTENSION_OCIRUNTIME_EXECUTABLE
+                - name: STEADYBIT_EXTENSION_OCIRUNTIME_PATH
                   value: runc
                 - name: STEADYBIT_EXTENSION_CONTAINER_SOCKET
                   value: /var/run/docker.sock
@@ -466,7 +466,7 @@ manifest should match snapshot with TLS:
                   value: "false"
                 - name: STEADYBIT_EXTENSION_OCIRUNTIME_ROOT
                   value: /run/docker/runtime-runc/moby
-                - name: STEADYBIT_EXTENSION_OCIRUNTIME_EXECUTABLE
+                - name: STEADYBIT_EXTENSION_OCIRUNTIME_PATH
                   value: runc
                 - name: STEADYBIT_EXTENSION_CONTAINER_SOCKET
                   value: /var/run/docker.sock
@@ -618,7 +618,7 @@ manifest should match snapshot with appArmorProfile for k8s >= 1.30:
                   value: "false"
                 - name: STEADYBIT_EXTENSION_OCIRUNTIME_ROOT
                   value: /run/containerd/runc/k8s.io
-                - name: STEADYBIT_EXTENSION_OCIRUNTIME_EXECUTABLE
+                - name: STEADYBIT_EXTENSION_OCIRUNTIME_PATH
                   value: runc
                 - name: STEADYBIT_EXTENSION_CONTAINER_SOCKET
                   value: /run/containerd/containerd.sock
@@ -762,7 +762,7 @@ manifest should match snapshot with different containerPorts:
                   value: "false"
                 - name: STEADYBIT_EXTENSION_OCIRUNTIME_ROOT
                   value: /run/containerd/runc/k8s.io
-                - name: STEADYBIT_EXTENSION_OCIRUNTIME_EXECUTABLE
+                - name: STEADYBIT_EXTENSION_OCIRUNTIME_PATH
                   value: runc
                 - name: STEADYBIT_EXTENSION_CONTAINER_SOCKET
                   value: /run/containerd/containerd.sock
@@ -906,7 +906,7 @@ manifest should match snapshot with discover all deployments:
                   value: "false"
                 - name: STEADYBIT_EXTENSION_OCIRUNTIME_ROOT
                   value: /run/containerd/runc/k8s.io
-                - name: STEADYBIT_EXTENSION_OCIRUNTIME_EXECUTABLE
+                - name: STEADYBIT_EXTENSION_OCIRUNTIME_PATH
                   value: runc
                 - name: STEADYBIT_EXTENSION_CONTAINER_SOCKET
                   value: /run/containerd/containerd.sock
@@ -1048,7 +1048,7 @@ manifest should match snapshot with extra env vars:
                   value: "false"
                 - name: STEADYBIT_EXTENSION_OCIRUNTIME_ROOT
                   value: /run/containerd/runc/k8s.io
-                - name: STEADYBIT_EXTENSION_OCIRUNTIME_EXECUTABLE
+                - name: STEADYBIT_EXTENSION_OCIRUNTIME_PATH
                   value: runc
                 - name: STEADYBIT_EXTENSION_CONTAINER_SOCKET
                   value: /run/containerd/containerd.sock
@@ -1199,7 +1199,7 @@ manifest should match snapshot with extra labels:
                   value: "false"
                 - name: STEADYBIT_EXTENSION_OCIRUNTIME_ROOT
                   value: /run/containerd/runc/k8s.io
-                - name: STEADYBIT_EXTENSION_OCIRUNTIME_EXECUTABLE
+                - name: STEADYBIT_EXTENSION_OCIRUNTIME_PATH
                   value: runc
                 - name: STEADYBIT_EXTENSION_CONTAINER_SOCKET
                   value: /run/containerd/containerd.sock
@@ -1341,7 +1341,7 @@ manifest should match snapshot with mutual TLS:
                   value: "false"
                 - name: STEADYBIT_EXTENSION_OCIRUNTIME_ROOT
                   value: /run/docker/runtime-runc/moby
-                - name: STEADYBIT_EXTENSION_OCIRUNTIME_EXECUTABLE
+                - name: STEADYBIT_EXTENSION_OCIRUNTIME_PATH
                   value: runc
                 - name: STEADYBIT_EXTENSION_CONTAINER_SOCKET
                   value: /var/run/docker.sock
@@ -1503,7 +1503,7 @@ manifest should match snapshot with mutual TLS using containerPaths:
                   value: "false"
                 - name: STEADYBIT_EXTENSION_OCIRUNTIME_ROOT
                   value: /run/containerd/runc/k8s.io
-                - name: STEADYBIT_EXTENSION_OCIRUNTIME_EXECUTABLE
+                - name: STEADYBIT_EXTENSION_OCIRUNTIME_PATH
                   value: runc
                 - name: STEADYBIT_EXTENSION_CONTAINER_SOCKET
                   value: /run/containerd/containerd.sock
@@ -1656,7 +1656,7 @@ manifest should match snapshot with platform gke-autopilot:
                   value: "false"
                 - name: STEADYBIT_EXTENSION_OCIRUNTIME_ROOT
                   value: /run/containerd/runc/k8s.io
-                - name: STEADYBIT_EXTENSION_OCIRUNTIME_EXECUTABLE
+                - name: STEADYBIT_EXTENSION_OCIRUNTIME_PATH
                   value: runc
                 - name: STEADYBIT_EXTENSION_CONTAINER_SOCKET
                   value: /run/containerd/containerd.sock
@@ -1798,7 +1798,7 @@ manifest should match snapshot with podSecurityContext:
                   value: "false"
                 - name: STEADYBIT_EXTENSION_OCIRUNTIME_ROOT
                   value: /run/containerd/runc/k8s.io
-                - name: STEADYBIT_EXTENSION_OCIRUNTIME_EXECUTABLE
+                - name: STEADYBIT_EXTENSION_OCIRUNTIME_PATH
                   value: runc
                 - name: STEADYBIT_EXTENSION_CONTAINER_SOCKET
                   value: /run/containerd/containerd.sock
@@ -1941,7 +1941,7 @@ manifest should match snapshot with priority class:
                   value: "false"
                 - name: STEADYBIT_EXTENSION_OCIRUNTIME_ROOT
                   value: /run/containerd/runc/k8s.io
-                - name: STEADYBIT_EXTENSION_OCIRUNTIME_EXECUTABLE
+                - name: STEADYBIT_EXTENSION_OCIRUNTIME_PATH
                   value: runc
                 - name: STEADYBIT_EXTENSION_CONTAINER_SOCKET
                   value: /run/containerd/containerd.sock
@@ -2084,7 +2084,7 @@ manifest should match snapshot with update strategy:
                   value: "false"
                 - name: STEADYBIT_EXTENSION_OCIRUNTIME_ROOT
                   value: /run/containerd/runc/k8s.io
-                - name: STEADYBIT_EXTENSION_OCIRUNTIME_EXECUTABLE
+                - name: STEADYBIT_EXTENSION_OCIRUNTIME_PATH
                   value: runc
                 - name: STEADYBIT_EXTENSION_CONTAINER_SOCKET
                   value: /run/containerd/containerd.sock

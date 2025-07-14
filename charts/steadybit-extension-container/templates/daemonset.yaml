@@ -93,8 +93,8 @@ spec:
               value: {{ include "ociRuntime.get" (list . "debug") | quote }}
             - name: STEADYBIT_EXTENSION_OCIRUNTIME_ROOT
               value: {{ include "ociRuntime.get" (list . "root") | quote }}
-            - name: STEADYBIT_EXTENSION_OCIRUNTIME_EXECUTABLE
-              value: {{ include "ociRuntime.get" (list . "executable") | quote }}
+            - name: STEADYBIT_EXTENSION_OCIRUNTIME_PATH
+              value: {{ include "ociRuntime.get" (list . "path") | quote }}
             - name: STEADYBIT_EXTENSION_CONTAINER_SOCKET
               value: {{ include "containerEngine.socket" . }}
             - name: STEADYBIT_EXTENSION_CONTAINER_RUNTIME
