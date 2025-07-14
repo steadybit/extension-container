@@ -114,7 +114,7 @@ manifest should match snapshot using containerd and using resource limits:
                 - mountPath: /run/containerd/containerd.sock
                   name: runtime-socket
                 - mountPath: /run/containerd/runc/k8s.io
-                  name: runtime-runc-root
+                  name: ociruntime-root
           hostPID: true
           securityContext:
             runAsNonRoot: true
@@ -135,7 +135,7 @@ manifest should match snapshot using containerd and using resource limits:
             - hostPath:
                 path: /run/containerd/runc/k8s.io
                 type: Directory
-              name: runtime-runc-root
+              name: ociruntime-root
       updateStrategy:
         rollingUpdate:
           maxUnavailable: 1
@@ -258,7 +258,7 @@ manifest should match snapshot using crio using podAnnotations and Labels:
                 - mountPath: /var/run/crio/crio.sock
                   name: runtime-socket
                 - mountPath: /run/runc
-                  name: runtime-runc-root
+                  name: ociruntime-root
           hostPID: true
           securityContext:
             runAsNonRoot: true
@@ -279,7 +279,7 @@ manifest should match snapshot using crio using podAnnotations and Labels:
             - hostPath:
                 path: /run/runc
                 type: Directory
-              name: runtime-runc-root
+              name: ociruntime-root
       updateStrategy:
         rollingUpdate:
           maxUnavailable: 1
@@ -400,7 +400,7 @@ manifest should match snapshot using docker:
                 - mountPath: /var/run/docker.sock
                   name: runtime-socket
                 - mountPath: /run/docker/runtime-runc/moby
-                  name: runtime-runc-root
+                  name: ociruntime-root
           hostPID: true
           securityContext:
             runAsNonRoot: true
@@ -421,7 +421,7 @@ manifest should match snapshot using docker:
             - hostPath:
                 path: /run/docker/runtime-runc/moby
                 type: Directory
-              name: runtime-runc-root
+              name: ociruntime-root
       updateStrategy:
         rollingUpdate:
           maxUnavailable: 1
@@ -546,7 +546,7 @@ manifest should match snapshot with TLS:
                 - mountPath: /var/run/docker.sock
                   name: runtime-socket
                 - mountPath: /run/docker/runtime-runc/moby
-                  name: runtime-runc-root
+                  name: ociruntime-root
                 - mountPath: /etc/extension/certificates/server-cert
                   name: certificate-server-cert
                   readOnly: true
@@ -570,7 +570,7 @@ manifest should match snapshot with TLS:
             - hostPath:
                 path: /run/docker/runtime-runc/moby
                 type: Directory
-              name: runtime-runc-root
+              name: ociruntime-root
             - name: certificate-server-cert
               secret:
                 optional: false
@@ -696,7 +696,7 @@ manifest should match snapshot with appArmorProfile for k8s >= 1.30:
                 - mountPath: /run/containerd/containerd.sock
                   name: runtime-socket
                 - mountPath: /run/containerd/runc/k8s.io
-                  name: runtime-runc-root
+                  name: ociruntime-root
           hostPID: true
           securityContext:
             runAsNonRoot: true
@@ -717,7 +717,7 @@ manifest should match snapshot with appArmorProfile for k8s >= 1.30:
             - hostPath:
                 path: /run/containerd/runc/k8s.io
                 type: Directory
-              name: runtime-runc-root
+              name: ociruntime-root
       updateStrategy:
         rollingUpdate:
           maxUnavailable: 1
@@ -838,7 +838,7 @@ manifest should match snapshot with different containerPorts:
                 - mountPath: /run/containerd/containerd.sock
                   name: runtime-socket
                 - mountPath: /run/containerd/runc/k8s.io
-                  name: runtime-runc-root
+                  name: ociruntime-root
           hostPID: true
           securityContext:
             runAsNonRoot: true
@@ -859,7 +859,7 @@ manifest should match snapshot with different containerPorts:
             - hostPath:
                 path: /run/containerd/runc/k8s.io
                 type: Directory
-              name: runtime-runc-root
+              name: ociruntime-root
       updateStrategy:
         rollingUpdate:
           maxUnavailable: 1
@@ -982,7 +982,7 @@ manifest should match snapshot with discover all deployments:
                 - mountPath: /run/containerd/containerd.sock
                   name: runtime-socket
                 - mountPath: /run/containerd/runc/k8s.io
-                  name: runtime-runc-root
+                  name: ociruntime-root
           hostPID: true
           securityContext:
             runAsNonRoot: true
@@ -1003,7 +1003,7 @@ manifest should match snapshot with discover all deployments:
             - hostPath:
                 path: /run/containerd/runc/k8s.io
                 type: Directory
-              name: runtime-runc-root
+              name: ociruntime-root
       updateStrategy:
         rollingUpdate:
           maxUnavailable: 1
@@ -1131,7 +1131,7 @@ manifest should match snapshot with extra env vars:
                 - mountPath: /run/containerd/containerd.sock
                   name: runtime-socket
                 - mountPath: /run/containerd/runc/k8s.io
-                  name: runtime-runc-root
+                  name: ociruntime-root
           hostPID: true
           securityContext:
             runAsNonRoot: true
@@ -1152,7 +1152,7 @@ manifest should match snapshot with extra env vars:
             - hostPath:
                 path: /run/containerd/runc/k8s.io
                 type: Directory
-              name: runtime-runc-root
+              name: ociruntime-root
       updateStrategy:
         rollingUpdate:
           maxUnavailable: 1
@@ -1275,7 +1275,7 @@ manifest should match snapshot with extra labels:
                 - mountPath: /run/containerd/containerd.sock
                   name: runtime-socket
                 - mountPath: /run/containerd/runc/k8s.io
-                  name: runtime-runc-root
+                  name: ociruntime-root
           hostPID: true
           securityContext:
             runAsNonRoot: true
@@ -1296,7 +1296,7 @@ manifest should match snapshot with extra labels:
             - hostPath:
                 path: /run/containerd/runc/k8s.io
                 type: Directory
-              name: runtime-runc-root
+              name: ociruntime-root
       updateStrategy:
         rollingUpdate:
           maxUnavailable: 1
@@ -1423,7 +1423,7 @@ manifest should match snapshot with mutual TLS:
                 - mountPath: /var/run/docker.sock
                   name: runtime-socket
                 - mountPath: /run/docker/runtime-runc/moby
-                  name: runtime-runc-root
+                  name: ociruntime-root
                 - mountPath: /etc/extension/certificates/client-cert-a
                   name: certificate-client-cert-a
                   readOnly: true
@@ -1450,7 +1450,7 @@ manifest should match snapshot with mutual TLS:
             - hostPath:
                 path: /run/docker/runtime-runc/moby
                 type: Directory
-              name: runtime-runc-root
+              name: ociruntime-root
             - name: certificate-client-cert-a
               secret:
                 optional: false
@@ -1585,7 +1585,7 @@ manifest should match snapshot with mutual TLS using containerPaths:
                 - mountPath: /run/containerd/containerd.sock
                   name: runtime-socket
                 - mountPath: /run/containerd/runc/k8s.io
-                  name: runtime-runc-root
+                  name: ociruntime-root
           hostPID: true
           securityContext:
             runAsNonRoot: true
@@ -1606,7 +1606,7 @@ manifest should match snapshot with mutual TLS using containerPaths:
             - hostPath:
                 path: /run/containerd/runc/k8s.io
                 type: Directory
-              name: runtime-runc-root
+              name: ociruntime-root
       updateStrategy:
         rollingUpdate:
           maxUnavailable: 1
@@ -1732,7 +1732,7 @@ manifest should match snapshot with platform gke-autopilot:
                 - mountPath: /run/containerd/containerd.sock
                   name: runtime-socket
                 - mountPath: /run/containerd/runc/k8s.io
-                  name: runtime-runc-root
+                  name: ociruntime-root
           hostPID: true
           securityContext:
             runAsNonRoot: true
@@ -1753,7 +1753,7 @@ manifest should match snapshot with platform gke-autopilot:
             - hostPath:
                 path: /run/containerd/runc/k8s.io
                 type: Directory
-              name: runtime-runc-root
+              name: ociruntime-root
       updateStrategy:
         rollingUpdate:
           maxUnavailable: 1
@@ -1874,7 +1874,7 @@ manifest should match snapshot with podSecurityContext:
                 - mountPath: /run/containerd/containerd.sock
                   name: runtime-socket
                 - mountPath: /run/containerd/runc/k8s.io
-                  name: runtime-runc-root
+                  name: ociruntime-root
           hostPID: true
           securityContext:
             runAsNonRoot: true
@@ -1896,7 +1896,7 @@ manifest should match snapshot with podSecurityContext:
             - hostPath:
                 path: /run/containerd/runc/k8s.io
                 type: Directory
-              name: runtime-runc-root
+              name: ociruntime-root
       updateStrategy:
         rollingUpdate:
           maxUnavailable: 1
@@ -2017,7 +2017,7 @@ manifest should match snapshot with priority class:
                 - mountPath: /run/containerd/containerd.sock
                   name: runtime-socket
                 - mountPath: /run/containerd/runc/k8s.io
-                  name: runtime-runc-root
+                  name: ociruntime-root
           hostPID: true
           priorityClassName: my-priority-class
           securityContext:
@@ -2039,7 +2039,7 @@ manifest should match snapshot with priority class:
             - hostPath:
                 path: /run/containerd/runc/k8s.io
                 type: Directory
-              name: runtime-runc-root
+              name: ociruntime-root
       updateStrategy:
         rollingUpdate:
           maxUnavailable: 1
@@ -2160,7 +2160,7 @@ manifest should match snapshot with update strategy:
                 - mountPath: /run/containerd/containerd.sock
                   name: runtime-socket
                 - mountPath: /run/containerd/runc/k8s.io
-                  name: runtime-runc-root
+                  name: ociruntime-root
           hostPID: true
           securityContext:
             runAsNonRoot: true
@@ -2181,7 +2181,7 @@ manifest should match snapshot with update strategy:
             - hostPath:
                 path: /run/containerd/runc/k8s.io
                 type: Directory
-              name: runtime-runc-root
+              name: ociruntime-root
       updateStrategy:
         rollingUpdate:
           maxUnavailable: 5
