@@ -1,3 +1,5 @@
+// Copyright 2025 steadybit GmbH. All rights reserved.
+
 package extcontainer
 
 import (
@@ -24,11 +26,11 @@ func Test_stressIo(t *testing.T) {
 				"mbytes_per_worker": 768,
 			},
 			want: stress.Opts{
-				HddWorkers: extutil.Ptr(1),
-				HddBytes:   "768m",
-				IoWorkers:  extutil.Ptr(1),
-				TempPath:   "/somepath",
-				Timeout:    1000000000,
+				HddWorkers:   extutil.Ptr(1),
+				HddBytes:     "768m",
+				IomixWorkers: extutil.Ptr(1),
+				TempPath:     "/somepath",
+				Timeout:      1000000000,
 			},
 		},
 		{
@@ -41,9 +43,9 @@ func Test_stressIo(t *testing.T) {
 				"mode":              "flush",
 			},
 			want: stress.Opts{
-				IoWorkers: extutil.Ptr(1),
-				TempPath:  "/somepath",
-				Timeout:   1000000000,
+				IomixWorkers: extutil.Ptr(1),
+				TempPath:     "/somepath",
+				Timeout:      1000000000,
 			},
 		},
 		{
