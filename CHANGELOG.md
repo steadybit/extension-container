@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.5.0
+
+ - run steadybit sidecar containers using crun
+ - support crun on openshift >= 4.18
+ - use stressng --iomix (instead of --io) to stress io
+
 ## v1.4.12
 
 - If stress/diskfill/memfill exits unexpetedly report this as error and not as failure
