@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.5.1
+ - Add STEADYBIT_EXTENSTION_DIG_TIMEOUT
+ - Treat dns answers case insensitive
+
 ## v1.5.0
 
  - run steadybit sidecar containers using crun
