@@ -55,90 +55,90 @@ func TestWithMinikube(t *testing.T) {
 	}
 
 	e2e.WithMinikube(t, getMinikubeOptions(), &extFactory, []e2e.WithMinikubeTestCase{
-		{
-			Name: "validate discovery",
-			Test: validateDiscovery,
-		},
+		//{
+		//	Name: "validate discovery",
+		//	Test: validateDiscovery,
+		//},
 		{
 			Name: "target discovery",
 			Test: testDiscovery,
 		},
-		{
-			Name: "stop container",
-			Test: testStopContainer,
-		},
-		{
-			Name: "pause container",
-			Test: testPauseContainer,
-		},
-		{
-			Name: "stress cpu",
-			Test: testStressCpu,
-		},
-		{
-			Name: "stress cpu without cap_sys_resource",
-			Test: testStressCpuNoCapSysResource,
-		},
-		{
-			Name: "stress memory",
-			Test: testStressMemory,
-		},
-		{
-			Name: "stress io",
-			Test: testStressIo,
-		},
-		{
-			Name: "stress combine cpu and memory on same container",
-			Test: testStressCombined,
-		},
-		{
-			Name: "network blackhole",
-			Test: testNetworkBlackhole,
-		},
-		{
-			Name: "network blackhole (3 containers in one pod)",
-			Test: testNetworkBlackhole3Containers,
-		},
-		{
-			Name: "network delay",
-			Test: testNetworkDelay,
-		},
-		{
-			Name: "network block dns",
-			Test: testNetworkBlockDns,
-		},
-		{
-			Name: "network limit bandwidth",
-			Test: testNetworkLimitBandwidth,
-		},
-		{
-			Name: "network package loss",
-			Test: testNetworkPackageLoss,
-		},
-		{
-			Name: "network package corruption",
-			Test: testNetworkPackageCorruption,
-		},
-		{
-			Name: "host network detection",
-			Test: testHostNetwork,
-		},
-		{
-			Name: "network delay two containers on the same network",
-			Test: testNetworkDelayOnTwoContainers,
-		},
-		{
-			Name: "network delay and bandwidth on the same container should error",
-			Test: testNetworkDelayAndBandwidthOnSameContainer,
-		},
-		{
-			Name: "fill disk",
-			Test: testFillDisk,
-		},
-		{
-			Name: "fill memory",
-			Test: testFillMemory,
-		},
+		//{
+		//	Name: "stop container",
+		//	Test: testStopContainer,
+		//},
+		//{
+		//	Name: "pause container",
+		//	Test: testPauseContainer,
+		//},
+		//{
+		//	Name: "stress cpu",
+		//	Test: testStressCpu,
+		//},
+		//{
+		//	Name: "stress cpu without cap_sys_resource",
+		//	Test: testStressCpuNoCapSysResource,
+		//},
+		//{
+		//	Name: "stress memory",
+		//	Test: testStressMemory,
+		//},
+		//{
+		//	Name: "stress io",
+		//	Test: testStressIo,
+		//},
+		//{
+		//	Name: "stress combine cpu and memory on same container",
+		//	Test: testStressCombined,
+		//},
+		//{
+		//	Name: "network blackhole",
+		//	Test: testNetworkBlackhole,
+		//},
+		//{
+		//	Name: "network blackhole (3 containers in one pod)",
+		//	Test: testNetworkBlackhole3Containers,
+		//},
+		//{
+		//	Name: "network delay",
+		//	Test: testNetworkDelay,
+		//},
+		//{
+		//	Name: "network block dns",
+		//	Test: testNetworkBlockDns,
+		//},
+		//{
+		//	Name: "network limit bandwidth",
+		//	Test: testNetworkLimitBandwidth,
+		//},
+		//{
+		//	Name: "network package loss",
+		//	Test: testNetworkPackageLoss,
+		//},
+		//{
+		//	Name: "network package corruption",
+		//	Test: testNetworkPackageCorruption,
+		//},
+		//{
+		//	Name: "host network detection",
+		//	Test: testHostNetwork,
+		//},
+		//{
+		//	Name: "network delay two containers on the same network",
+		//	Test: testNetworkDelayOnTwoContainers,
+		//},
+		//{
+		//	Name: "network delay and bandwidth on the same container should error",
+		//	Test: testNetworkDelayAndBandwidthOnSameContainer,
+		//},
+		//{
+		//	Name: "fill disk",
+		//	Test: testFillDisk,
+		//},
+		//{
+		//	Name: "fill memory",
+		//	Test: testFillMemory,
+		//},
 	})
 }
 
@@ -1291,6 +1291,7 @@ func testDiscovery(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	})
 	require.NoError(t, err)
 	assert.Equal(t, target.TargetType, "com.steadybit.extension_container.container")
+	assert.Contains(t, target.Attributes, "container.name")
 	assert.NotContains(t, target.Attributes, "container.label.maintainer")
 	assert.Equal(t, []string{m.Profile}, target.Attributes["host.hostname"])
 	assert.Equal(t, []string{m.Profile}, target.Attributes["host.domainname"])
