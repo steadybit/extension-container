@@ -52,7 +52,7 @@ jobs:
           retention-days: 3
 
   extension-ci:
-    uses: steadybit/extension-kit/.github/workflows/reusable-extension-ci.yml@main
+    uses: steadybit/extension-kit/.github/workflows/reusable-extension-ci.yml@main # NOSONAR githubactions:S7637 - our own action
     needs: [e2e-tests]
     with:
       go_version: '1.24'
