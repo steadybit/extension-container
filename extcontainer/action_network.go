@@ -7,6 +7,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
+	"slices"
+	"strings"
+
 	"github.com/google/uuid"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/rs/zerolog/log"
@@ -18,9 +22,6 @@ import (
 	"github.com/steadybit/extension-container/extcontainer/container/types"
 	"github.com/steadybit/extension-kit"
 	"github.com/steadybit/extension-kit/extutil"
-	"net"
-	"slices"
-	"strings"
 )
 
 type networkOptsProvider func(ctx context.Context, sidecar network.SidecarOpts, request action_kit_api.PrepareActionRequestBody) (network.Opts, action_kit_api.Messages, error)
@@ -294,11 +295,15 @@ func mapToNetworkFilter(ctx context.Context, r ociruntime.OciRuntime, sidecar ne
 		i.Comment = "parameters"
 	}
 
+	slices.SortFunc(includes, network.NetWithPortRange.Compare)
+
 	excludes, err := toExcludes(restrictedEndpoints)
 	if err != nil {
 		return network.Filter{}, nil, err
 	}
 	excludes = append(excludes, network.ComputeExcludesForOwnIpAndPorts(config.Config.Port, config.Config.HealthPort)...)
+
+	slices.SortFunc(excludes, network.NetWithPortRange.Compare)
 
 	var messages []action_kit_api.Message
 	excludes, condensed := condenseExcludes(excludes)
