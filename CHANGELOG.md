@@ -1,5 +1,8 @@
 # Changelog
 
+## v1.5.2
+ - Update dependencies
+
 ## v1.5.1
  - Add STEADYBIT_EXTENSTION_DIG_TIMEOUT
  - Treat dns answers case insensitive
