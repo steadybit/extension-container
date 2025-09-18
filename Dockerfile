@@ -42,7 +42,7 @@ RUN curl --proto "=https" -sfL https://github.com/containers/crun/releases/downl
 ##
 ## Runtime
 ##
-FROM debian:bookworm-slim
+FROM debian:13-slim
 
 ARG VERSION=unknown
 ARG REVISION=unknown
