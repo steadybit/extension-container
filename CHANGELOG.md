@@ -1,17 +1,24 @@
 # Changelog
 
+## v1.5.3
+
+- Correctly reference named network namespace in ip netns exec calls
+- Update dependencies
+
 ## v1.5.2
+
  - Update dependencies
 
 ## v1.5.1
+
  - Add STEADYBIT_EXTENSTION_DIG_TIMEOUT
  - Treat dns answers case insensitive
 
 ## v1.5.0
 
- - run steadybit sidecar containers using crun
- - support crun on openshift >= 4.18
- - use stressng --iomix (instead of --io) to stress io
+ - Run steadybit sidecar containers using crun
+ - Support crun on openshift >= 4.18
+ - Use stressng --iomix (instead of --io) to stress io
 
 ## v1.4.12
 
