@@ -44,7 +44,7 @@ jobs:
           env "E2E_RUNTIMES=${{ matrix.e2e-runtime }}" make e2e-test
 
       - name: Upload test coverage
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: e2e-coverage-${{ matrix.e2e-runtime }}
           path: e2e/e2e-coverage-*.out
