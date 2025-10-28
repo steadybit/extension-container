@@ -56,15 +56,6 @@ func getNetworkDelayDescription() action_kit_api.ActionDescription {
 				Order:        extutil.Ptr(1),
 			},
 			action_kit_api.ActionParameter{
-				Name:         "networkDelayTcpPshOnly",
-				Label:        "TCP Data Packets Only",
-				Description:  extutil.Ptr("Delay only TCP data packets (PSH flag heuristic). UDP is not delayed."),
-				Type:         action_kit_api.ActionParameterTypeBoolean,
-				DefaultValue: extutil.Ptr("false"),
-				Required:     extutil.Ptr(true),
-				Order:        extutil.Ptr(3),
-			},
-			action_kit_api.ActionParameter{
 				Name:         "networkDelayJitter",
 				Label:        "Jitter",
 				Description:  extutil.Ptr("Add random +/-30% jitter to network delay?"),
@@ -72,6 +63,15 @@ func getNetworkDelayDescription() action_kit_api.ActionDescription {
 				DefaultValue: extutil.Ptr("false"),
 				Required:     extutil.Ptr(true),
 				Order:        extutil.Ptr(2),
+			},
+			action_kit_api.ActionParameter{
+				Name:         "networkDelayTcpPshOnly",
+				Label:        "TCP Data Packets Only",
+				Description:  extutil.Ptr("Delay only TCP data packets (PSH flag heuristic). UDP is not delayed."),
+				Type:         action_kit_api.ActionParameterTypeBoolean,
+				DefaultValue: extutil.Ptr("false"),
+				Required:     extutil.Ptr(true),
+				Order:        extutil.Ptr(3),
 			},
 			action_kit_api.ActionParameter{
 				Name:        "networkInterface",
