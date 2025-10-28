@@ -1,9 +1,9 @@
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2025 Steadybit GmbH
+
 /*
  * Copyright 2024 steadybit GmbH. All rights reserved.
  */
-
-// SPDX-License-Identifier: MIT
-// SPDX-FileCopyrightText: 2023 Steadybit GmbH
 
 package e2e
 
@@ -245,7 +245,7 @@ func testNetworkDelay(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			Hostname     []string `json:"hostname"`
 			Port         []string `json:"port"`
 			NetInterface []string `json:"networkInterface"`
-			TcpPshOnly   bool     `json:"networkDelayTcpPshOnly"`
+			TcpPshOnly   bool     `json:"tcpDataPacketsOnly"`
 		}{
 			Duration:     20000,
 			Delay:        200,
@@ -353,7 +353,7 @@ func testNetworkDelayTcpPsh(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			Hostname     []string `json:"hostname"`
 			Port         []string `json:"port"`
 			NetInterface []string `json:"networkInterface"`
-			TcpPshOnly   bool     `json:"networkDelayTcpPshOnly"`
+			TcpPshOnly   bool     `json:"tcpDataPacketsOnly"`
 		}{
 			Duration:     20000,
 			Delay:        500,

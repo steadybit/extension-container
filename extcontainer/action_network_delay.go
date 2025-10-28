@@ -65,13 +65,17 @@ func getNetworkDelayDescription() action_kit_api.ActionDescription {
 				Order:        extutil.Ptr(2),
 			},
 			action_kit_api.ActionParameter{
-				Name:         "networkDelayTcpPshOnly",
+				Name:         "tcpDataPacketsOnly",
 				Label:        "TCP Data Packets Only",
-				Description:  extutil.Ptr("Delay only TCP data packets (PSH flag heuristic). UDP is not delayed."),
+				Description:  extutil.Ptr("[beta] Delay only TCP data packets (PSH flag heuristic). UDP is not delayed."),
 				Type:         action_kit_api.ActionParameterTypeBoolean,
 				DefaultValue: extutil.Ptr("false"),
 				Required:     extutil.Ptr(true),
-				Order:        extutil.Ptr(3),
+				Hint: &action_kit_api.ActionHint{
+					Type:    action_kit_api.HintInfo,
+					Content: `When you observe the actual delay being a multiple of the configured delay, you might choose this option to avoid delaying the TCP handshake.`,
+				},
+				Order: extutil.Ptr(3),
 			},
 			action_kit_api.ActionParameter{
 				Name:        "networkInterface",
@@ -95,7 +99,7 @@ func delay(r ociruntime.OciRuntime) networkOptsProvider {
 			jitter = delay * 30 / 100
 		}
 
-		tcpPshOnly := extutil.ToBool(request.Config["networkDelayTcpPshOnly"])
+		tcpPshOnly := extutil.ToBool(request.Config["tcpDataPacketsOnly"])
 
 		filter, messages, err := mapToNetworkFilter(ctx, r, sidecar, request.Config, getRestrictedEndpoints(request))
 		if err != nil {
