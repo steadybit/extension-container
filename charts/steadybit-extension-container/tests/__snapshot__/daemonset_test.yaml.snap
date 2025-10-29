@@ -16,7 +16,7 @@ manifest should match snapshot using containerd and using resource limits:
       template:
         metadata:
           annotations:
-            container.apparmor.security.beta.kubernetes.io/steadybit-extension-container: unconfined
+            container.apparmor.security.beta.kubernetes.io/extension: unconfined
             oneagent.dynatrace.com/injection: "false"
             steadybit.com/extension-auto-discovery: |
               {"extensions":[{"port":8086,"protocol":"http","types":["ACTION","DISCOVERY"]}]}
@@ -158,7 +158,7 @@ manifest should match snapshot using crio using podAnnotations and Labels:
       template:
         metadata:
           annotations:
-            container.apparmor.security.beta.kubernetes.io/steadybit-extension-container: unconfined
+            container.apparmor.security.beta.kubernetes.io/extension: unconfined
             oneagent.dynatrace.com/injection: "false"
             some-annotation: some-annotation-value
             steadybit.com/extension-auto-discovery: |
@@ -302,7 +302,7 @@ manifest should match snapshot using docker:
       template:
         metadata:
           annotations:
-            container.apparmor.security.beta.kubernetes.io/steadybit-extension-container: unconfined
+            container.apparmor.security.beta.kubernetes.io/extension: unconfined
             oneagent.dynatrace.com/injection: "false"
             steadybit.com/extension-auto-discovery: |
               {"extensions":[{"port":8086,"protocol":"http","types":["ACTION","DISCOVERY"]}]}
@@ -444,7 +444,7 @@ manifest should match snapshot with TLS:
       template:
         metadata:
           annotations:
-            container.apparmor.security.beta.kubernetes.io/steadybit-extension-container: unconfined
+            container.apparmor.security.beta.kubernetes.io/extension: unconfined
             oneagent.dynatrace.com/injection: "false"
             steadybit.com/extension-auto-discovery: |
               {"extensions":[{"port":8086,"protocol":"https","types":["ACTION","DISCOVERY"]}]}
@@ -740,7 +740,7 @@ manifest should match snapshot with different containerPorts:
       template:
         metadata:
           annotations:
-            container.apparmor.security.beta.kubernetes.io/steadybit-extension-container: unconfined
+            container.apparmor.security.beta.kubernetes.io/extension: unconfined
             oneagent.dynatrace.com/injection: "false"
             steadybit.com/extension-auto-discovery: |
               {"extensions":[{"port":9090,"protocol":"http","types":["ACTION","DISCOVERY"]}]}
@@ -882,7 +882,7 @@ manifest should match snapshot with discover all deployments:
       template:
         metadata:
           annotations:
-            container.apparmor.security.beta.kubernetes.io/steadybit-extension-container: unconfined
+            container.apparmor.security.beta.kubernetes.io/extension: unconfined
             oneagent.dynatrace.com/injection: "false"
             steadybit.com/extension-auto-discovery: |
               {"extensions":[{"port":8086,"protocol":"http","types":["ACTION","DISCOVERY"]}]}
@@ -1026,7 +1026,7 @@ manifest should match snapshot with extra env vars:
       template:
         metadata:
           annotations:
-            container.apparmor.security.beta.kubernetes.io/steadybit-extension-container: unconfined
+            container.apparmor.security.beta.kubernetes.io/extension: unconfined
             oneagent.dynatrace.com/injection: "false"
             steadybit.com/extension-auto-discovery: |
               {"extensions":[{"port":8086,"protocol":"http","types":["ACTION","DISCOVERY"]}]}
@@ -1176,7 +1176,7 @@ manifest should match snapshot with extra labels:
       template:
         metadata:
           annotations:
-            container.apparmor.security.beta.kubernetes.io/steadybit-extension-container: unconfined
+            container.apparmor.security.beta.kubernetes.io/extension: unconfined
             oneagent.dynatrace.com/injection: "false"
             steadybit.com/extension-auto-discovery: |
               {"extensions":[{"port":8086,"protocol":"http","types":["ACTION","DISCOVERY"]}]}
@@ -1319,7 +1319,7 @@ manifest should match snapshot with mutual TLS:
       template:
         metadata:
           annotations:
-            container.apparmor.security.beta.kubernetes.io/steadybit-extension-container: unconfined
+            container.apparmor.security.beta.kubernetes.io/extension: unconfined
             oneagent.dynatrace.com/injection: "false"
             steadybit.com/extension-auto-discovery: |
               {"extensions":[{"port":8086,"protocol":"https","types":["ACTION","DISCOVERY"]}]}
@@ -1481,7 +1481,7 @@ manifest should match snapshot with mutual TLS using containerPaths:
       template:
         metadata:
           annotations:
-            container.apparmor.security.beta.kubernetes.io/steadybit-extension-container: unconfined
+            container.apparmor.security.beta.kubernetes.io/extension: unconfined
             oneagent.dynatrace.com/injection: "false"
             steadybit.com/extension-auto-discovery: |
               {"extensions":[{"port":8086,"protocol":"https","types":["ACTION","DISCOVERY"]}]}
@@ -1630,7 +1630,7 @@ manifest should match snapshot with platform gke-autopilot:
         metadata:
           annotations:
             autopilot.gke.io/no-connect: "true"
-            container.apparmor.security.beta.kubernetes.io/steadybit-extension-container: unconfined
+            container.apparmor.security.beta.kubernetes.io/extension: unconfined
             oneagent.dynatrace.com/injection: "false"
             steadybit.com/extension-auto-discovery: |
               {"extensions":[{"port":8086,"protocol":"http","types":["ACTION","DISCOVERY"]}]}
@@ -1776,7 +1776,7 @@ manifest should match snapshot with podSecurityContext:
       template:
         metadata:
           annotations:
-            container.apparmor.security.beta.kubernetes.io/steadybit-extension-container: unconfined
+            container.apparmor.security.beta.kubernetes.io/extension: unconfined
             oneagent.dynatrace.com/injection: "false"
             steadybit.com/extension-auto-discovery: |
               {"extensions":[{"port":8086,"protocol":"http","types":["ACTION","DISCOVERY"]}]}
@@ -1919,7 +1919,7 @@ manifest should match snapshot with priority class:
       template:
         metadata:
           annotations:
-            container.apparmor.security.beta.kubernetes.io/steadybit-extension-container: unconfined
+            container.apparmor.security.beta.kubernetes.io/extension: unconfined
             oneagent.dynatrace.com/injection: "false"
             steadybit.com/extension-auto-discovery: |
               {"extensions":[{"port":8086,"protocol":"http","types":["ACTION","DISCOVERY"]}]}
@@ -2062,7 +2062,7 @@ manifest should match snapshot with update strategy:
       template:
         metadata:
           annotations:
-            container.apparmor.security.beta.kubernetes.io/steadybit-extension-container: unconfined
+            container.apparmor.security.beta.kubernetes.io/extension: unconfined
             oneagent.dynatrace.com/injection: "false"
             steadybit.com/extension-auto-discovery: |
               {"extensions":[{"port":8086,"protocol":"http","types":["ACTION","DISCOVERY"]}]}
