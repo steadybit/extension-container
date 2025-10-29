@@ -1673,7 +1673,7 @@ func testFillMemory(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 
 func requireAllSidecarsCleanedUp(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	t.Helper()
-	out, err := m.PodExec(e.Pod, "steadybit-extension-container", "ls", "/tmp/steadybit/containers")
+	out, err := m.PodExec(e.Pod, "extension", "ls", "/tmp/steadybit/containers")
 	if strings.Contains(out, "No such file or directory") {
 		return
 	}

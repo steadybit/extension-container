@@ -65,7 +65,7 @@ spec:
             limits:
               memory: {{ .Values.resources.limits.memory }}
               cpu: {{ .Values.resources.limits.cpu }}
-          name: steadybit-extension-container
+          name: {{ if eq .Values.platform "gke-autopilot" }}steadybit-extension-container{{ else }}extension{{ end }}
           {{if eq .Values.platform "gke-autopilot" -}}
           args:
             - "-disallowHostNetwork"
