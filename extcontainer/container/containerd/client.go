@@ -7,6 +7,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	"strings"
+	"syscall"
+	"time"
+
 	"github.com/containerd/containerd"
 	containersapi "github.com/containerd/containerd/api/services/containers/v1"
 	tasksapi "github.com/containerd/containerd/api/services/tasks/v1"
@@ -16,10 +21,6 @@ import (
 	"github.com/steadybit/extension-container/extcontainer/container/types"
 	"google.golang.org/grpc/codes"
 	grpcstatus "google.golang.org/grpc/status"
-	"io"
-	"strings"
-	"syscall"
-	"time"
 )
 
 type client struct {
