@@ -35,7 +35,7 @@ jobs:
 
       - uses: actions/setup-go@v6
         with:
-          go-version: '1.24'
+          go-version: '^1.25.4'
 
       - name: Audit
         run: |
@@ -55,7 +55,7 @@ jobs:
     uses: steadybit/extension-kit/.github/workflows/reusable-extension-ci.yml@main # NOSONAR githubactions:S7637 - our own action
     needs: [e2e-tests]
     with:
-      go_version: '1.24'
+      go_version: '^1.25.4'
       build_linux_packages: true
       force_push_docker_image: false
       VERSION_BUMPER_APPID: ${{ vars.GH_APP_STEADYBIT_APP_ID }}
