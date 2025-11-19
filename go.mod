@@ -2,6 +2,9 @@ module github.com/steadybit/extension-container
 
 go 1.25.3
 
+//https://github.com/containerd/containerd/issues/12493
+replace github.com/opencontainers/runtime-spec => github.com/opencontainers/runtime-spec v1.2.1
+
 require (
 	github.com/KimMachineGun/automemlimit v0.7.5
 	github.com/containerd/containerd v1.7.29
