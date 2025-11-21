@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.5.7
+
+- Update dependencies (runc and crun)
+
 ## v1.5.6
 
 - Update dependencies
