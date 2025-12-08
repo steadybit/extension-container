@@ -1,13 +1,6 @@
 vulnerabilities:
-  - id: CVE-2025-58183
-    statement: Wait for a new runc version
-    expired_at: 2025-12-31
-  - id: CVE-2025-58186
-    statement: Wait for a new runc version
-    expired_at: 2025-12-31
-  - id: CVE-2025-58187
-    statement: Wait for a new runc version
-    expired_at: 2025-12-31
-  - id: CVE-2025-58188
+  - id: CVE-2025-61729
+    paths:
+      - usr/sbin/runc
     statement: Wait for a new runc version
     expired_at: 2025-12-31
