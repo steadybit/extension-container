@@ -7,7 +7,7 @@ replace github.com/opencontainers/runtime-spec => github.com/opencontainers/runt
 
 require (
 	github.com/KimMachineGun/automemlimit v0.7.5
-	github.com/containerd/containerd v1.7.29
+	github.com/containerd/containerd v1.7.30
 	github.com/containerd/containerd/api v1.10.0
 	github.com/containerd/errdefs v1.0.0
 	github.com/containerd/errdefs/pkg v0.3.0
