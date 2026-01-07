@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
 	"github.com/steadybit/action-kit/go/action_kit_commons/network"
 	"github.com/steadybit/action-kit/go/action_kit_commons/ociruntime"
@@ -52,7 +53,10 @@ func blackhole(r ociruntime.OciRuntime) networkOptsProvider {
 			return nil, nil, err
 		}
 
-		return &network.BlackholeOpts{Filter: filter}, messages, nil
+		return &network.BlackholeOpts{
+			Filter:           filter,
+			ExecutionContext: mapToExecutionContext(request),
+		}, messages, nil
 	}
 }
 

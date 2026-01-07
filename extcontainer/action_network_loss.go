@@ -87,9 +87,10 @@ func packageLoss(r ociruntime.OciRuntime) networkOptsProvider {
 		}
 
 		return &network.PackageLossOpts{
-			Filter:     filter,
-			Loss:       loss,
-			Interfaces: interfaces,
+			Filter:           filter,
+			Loss:             loss,
+			Interfaces:       interfaces,
+			ExecutionContext: mapToExecutionContext(request),
 		}, messages, nil
 	}
 }

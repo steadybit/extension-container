@@ -6,6 +6,7 @@ package extcontainer
 import (
 	"context"
 	"fmt"
+
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
 	"github.com/steadybit/action-kit/go/action_kit_commons/network"
 	"github.com/steadybit/action-kit/go/action_kit_commons/ociruntime"
@@ -70,7 +71,8 @@ func blockDns(_ ociruntime.OciRuntime) networkOptsProvider {
 		dnsPort := uint16(extutil.ToUInt(request.Config["dnsPort"]))
 
 		return &network.BlackholeOpts{
-			Filter: network.Filter{Include: network.NewNetWithPortRanges(network.NetAny, network.PortRange{From: dnsPort, To: dnsPort})},
+			Filter:           network.Filter{Include: network.NewNetWithPortRanges(network.NetAny, network.PortRange{From: dnsPort, To: dnsPort})},
+			ExecutionContext: mapToExecutionContext(request),
 		}, nil, nil
 	}
 }

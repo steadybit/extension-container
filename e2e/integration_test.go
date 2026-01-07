@@ -1507,11 +1507,17 @@ func testNetworkDelayOnTwoContainers(t *testing.T, m *e2e.Minikube, e *e2e.Exten
 		Delay:    200,
 	}
 
-	action, err := e.RunAction(fmt.Sprintf("%s.network_delay", extcontainer.BaseActionID), target, config, &action_kit_api.ExecutionContext{})
+	action, err := e.RunAction(fmt.Sprintf("%s.network_delay", extcontainer.BaseActionID), target, config, &action_kit_api.ExecutionContext{
+		ExperimentKey: extutil.Ptr("TEST-1"),
+		ExecutionId:   extutil.Ptr(12345),
+	})
 	defer func() { _ = action.Cancel() }()
 	require.NoError(t, err)
 
-	action2, err2 := e.RunAction(fmt.Sprintf("%s.network_delay", extcontainer.BaseActionID), target2, config, &action_kit_api.ExecutionContext{})
+	action2, err2 := e.RunAction(fmt.Sprintf("%s.network_delay", extcontainer.BaseActionID), target2, config, &action_kit_api.ExecutionContext{
+		ExperimentKey: extutil.Ptr("TEST-2"),
+		ExecutionId:   extutil.Ptr(6789),
+	})
 	defer func() { _ = action2.Cancel() }()
 	require.NoError(t, err2)
 

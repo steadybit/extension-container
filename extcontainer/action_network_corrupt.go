@@ -89,9 +89,10 @@ func corruptPackages(r ociruntime.OciRuntime) networkOptsProvider {
 		}
 
 		return &network.CorruptPackagesOpts{
-			Filter:     filter,
-			Corruption: corruption,
-			Interfaces: interfaces,
+			Filter:           filter,
+			ExecutionContext: mapToExecutionContext(request),
+			Corruption:       corruption,
+			Interfaces:       interfaces,
 		}, messages, nil
 	}
 }

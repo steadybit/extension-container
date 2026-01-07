@@ -117,11 +117,12 @@ func delay(r ociruntime.OciRuntime) networkOptsProvider {
 		}
 
 		return &network.DelayOpts{
-			Filter:     filter,
-			Delay:      delay,
-			Jitter:     jitter,
-			Interfaces: interfaces,
-			TcpPshOnly: tcpPshOnly,
+			Filter:           filter,
+			ExecutionContext: mapToExecutionContext(request),
+			Delay:            delay,
+			Jitter:           jitter,
+			Interfaces:       interfaces,
+			TcpPshOnly:       tcpPshOnly,
 		}, messages, nil
 	}
 }

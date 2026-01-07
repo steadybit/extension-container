@@ -292,8 +292,8 @@ github.com/spf13/pflag v1.0.10/go.mod h1:McXfInJRrz4CZXVZOBLb0bTZqETkiAhM9Iw0y3A
 github.com/spkg/bom v0.0.0-20160624110644-59b7046e48ad/go.mod h1:qLr4V1qq6nMqFKkMo8ZTx3f+BZEkzsRUY10Xsm2mwU0=
 github.com/steadybit/action-kit/go/action_kit_api/v2 v2.10.4 h1:JE8LeEiv1kZ9UKKFj8gxgl5CQpFuTkW71PUa5Nl+dv4=
 github.com/steadybit/action-kit/go/action_kit_api/v2 v2.10.4/go.mod h1:D+Mg/shU0nd6aiYlzHUiddMFgTspGr3Lv0J9BX6QpXI=
-github.com/steadybit/action-kit/go/action_kit_commons v1.5.11 h1:8Ik1IUgUyXSQAEzVpTLPvVQ26mzGrbBEd1TgJIDz+xo=
-github.com/steadybit/action-kit/go/action_kit_commons v1.5.11/go.mod h1:mOsKCoEKhDTm08r3FAsSQkif/R1vCAQgk2eHsu1K680=
+github.com/steadybit/action-kit/go/action_kit_commons v1.5.12 h1:pGTVWkWbA58LkJ+F0EOGvVWg4NCeRiqEamnhvRquU2g=
+github.com/steadybit/action-kit/go/action_kit_commons v1.5.12/go.mod h1:RrPFxUeKOsZudaxjzEBKdAYOz15NC5WmK6sY9qL/0pU=
 github.com/steadybit/action-kit/go/action_kit_sdk v1.3.1 h1:c83hiU+RLWjqouWR9baiidmYcTtDTdRa5rkWKFvdbc8=
 github.com/steadybit/action-kit/go/action_kit_sdk v1.3.1/go.mod h1:DMMqDn4QNetxAoEXSpS7xF/vV+aD6YIDl/CgWOi5ii8=
 github.com/steadybit/action-kit/go/action_kit_test v1.4.4 h1:Ftslh3RXC1IgJV8jj5pAdTfMlqbn7bX9gBEFRu0+vUc=
@@ -401,8 +401,8 @@ golang.org/x/sys v0.0.0-20220715151400-c0bba94af5f8/go.mod h1:oPkhp1MJrh7nUepCBc
 golang.org/x/sys v0.0.0-20220811171246-fbc7d0a398ab/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 golang.org/x/sys v0.6.0/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 golang.org/x/sys v0.12.0/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
-golang.org/x/sys v0.38.0 h1:3yZWxaJjBmCWXqhN1qh02AkOnCQ1poK6oF+a7xWL6Gc=
-golang.org/x/sys v0.38.0/go.mod h1:OgkHotnGiDImocRcuBABYBEXf8A9a87e/uXjp9XT3ks=
+golang.org/x/sys v0.39.0 h1:CvCKL8MeisomCi6qNZ+wbb0DN9E5AATixKsvNtMoMFk=
+golang.org/x/sys v0.39.0/go.mod h1:OgkHotnGiDImocRcuBABYBEXf8A9a87e/uXjp9XT3ks=
 golang.org/x/term v0.37.0 h1:8EGAD0qCmHYZg6J17DvsMy9/wJ7/D/4pV/wfnld5lTU=
 golang.org/x/term v0.37.0/go.mod h1:5pB4lxRNYYVZuTLmy8oR2BH8dflOR+IbTYFD8fi3254=
 golang.org/x/text v0.3.0/go.mod h1:NqM8EUOU14njkJ3fqMW+pc6Ldnwhi/IjpwHt7yyuwOQ=
