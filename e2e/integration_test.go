@@ -1,9 +1,5 @@
 // SPDX-License-Identifier: MIT
-// SPDX-FileCopyrightText: 2025 Steadybit GmbH
-
-/*
- * Copyright 2024 steadybit GmbH. All rights reserved.
- */
+// SPDX-FileCopyrightText: 2026 Steadybit GmbH
 
 package e2e
 
@@ -143,6 +139,10 @@ func TestWithMinikube(t *testing.T) {
 		{
 			Name: "fill memory",
 			Test: testFillMemory,
+		},
+		{
+			Name: "fill memory with container stop",
+			Test: testFillMemoryWithContainerStop,
 		},
 	})
 }
@@ -1344,6 +1344,7 @@ func testPauseContainer(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	duration := end.Sub(start)
 	assert.True(t, duration >= 4*time.Second && duration < 5500*time.Millisecond, "container expected to be paused for ~5s but was paused for %s", duration)
 }
+
 func testStopContainer(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	nginx := e2e.Nginx{Minikube: m}
 	nginx2 := e2e.Nginx{Minikube: m}
@@ -1674,6 +1675,50 @@ func testFillMemory(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			e2e.AssertProcessNOTRunningInContainer(t, m, nginx.Pod, "nginx", "memfill")
 		})
 	}
+	requireAllSidecarsCleanedUp(t, m, e)
+}
+
+func testFillMemoryWithContainerStop(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
+	nginx := e2e.Nginx{Minikube: m}
+	err := nginx.Deploy("nginx-fill-mem-stop", func(p *acorev1.PodApplyConfiguration) {
+		p.Spec.Containers[0].Resources = &acorev1.ResourceRequirementsApplyConfiguration{
+			Limits: &corev1.ResourceList{
+				"memory": resource.MustParse("100Mi"),
+			},
+		}
+	})
+	require.NoError(t, err, "failed to create pod")
+
+	target, err := nginx.Target()
+	require.NoError(t, err)
+
+	config := struct {
+		Duration      int    `json:"duration"`
+		Size          int    `json:"size"`
+		Unit          string `json:"unit"`
+		Mode          string `json:"mode"`
+		FailOnOomKill bool   `json:"failOnOomKill"`
+	}{Duration: 60000, Size: 50, Unit: "%", Mode: "usage", FailOnOomKill: false}
+
+	action, err := e.RunAction(fmt.Sprintf("%s.fill_mem", extcontainer.BaseActionID), target, config, &action_kit_api.ExecutionContext{})
+	require.NoError(t, err)
+
+	e2e.AssertProcessRunningInContainer(t, m, nginx.Pod, "nginx", "memfill", false)
+
+	status, err := nginx.ContainerStatus()
+	require.NoError(t, err)
+	require.NotNil(t, status)
+
+	// Delete the pod while the attack is running
+	_ = nginx.Delete()
+
+	// Await status endpoint call
+	time.Sleep(5 * time.Second)
+
+	// The action stop should handle the missing container gracefully
+	err = action.Cancel()
+	require.NoError(t, err)
+
 	requireAllSidecarsCleanedUp(t, m, e)
 }
 
