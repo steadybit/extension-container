@@ -4,3 +4,16 @@ vulnerabilities:
       - usr/sbin/runc
     statement: Wait for a new runc version
     expired_at: 2026-03-01
+  - id: CVE-2025-61726
+    paths:
+      - usr/sbin/runc
+    statement: Wait for a new runc version
+    expired_at: 2026-03-01
+  - id: CVE-2025-61728
+    paths:
+      - usr/sbin/runc
+    statement: Wait for a new runc version
+    expired_at: 2026-03-01
+  - id: CVE-2026-0861
+    statement: Wait for new libc version in base image
+    expired_at: 2026-03-01
