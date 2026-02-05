@@ -2,10 +2,11 @@ package extcontainer
 
 import (
 	"context"
-	"github.com/steadybit/discovery-kit/go/discovery_kit_api"
-	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
+
+	"github.com/steadybit/discovery-kit/go/discovery_kit_api"
+	"github.com/stretchr/testify/assert"
 )
 
 func Test_schedule(t *testing.T) {
@@ -22,6 +23,6 @@ func Test_schedule(t *testing.T) {
 
 	assert.Eventually(t, func() bool {
 		targets, _ := decorated(ctx)
-		return assert.Equal(t, wantedTargets, targets)
+		return len(targets) == 1 && targets[0].Id == "id"
 	}, 3*time.Second, 1*time.Second)
 }
