@@ -1,4 +1,4 @@
-// Copyright 2025 steadybit GmbH. All rights reserved.
+// Copyright 2026 steadybit GmbH. All rights reserved.
 
 package extcontainer
 
@@ -6,6 +6,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
+
 	"github.com/google/uuid"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
@@ -17,7 +19,6 @@ import (
 	"github.com/steadybit/extension-kit/extbuild"
 	"github.com/steadybit/extension-kit/extutil"
 	"golang.org/x/sync/syncmap"
-	"strings"
 )
 
 type fillDiskAction struct {
@@ -272,19 +273,18 @@ func (a *fillDiskAction) Stop(_ context.Context, state *FillDiskActionState) (*a
 	}, nil
 }
 
-func (a *fillDiskAction) stopFillDiskContainer(executionId uuid.UUID) error {
-	s, ok := a.diskfills.LoadAndDelete(executionId)
-	if !ok {
-		return errors.New("no diskfill container found")
-	}
-
-	return s.(diskfill.Diskfill).Stop()
-}
-
 func (a *fillDiskAction) fillDiskContainerExited(executionId uuid.UUID) (bool, error) {
 	s, ok := a.diskfills.Load(executionId)
 	if !ok {
 		return true, nil
 	}
 	return s.(diskfill.Diskfill).Exited()
+}
+
+func (a *fillDiskAction) stopFillDiskContainer(executionId uuid.UUID) error {
+	s, ok := a.diskfills.LoadAndDelete(executionId)
+	if !ok {
+		return errors.New("no diskfill container found")
+	}
+	return s.(diskfill.Diskfill).Stop()
 }

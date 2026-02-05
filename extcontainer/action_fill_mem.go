@@ -1,4 +1,4 @@
-// Copyright 2025 steadybit GmbH. All rights reserved.
+// Copyright 2026 steadybit GmbH. All rights reserved.
 
 package extcontainer
 
@@ -6,8 +6,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os/exec"
+	"strings"
+	"time"
+
 	"github.com/google/uuid"
 	"github.com/opencontainers/runtime-spec/specs-go"
+	"github.com/rs/zerolog/log"
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
 	"github.com/steadybit/action-kit/go/action_kit_commons/memfill"
 	"github.com/steadybit/action-kit/go/action_kit_commons/ociruntime"
@@ -17,9 +22,6 @@ import (
 	"github.com/steadybit/extension-kit/extbuild"
 	"github.com/steadybit/extension-kit/extutil"
 	"golang.org/x/sync/syncmap"
-	"os/exec"
-	"strings"
-	"time"
 )
 
 type fillMemoryAction struct {
@@ -202,7 +204,7 @@ func (a *fillMemoryAction) Start(_ context.Context, state *FillMemoryActionState
 	}, nil
 }
 
-func (a *fillMemoryAction) Status(_ context.Context, state *FillMemoryActionState) (*action_kit_api.StatusResult, error) {
+func (a *fillMemoryAction) Status(ctx context.Context, state *FillMemoryActionState) (*action_kit_api.StatusResult, error) {
 	exited, err := a.fillMemoryExited(state.ExecutionId)
 	if !exited {
 		return &action_kit_api.StatusResult{Completed: false}, nil
@@ -224,8 +226,26 @@ func (a *fillMemoryAction) Status(_ context.Context, state *FillMemoryActionStat
 	var exitErr *exec.ExitError
 	if errors.As(err, &exitErr) {
 		exitCode := exitErr.ExitCode()
+		log.Debug().Err(err).Msgf("memfill exited unexpectedly with exit code %d", exitCode)
+
 		if len(exitErr.Stderr) > 0 {
 			errMessage = fmt.Sprintf("%s\n%s", exitErr.Error(), string(exitErr.Stderr))
+		}
+
+		// memfill was stopped by a signal, which is ok if the target process is also gone.
+		if exitErr.ExitCode() == -1 {
+			_, err := getProcessInfoForContainer(ctx, a.ociRuntime, RemovePrefix(state.ContainerID), specs.PIDNamespace)
+			if err != nil {
+				return &action_kit_api.StatusResult{
+					Completed: true,
+					Messages: &[]action_kit_api.Message{
+						{
+							Level:   extutil.Ptr(action_kit_api.Warn),
+							Message: fmt.Sprintf("memfill exited unexpectedly, target container stopped: %s", errMessage),
+						},
+					},
+				}, nil
+			}
 		}
 
 		for _, ignore := range state.IgnoreExitCodes {

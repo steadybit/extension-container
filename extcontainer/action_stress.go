@@ -1,4 +1,4 @@
-// Copyright 2025 steadybit GmbH. All rights reserved.
+// Copyright 2026 steadybit GmbH. All rights reserved.
 
 package extcontainer
 
@@ -6,6 +6,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os/exec"
+	"strings"
+
 	"github.com/google/uuid"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
@@ -16,8 +19,6 @@ import (
 	"github.com/steadybit/extension-kit"
 	"github.com/steadybit/extension-kit/extutil"
 	"golang.org/x/sync/syncmap"
-	"os/exec"
-	"strings"
 )
 
 type stressOptsProvider func(request action_kit_api.PrepareActionRequestBody) (stress.Opts, error)
@@ -124,7 +125,7 @@ func (a *stressAction) Start(ctx context.Context, state *StressActionState) (*ac
 	}, nil
 }
 
-func (a *stressAction) Status(_ context.Context, state *StressActionState) (*action_kit_api.StatusResult, error) {
+func (a *stressAction) Status(ctx context.Context, state *StressActionState) (*action_kit_api.StatusResult, error) {
 	exited, err := a.stressExited(state.ExecutionId)
 	if !exited {
 		return &action_kit_api.StatusResult{Completed: false}, nil
@@ -136,7 +137,7 @@ func (a *stressAction) Status(_ context.Context, state *StressActionState) (*act
 			Messages: &[]action_kit_api.Message{
 				{
 					Level:   extutil.Ptr(action_kit_api.Info),
-					Message: fmt.Sprintf("Stessing container %s stopped", state.TargetLabel),
+					Message: fmt.Sprintf("Stressing container %s stopped", state.TargetLabel),
 				},
 			},
 		}, nil
@@ -149,6 +150,22 @@ func (a *stressAction) Status(_ context.Context, state *StressActionState) (*act
 		exitCode := exitErr.ExitCode()
 		if len(exitErr.Stderr) > 0 {
 			errMessage = fmt.Sprintf("%s\n%s", exitErr.Error(), string(exitErr.Stderr))
+		}
+
+		// stress-ng was stopped by a signal, which is ok if the target process is also gone.
+		if exitErr.ExitCode() == -1 {
+			_, err := getProcessInfoForContainer(ctx, a.ociRuntime, RemovePrefix(state.ContainerID), specs.PIDNamespace)
+			if err != nil {
+				return &action_kit_api.StatusResult{
+					Completed: true,
+					Messages: &[]action_kit_api.Message{
+						{
+							Level:   extutil.Ptr(action_kit_api.Warn),
+							Message: fmt.Sprintf("stress-ng exited unexpectedly, target container stopped: %s", errMessage),
+						},
+					},
+				}, nil
+			}
 		}
 
 		for _, ignore := range state.IgnoreExitCodes {
