@@ -137,6 +137,10 @@ func TestWithMinikube(t *testing.T) {
 			Test: testFillDisk,
 		},
 		{
+			Name: "fill disk oom kill",
+			Test: testFillDiskOomKill,
+		},
+		{
 			Name: "fill memory",
 			Test: testFillMemory,
 		},
@@ -1290,6 +1294,93 @@ func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			assert.Contains(t, out, "No such file or directory")
 		})
 	}
+	requireAllSidecarsCleanedUp(t, m, e)
+}
+
+func testFillDiskOomKill(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
+	tests := []struct {
+		name          string
+		failOnOomKill bool
+		wantedErr     *string
+	}{
+		{
+			name:          "should fail on oom kill",
+			failOnOomKill: true,
+			wantedErr:     extutil.Ptr("exit status 137"),
+		},
+		{
+			name:          "should not fail on oom kill",
+			failOnOomKill: false,
+			wantedErr:     nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			nginx := e2e.Nginx{Minikube: m}
+			medium := corev1.StorageMediumMemory
+			err := nginx.Deploy("nginx-fill-disk-oom", func(c *acorev1.PodApplyConfiguration) {
+				c.Spec.Containers[0].Resources = &acorev1.ResourceRequirementsApplyConfiguration{
+					Limits: &corev1.ResourceList{
+						"memory": resource.MustParse("100Mi"),
+					},
+				}
+				c.Spec.Containers[0].VolumeMounts = []acorev1.VolumeMountApplyConfiguration{
+					{
+						Name:      extutil.Ptr("memory-disk"),
+						MountPath: extutil.Ptr("/memory-disk"),
+					},
+				}
+				c.Spec.Volumes = []acorev1.VolumeApplyConfiguration{
+					{
+						Name: extutil.Ptr("memory-disk"),
+						VolumeSourceApplyConfiguration: acorev1.VolumeSourceApplyConfiguration{
+							EmptyDir: &acorev1.EmptyDirVolumeSourceApplyConfiguration{
+								Medium: &medium,
+							},
+						},
+					},
+				}
+			})
+			require.NoError(t, err, "failed to create pod")
+			defer func() { _ = nginx.Delete() }()
+
+			target, err := nginx.Target()
+			require.NoError(t, err)
+
+			config := struct {
+				Duration      int    `json:"duration"`
+				Path          string `json:"path"`
+				Size          int    `json:"size"`
+				Mode          string `json:"mode"`
+				BlockSize     int    `json:"blocksize"`
+				Method        string `json:"method"`
+				FailOnOomKill bool   `json:"failOnOomKill"`
+			}{
+				Duration:      60000,
+				Size:          200,
+				Mode:          string(diskfill.MBToFill),
+				Method:        string(diskfill.OverTime),
+				BlockSize:     5,
+				Path:          "/memory-disk",
+				FailOnOomKill: tt.failOnOomKill,
+			}
+
+			action, err := e.RunAction(fmt.Sprintf("%s.fill_disk", extcontainer.BaseActionID), target, config, &action_kit_api.ExecutionContext{})
+			require.NoError(t, err)
+
+			// Await status endpoint call
+			time.Sleep(5 * time.Second)
+
+			if tt.wantedErr == nil {
+				require.NoError(t, action.Cancel())
+			} else {
+				err = action.Wait()
+				require.ErrorContains(t, err, *tt.wantedErr)
+			}
+		})
+	}
+
 	requireAllSidecarsCleanedUp(t, m, e)
 }
 

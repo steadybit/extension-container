@@ -6,10 +6,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os/exec"
 	"strings"
 
 	"github.com/google/uuid"
 	"github.com/opencontainers/runtime-spec/specs-go"
+	"github.com/rs/zerolog/log"
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
 	"github.com/steadybit/action-kit/go/action_kit_commons/diskfill"
 	"github.com/steadybit/action-kit/go/action_kit_commons/ociruntime"
@@ -28,11 +30,12 @@ type fillDiskAction struct {
 }
 
 type FillDiskActionState struct {
-	ExecutionId  uuid.UUID
-	ContainerID  string
-	TargetLabel  string
-	Sidecar      diskfill.SidecarOpts
-	FillDiskOpts diskfill.Opts
+	ExecutionId     uuid.UUID
+	ContainerID     string
+	TargetLabel     string
+	Sidecar         diskfill.SidecarOpts
+	FillDiskOpts    diskfill.Opts
+	IgnoreExitCodes []int
 }
 
 // Make sure fillDiskAction implements all required interfaces
@@ -149,6 +152,15 @@ func (a *fillDiskAction) Describe() action_kit_api.ActionDescription {
 				MaxValue:     extutil.Ptr(1024),
 				Advanced:     extutil.Ptr(true),
 			},
+			{
+				Name:         "failOnOomKill",
+				Label:        "Fail on OOM Kill",
+				Description:  extutil.Ptr("Should an OOM kill be considered a failure?"),
+				Type:         action_kit_api.ActionParameterTypeBoolean,
+				DefaultValue: extutil.Ptr("true"),
+				Required:     extutil.Ptr(false),
+				Advanced:     extutil.Ptr(true),
+			},
 		},
 	}
 }
@@ -209,6 +221,10 @@ func (a *fillDiskAction) Prepare(ctx context.Context, state *FillDiskActionState
 	}
 	state.FillDiskOpts = opts
 	state.ExecutionId = request.ExecutionId
+
+	if !extutil.ToBool(request.Config["failOnOomKill"]) {
+		state.IgnoreExitCodes = []int{137}
+	}
 	return nil, nil
 }
 
@@ -244,18 +260,81 @@ func (a *fillDiskAction) Start(ctx context.Context, state *FillDiskActionState) 
 	}, nil
 }
 
-func (a *fillDiskAction) Status(_ context.Context, state *FillDiskActionState) (*action_kit_api.StatusResult, error) {
-	if _, err := a.fillDiskContainerExited(state.ExecutionId); err == nil {
+func (a *fillDiskAction) Status(ctx context.Context, state *FillDiskActionState) (*action_kit_api.StatusResult, error) {
+	exited, err := a.fillDiskContainerExited(state.ExecutionId)
+	if !exited {
 		return &action_kit_api.StatusResult{Completed: false}, nil
-	} else {
+	}
+
+	if err == nil {
 		return &action_kit_api.StatusResult{
 			Completed: true,
-			Error: &action_kit_api.ActionKitError{
-				Status: extutil.Ptr(action_kit_api.Errored),
-				Title:  fmt.Sprintf("Failed to fill dik on container: %s", err.Error()),
+			Messages: &[]action_kit_api.Message{
+				{
+					Level:   extutil.Ptr(action_kit_api.Info),
+					Message: fmt.Sprintf("fill disk for container %s stopped", state.TargetLabel),
+				},
 			},
 		}, nil
 	}
+
+	errMessage := err.Error()
+	var exitErr *exec.ExitError
+	if errors.As(err, &exitErr) {
+		exitCode := exitErr.ExitCode()
+		log.Debug().Err(err).Msgf("fill disk exited unexpectedly with exit code %d", exitCode)
+
+		if len(exitErr.Stderr) > 0 {
+			errMessage = fmt.Sprintf("%s\n%s", exitErr.Error(), string(exitErr.Stderr))
+		}
+
+		// fill disk was stopped by a signal, which is ok if the target process is also gone.
+		if exitErr.ExitCode() == -1 {
+			_, err := getProcessInfoForContainer(ctx, a.ociRuntime, RemovePrefix(state.ContainerID), specs.PIDNamespace)
+			if err != nil {
+				return &action_kit_api.StatusResult{
+					Completed: true,
+					Messages: &[]action_kit_api.Message{
+						{
+							Level:   extutil.Ptr(action_kit_api.Warn),
+							Message: fmt.Sprintf("fill disk exited unexpectedly, target container stopped: %s", errMessage),
+						},
+					},
+					Summary: &action_kit_api.Summary{
+						Level: action_kit_api.SummaryLevelWarning,
+						Text:  "fill disk exited unexpectedly, target container stopped",
+					},
+				}, nil
+			}
+		}
+
+		for _, ignore := range state.IgnoreExitCodes {
+			if exitCode == ignore {
+				return &action_kit_api.StatusResult{
+					Completed: true,
+					Messages: &[]action_kit_api.Message{
+						{
+							Level:   extutil.Ptr(action_kit_api.Warn),
+							Message: fmt.Sprintf("fill disk exited unexpectedly: %s", errMessage),
+						},
+					},
+					Summary: &action_kit_api.Summary{
+						Level: action_kit_api.SummaryLevelWarning,
+						Text:  "fill disk exited unexpectedly",
+					},
+				}, nil
+			}
+		}
+	}
+
+	return &action_kit_api.StatusResult{
+		Completed: true,
+		Error: &action_kit_api.ActionKitError{
+			Status: extutil.Ptr(action_kit_api.Errored),
+			Title:  "Failed to fill disk on container",
+			Detail: extutil.Ptr(errMessage),
+		},
+	}, nil
 }
 
 func (a *fillDiskAction) Stop(_ context.Context, state *FillDiskActionState) (*action_kit_api.StopResult, error) {

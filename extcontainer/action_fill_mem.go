@@ -275,7 +275,8 @@ func (a *fillMemoryAction) Status(ctx context.Context, state *FillMemoryActionSt
 		Completed: true,
 		Error: &action_kit_api.ActionKitError{
 			Status: extutil.Ptr(action_kit_api.Errored),
-			Title:  fmt.Sprintf("Failed to fill memory for container: %s", errMessage),
+			Title:  "Failed to fill memory for container",
+			Detail: extutil.Ptr(errMessage),
 		},
 	}, nil
 }

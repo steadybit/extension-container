@@ -144,7 +144,6 @@ func (a *stressAction) Status(ctx context.Context, state *StressActionState) (*a
 	}
 
 	errMessage := err.Error()
-
 	var exitErr *exec.ExitError
 	if errors.As(err, &exitErr) {
 		exitCode := exitErr.ExitCode()
@@ -195,7 +194,8 @@ func (a *stressAction) Status(ctx context.Context, state *StressActionState) (*a
 		Completed: true,
 		Error: &action_kit_api.ActionKitError{
 			Status: extutil.Ptr(action_kit_api.Errored),
-			Title:  fmt.Sprintf("Failed to stress container: %s", errMessage),
+			Title:  "Failed to stress container",
+			Detail: extutil.Ptr(errMessage),
 		},
 	}, nil
 }
