@@ -246,7 +246,7 @@ func (a *fillMemoryAction) Status(ctx context.Context, state *FillMemoryActionSt
 					},
 					Summary: &action_kit_api.Summary{
 						Level: action_kit_api.SummaryLevelWarning,
-						Text:  fmt.Sprintf("memfill exited unexpectedly, target container stopped: %s", errMessage),
+						Text:  "memfill exited unexpectedly, target container stopped",
 					},
 				}, nil
 			}
@@ -264,7 +264,7 @@ func (a *fillMemoryAction) Status(ctx context.Context, state *FillMemoryActionSt
 					},
 					Summary: &action_kit_api.Summary{
 						Level: action_kit_api.SummaryLevelWarning,
-						Text:  fmt.Sprintf("memfill exited unexpectedly: %s", errMessage),
+						Text:  "memfill exited unexpectedly",
 					},
 				}, nil
 			}

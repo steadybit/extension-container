@@ -166,7 +166,7 @@ func (a *stressAction) Status(ctx context.Context, state *StressActionState) (*a
 					},
 					Summary: &action_kit_api.Summary{
 						Level: action_kit_api.SummaryLevelWarning,
-						Text:  fmt.Sprintf("stress-ng exited unexpectedly, target container stopped: %s", errMessage),
+						Text:  "stress-ng exited unexpectedly, target container stopped",
 					},
 				}, nil
 			}
@@ -184,7 +184,7 @@ func (a *stressAction) Status(ctx context.Context, state *StressActionState) (*a
 					},
 					Summary: &action_kit_api.Summary{
 						Level: action_kit_api.SummaryLevelWarning,
-						Text:  fmt.Sprintf("stress-ng exited unexpectedly: %s", errMessage),
+						Text:  "stress-ng exited unexpectedly",
 					},
 				}, nil
 			}
