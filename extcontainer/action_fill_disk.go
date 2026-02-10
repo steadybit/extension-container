@@ -261,21 +261,9 @@ func (a *fillDiskAction) Start(ctx context.Context, state *FillDiskActionState) 
 }
 
 func (a *fillDiskAction) Status(ctx context.Context, state *FillDiskActionState) (*action_kit_api.StatusResult, error) {
-	exited, err := a.fillDiskContainerExited(state.ExecutionId)
-	if !exited {
-		return &action_kit_api.StatusResult{Completed: false}, nil
-	}
-
+	_, err := a.fillDiskContainerExited(state.ExecutionId)
 	if err == nil {
-		return &action_kit_api.StatusResult{
-			Completed: true,
-			Messages: &[]action_kit_api.Message{
-				{
-					Level:   extutil.Ptr(action_kit_api.Info),
-					Message: fmt.Sprintf("fill disk for container %s stopped", state.TargetLabel),
-				},
-			},
-		}, nil
+		return &action_kit_api.StatusResult{Completed: false}, nil
 	}
 
 	errMessage := err.Error()
