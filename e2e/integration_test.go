@@ -43,11 +43,20 @@ func TestWithMinikube(t *testing.T) {
 		Name: "extension-container",
 		Port: 8086,
 		ExtraArgs: func(m *e2e.Minikube) []string {
-			return []string{
+			args := []string{
 				"--set", fmt.Sprintf("container.engine=%s", m.Runtime),
 				"--set", "logging.level=TRACE",
 				"--set", "discovery.attributes.excludes={container.label.*}",
 			}
+			//on cri-o runtimes, we need to set the ociRuntime to crun for minikube > 1.38
+			if m.Runtime == "cri-o" {
+				args = append(args,
+					"--set", "extension-container.container.engine=cri-o",
+					"--set", "extension-container.containerEngines.cri-o.ociRuntime.path=crun",
+					"--set", "extension-container.containerEngines.cri-o.ociRuntime.root=/run/crun",
+				)
+			}
+			return args
 		},
 	}
 
