@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.5.10
+
+- Handle OOMs in fill disk attack
+- Show summary message when container is stopped during stress and fill actions
+- Await fill disk attack duration before removing the created file
+- Don't fail resource attacks if target container is gone
+- Fix flaky schedule utils test
+- Update dependencies
+
 ## v1.5.9
 
 - Update dependencies
