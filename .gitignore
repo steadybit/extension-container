@@ -10,3 +10,5 @@
 /snyk.sarif
 
 dist/
+
+.env
