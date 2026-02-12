@@ -145,6 +145,10 @@ func TestWithMinikube(t *testing.T) {
 			Test: testFillDisk,
 		},
 		{
+			Name: "fill disk invalid path",
+			Test: testFillDiskInvalidPath,
+		},
+		{
 			Name: "fill disk oom kill",
 			Test: testFillDiskOomKill,
 		},
@@ -1302,6 +1306,73 @@ func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			assert.Contains(t, out, "No such file or directory")
 		})
 	}
+	requireAllSidecarsCleanedUp(t, m, e)
+}
+
+func testFillDiskInvalidPath(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
+	t.Run("non-existent path", func(t *testing.T) {
+		nginx := e2e.Nginx{Minikube: m}
+		err := nginx.Deploy("nginx-fill-disk-invalid")
+		require.NoError(t, err, "failed to create pod")
+		defer func() { _ = nginx.Delete() }()
+
+		target, err := nginx.Target()
+		require.NoError(t, err)
+
+		config := struct {
+			Duration  int    `json:"duration"`
+			Path      string `json:"path"`
+			Size      int    `json:"size"`
+			Mode      string `json:"mode"`
+			BlockSize int    `json:"blocksize"`
+			Method    string `json:"method"`
+		}{Duration: 30000, Size: 100, Mode: string(diskfill.MBToFill), Method: string(diskfill.AtOnce), BlockSize: 5, Path: "/non-existent-path"}
+
+		_, err = e.RunAction(fmt.Sprintf("%s.fill_disk", extcontainer.BaseActionID), target, config, &action_kit_api.ExecutionContext{})
+		require.Error(t, err)
+		require.ErrorContains(t, err, "Failed to verify target path")
+	})
+
+	t.Run("read-only filesystem", func(t *testing.T) {
+		nginx := e2e.Nginx{Minikube: m}
+		err := nginx.Deploy("nginx-fill-disk-ro", func(c *acorev1.PodApplyConfiguration) {
+			readOnly := true
+			c.Spec.Containers[0].VolumeMounts = []acorev1.VolumeMountApplyConfiguration{
+				{
+					Name:      extutil.Ptr("readonly-vol"),
+					MountPath: extutil.Ptr("/readonly-vol"),
+					ReadOnly:  &readOnly,
+				},
+			}
+			c.Spec.Volumes = []acorev1.VolumeApplyConfiguration{
+				{
+					Name: extutil.Ptr("readonly-vol"),
+					VolumeSourceApplyConfiguration: acorev1.VolumeSourceApplyConfiguration{
+						EmptyDir: &acorev1.EmptyDirVolumeSourceApplyConfiguration{},
+					},
+				},
+			}
+		})
+		require.NoError(t, err, "failed to create pod")
+		defer func() { _ = nginx.Delete() }()
+
+		target, err := nginx.Target()
+		require.NoError(t, err)
+
+		config := struct {
+			Duration  int    `json:"duration"`
+			Path      string `json:"path"`
+			Size      int    `json:"size"`
+			Mode      string `json:"mode"`
+			BlockSize int    `json:"blocksize"`
+			Method    string `json:"method"`
+		}{Duration: 30000, Size: 100, Mode: string(diskfill.MBToFill), Method: string(diskfill.AtOnce), BlockSize: 5, Path: "/readonly-vol"}
+
+		_, err = e.RunAction(fmt.Sprintf("%s.fill_disk", extcontainer.BaseActionID), target, config, &action_kit_api.ExecutionContext{})
+		require.Error(t, err)
+		require.ErrorContains(t, err, "Failed to verify target path")
+	})
+
 	requireAllSidecarsCleanedUp(t, m, e)
 }
 
