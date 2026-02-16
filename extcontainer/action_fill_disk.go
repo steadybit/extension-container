@@ -58,7 +58,7 @@ func (a *fillDiskAction) Describe() action_kit_api.ActionDescription {
 	return action_kit_api.ActionDescription{
 		Id:          fmt.Sprintf("%s.fill_disk", BaseActionID),
 		Label:       "Fill Disk",
-		Description: "Fills the disk in the container for the given duration.",
+		Description: "Fills the disk of the container for the given duration.",
 		Version:     extbuild.GetSemverVersionStringOrUnknown(),
 		Icon:        extutil.Ptr(fillDiskIcon),
 		TargetSelection: &action_kit_api.TargetSelection{
@@ -82,14 +82,14 @@ func (a *fillDiskAction) Describe() action_kit_api.ActionDescription {
 			{
 				Name:         "mode",
 				Label:        "Mode",
-				Description:  extutil.Ptr("Decide how to specify the amount to fill the disk:\n\noverall percentage of filled disk space in percent,\n\nMegabytes to write,\n\nMegabytes to leave free on disk"),
+				Description:  extutil.Ptr("Specify how to calculate the amount of disk space to fill."),
 				Required:     extutil.Ptr(true),
 				Order:        extutil.Ptr(2),
-				DefaultValue: extutil.Ptr("PERCENTAGE"),
+				DefaultValue: extutil.Ptr(string(diskfill.MBToFill)),
 				Type:         action_kit_api.ActionParameterTypeString,
 				Options: extutil.Ptr([]action_kit_api.ParameterOption{
 					action_kit_api.ExplicitParameterOption{
-						Label: "Overall percentage of filled disk space in percent",
+						Label: "Fill up to specified usage (in %)",
 						Value: string(diskfill.Percentage),
 					},
 					action_kit_api.ExplicitParameterOption{
@@ -105,9 +105,9 @@ func (a *fillDiskAction) Describe() action_kit_api.ActionDescription {
 			{
 				Name:         "size",
 				Label:        "Fill Value (depending on Mode)",
-				Description:  extutil.Ptr("Depending on the mode, specify the percentage of filled disk space or the number of Megabytes to be written or left free."),
+				Description:  extutil.Ptr("Depending on the mode, specify the percentage or megabytes to use."),
 				Type:         action_kit_api.ActionParameterTypeInteger,
-				DefaultValue: extutil.Ptr("80"),
+				DefaultValue: extutil.Ptr("500"),
 				Required:     extutil.Ptr(true),
 				Order:        extutil.Ptr(3),
 			},
@@ -142,7 +142,7 @@ func (a *fillDiskAction) Describe() action_kit_api.ActionDescription {
 			},
 			{
 				Name:         "blocksize",
-				Label:        "Block Size (in MBytes) of the File to Write for method `At Once`",
+				Label:        "Block Size (in MBytes) of the File to Write for method `Over Time`",
 				Description:  extutil.Ptr("Define the block size for writing the file with the dd command. If the block size is larger than the fill value, the fill value will be used as block size."),
 				Type:         action_kit_api.ActionParameterTypeInteger,
 				DefaultValue: extutil.Ptr("5"),
@@ -223,7 +223,7 @@ func (a *fillDiskAction) Prepare(ctx context.Context, state *FillDiskActionState
 	state.ExecutionId = request.ExecutionId
 
 	if err := diskfill.CheckPathWritableRunc(ctx, a.ociRuntime, state.Sidecar, opts.TempPath); err != nil {
-		return nil, extension_kit.ToError("Failed to verify target path.", err)
+		return nil, extension_kit.ToError(err.Error(), nil)
 	}
 
 	if !extutil.ToBool(request.Config["failOnOomKill"]) {
