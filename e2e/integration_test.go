@@ -355,14 +355,14 @@ func testNetworkDelayTcpPsh(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	for _, tt := range tests {
 		delay := 500
 		config := map[string]interface{}{
-			"duration":             20000,
-			"networkDelay":         delay,
-			"networkDelayJitter":   false,
-			"ip":                   tt.ip,
-			"hostname":             tt.hostname,
-			"port":                 tt.port,
-			"networkInterface":     tt.interfaces,
-			"tcpDataPacketsOnly":   tt.tcpPshOnly,
+			"duration":           20000,
+			"networkDelay":       delay,
+			"networkDelayJitter": false,
+			"ip":                 tt.ip,
+			"hostname":           tt.hostname,
+			"port":               tt.port,
+			"networkInterface":   tt.interfaces,
+			"tcpDataPacketsOnly": tt.tcpPshOnly,
 		}
 
 		t.Run(tt.name, func(t *testing.T) {
@@ -525,12 +525,12 @@ func testNetworkPackageCorruption(t *testing.T, m *e2e.Minikube, e *e2e.Extensio
 	for _, tt := range tests {
 		corruption := 10
 		config := map[string]interface{}{
-			"duration":           20000,
-			"networkCorruption":  corruption,
-			"ip":                 tt.ip,
-			"hostname":           tt.hostname,
-			"port":               tt.port,
-			"networkInterface":   tt.interfaces,
+			"duration":          20000,
+			"networkCorruption": corruption,
+			"ip":                tt.ip,
+			"hostname":          tt.hostname,
+			"port":              tt.port,
+			"networkInterface":  tt.interfaces,
 		}
 
 		t.Run(tt.name, func(t *testing.T) {
@@ -1284,7 +1284,7 @@ func testFillDiskInvalidPath(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 
 		_, err = e.RunAction(fmt.Sprintf("%s.fill_disk", extcontainer.BaseActionID), target, config, &action_kit_api.ExecutionContext{})
 		require.Error(t, err)
-		require.ErrorContains(t, err, "Failed to verify target path")
+		require.ErrorContains(t, err, "is not accessible")
 	})
 
 	t.Run("read-only filesystem", func(t *testing.T) {
@@ -1324,7 +1324,7 @@ func testFillDiskInvalidPath(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 
 		_, err = e.RunAction(fmt.Sprintf("%s.fill_disk", extcontainer.BaseActionID), target, config, &action_kit_api.ExecutionContext{})
 		require.Error(t, err)
-		require.ErrorContains(t, err, "Failed to verify target path")
+		require.ErrorContains(t, err, "does not exist or is not writable")
 	})
 
 	requireAllSidecarsCleanedUp(t, m, e)
