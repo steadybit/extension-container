@@ -69,7 +69,7 @@ var commonNetworkParameters = []action_kit_api.ActionParameter{
 	},
 	{
 		Name:         "hostname",
-		Label:        "Hostname",
+		Label:        "Hostnames",
 		Description:  extutil.Ptr("Restrict to/from which hosts the traffic is affected."),
 		Type:         action_kit_api.ActionParameterTypeStringArray,
 		DefaultValue: extutil.Ptr(""),
@@ -78,7 +78,7 @@ var commonNetworkParameters = []action_kit_api.ActionParameter{
 	},
 	{
 		Name:         "ip",
-		Label:        "IP Address/CIDR",
+		Label:        "IPs/CIDRs",
 		Description:  extutil.Ptr("Restrict to/from which IP addresses or blocks the traffic is affected."),
 		Type:         action_kit_api.ActionParameterTypeStringArray,
 		DefaultValue: extutil.Ptr(""),
