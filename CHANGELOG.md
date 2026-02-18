@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.5.11
+
+- Fill Disk: validate permissions of target directory
+
 ## v1.5.10
 
 - Handle OOMs in fill disk attack
