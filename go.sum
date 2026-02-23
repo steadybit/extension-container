@@ -292,10 +292,6 @@ github.com/spf13/pflag v1.0.10/go.mod h1:McXfInJRrz4CZXVZOBLb0bTZqETkiAhM9Iw0y3A
 github.com/spkg/bom v0.0.0-20160624110644-59b7046e48ad/go.mod h1:qLr4V1qq6nMqFKkMo8ZTx3f+BZEkzsRUY10Xsm2mwU0=
 github.com/steadybit/action-kit/go/action_kit_api/v2 v2.10.4 h1:JE8LeEiv1kZ9UKKFj8gxgl5CQpFuTkW71PUa5Nl+dv4=
 github.com/steadybit/action-kit/go/action_kit_api/v2 v2.10.4/go.mod h1:D+Mg/shU0nd6aiYlzHUiddMFgTspGr3Lv0J9BX6QpXI=
-github.com/steadybit/action-kit/go/action_kit_commons v1.5.15-0.20260218075658-6d262d5a918e h1:+9pcPnFApENKDk9lb/+4/pnKjK95rbrGIIL0wuCAj4c=
-github.com/steadybit/action-kit/go/action_kit_commons v1.5.15-0.20260218075658-6d262d5a918e/go.mod h1:/r4IVwATFgEDmFqLVcg41uT7hms35FCGsDC9sANu1JY=
-github.com/steadybit/action-kit/go/action_kit_commons v1.5.15-0.20260218092210-ef8962a90e4c h1:exD+hLL3WR0EHPZ9y26VySqxCslZRM6j/4J5g2dz/Pk=
-github.com/steadybit/action-kit/go/action_kit_commons v1.5.15-0.20260218092210-ef8962a90e4c/go.mod h1:/r4IVwATFgEDmFqLVcg41uT7hms35FCGsDC9sANu1JY=
 github.com/steadybit/action-kit/go/action_kit_commons v1.5.15 h1:DH7s/1n3rX3VOxLLPWCVuwE8o/L8L7AfxgoVEMhz41I=
 github.com/steadybit/action-kit/go/action_kit_commons v1.5.15/go.mod h1:/r4IVwATFgEDmFqLVcg41uT7hms35FCGsDC9sANu1JY=
 github.com/steadybit/action-kit/go/action_kit_sdk v1.3.1 h1:c83hiU+RLWjqouWR9baiidmYcTtDTdRa5rkWKFvdbc8=
@@ -310,8 +306,8 @@ github.com/steadybit/discovery-kit/go/discovery_kit_sdk v1.3.2 h1:xt2zJ5AykcUvZY
 github.com/steadybit/discovery-kit/go/discovery_kit_sdk v1.3.2/go.mod h1:iF/w15ursykWjPXgciQuDV23lKffhqtx4QghgDpHJ5A=
 github.com/steadybit/discovery-kit/go/discovery_kit_test v1.2.1 h1:CabRtfE70gt/4H/TgL/TRm54OkxWKbmPhTX2qEhzKZ4=
 github.com/steadybit/discovery-kit/go/discovery_kit_test v1.2.1/go.mod h1:PPJh5gSdVRKG/0qJCGJK5XnGxXat/v6UT8/2ilIbbX8=
-github.com/steadybit/extension-kit v1.10.2 h1:ny62/TPgZIhZibY0+L8zuFEKqx3XuCEXZgij0Z2SDyM=
-github.com/steadybit/extension-kit v1.10.2/go.mod h1:vjcSUw8/eR11sQxR7cTEkU2oPoNvoKTihXQIqh3jlHM=
+github.com/steadybit/extension-kit v1.10.3 h1:4qMsfF0YqVwLDUARkbd6MZRcsVgHMQ0BXVAY1g8y33A=
+github.com/steadybit/extension-kit v1.10.3/go.mod h1:vjcSUw8/eR11sQxR7cTEkU2oPoNvoKTihXQIqh3jlHM=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/objx v0.4.0/go.mod h1:YvHI0jy2hoMjB+UWwv71VJQ9isScKT/TqJzVSSt89Yw=
 github.com/stretchr/objx v0.5.0/go.mod h1:Yh+to48EsGEfYuaHDzXPcE3xhTkx73EhmCGUpEOglKo=
