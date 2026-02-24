@@ -3,3 +3,5 @@
 #### WARNING: .Values.container.runtime is deprecated please use .Values.container.engine instead. ####
 
 {{- end }}
+
+{{ include "extensionlib.image.deprecationNotice" . }}
