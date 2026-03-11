@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"slices"
 
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
 	"github.com/steadybit/action-kit/go/action_kit_commons/network"
@@ -42,7 +43,30 @@ func getNetworkBlackholeDescription() action_kit_api.ActionDescription {
 		Category:    extutil.Ptr("Network"),
 		Kind:        action_kit_api.Attack,
 		TimeControl: action_kit_api.TimeControlExternal,
-		Parameters:  commonNetworkParameters,
+		Parameters: slices.Concat(commonNetworkParameters, []action_kit_api.ActionParameter{
+			{
+				Name:         "ipRuleType",
+				Label:        "IP Rule Type",
+				Description:  extutil.Ptr("Specify iproute2 rule type to configure response."),
+				Type:         action_kit_api.ActionParameterTypeString,
+				DefaultValue: extutil.Ptr(string(network.IpRuleTypeBlackhole)),
+				Options: extutil.Ptr([]action_kit_api.ParameterOption{
+					action_kit_api.ExplicitParameterOption{
+						Label: "Blackhole (silently drop packets)",
+						Value: string(network.IpRuleTypeBlackhole),
+					},
+					action_kit_api.ExplicitParameterOption{
+						Label: "Unreachable (drop packets, return ICMP Network Unreachable)",
+						Value: string(network.IpRuleTypeUnreachable),
+					},
+					action_kit_api.ExplicitParameterOption{
+						Label: "Prohibit (drop packets, return ICMP Communication Prohibited)",
+						Value: string(network.IpRuleTypeProhibit),
+					},
+				}),
+				Advanced: extutil.Ptr(true),
+			},
+		}),
 	}
 }
 
@@ -53,9 +77,12 @@ func blackhole(r ociruntime.OciRuntime) networkOptsProvider {
 			return nil, nil, err
 		}
 
+		ruleType := extutil.ToString(request.Config["ipRuleType"])
+
 		return &network.BlackholeOpts{
 			Filter:           filter,
 			ExecutionContext: mapToExecutionContext(request),
+			IpRuleType:       network.IpRuleType(ruleType),
 		}, messages, nil
 	}
 }
