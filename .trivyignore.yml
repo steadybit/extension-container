@@ -27,3 +27,6 @@ vulnerabilities:
   - id: CVE-2026-0861
     statement: Wait for new libc version in base image
     expired_at: 2026-06-01
+  - id: CVE-2026-25210
+    statement: Wait for upstream fix in debian
+    expired_at: 2026-09-01
