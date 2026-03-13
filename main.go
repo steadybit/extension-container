@@ -5,6 +5,8 @@ package main
 
 import (
 	"context"
+	"time"
+
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
@@ -22,9 +24,12 @@ import (
 	"github.com/steadybit/extension-kit/extlogging"
 	"github.com/steadybit/extension-kit/extruntime"
 	"github.com/steadybit/extension-kit/extsignals"
+
 	// You can find more details of its behavior from the doc comment of memlimit.SetGoMemLimitWithEnv.
 	_ "github.com/KimMachineGun/automemlimit" // By default, it sets `GOMEMLIMIT` to 90% of cgroup's memory limit.
 )
+
+var startedAt = time.Now().Format(time.RFC3339)
 
 func main() {
 	extlogging.InitZeroLog()
@@ -39,8 +44,6 @@ func main() {
 
 	exthealth.SetReady(false)
 	exthealth.StartProbes(int(config.Config.HealthPort))
-
-	exthttp.RegisterHttpHandler("/", exthttp.GetterAsHandler(getExtensionList))
 
 	client, err := container.NewClient()
 	if err != nil {
@@ -83,6 +86,8 @@ func main() {
 	action_kit_sdk.RegisterAction(extcontainer.NewNetworkPackageLossContainerAction(r, client))
 	action_kit_sdk.RegisterAction(extcontainer.NewFillDiskContainerAction(r, client))
 	action_kit_sdk.RegisterAction(extcontainer.NewFillMemoryContainerAction(r, client))
+
+	exthttp.RegisterHttpHandler("/", exthttp.IfNoneMatchHandler(func() string { return startedAt }, exthttp.GetterAsHandler(getExtensionList)))
 
 	extsignals.ActivateSignalHandlers()
 
