@@ -84,6 +84,7 @@ func main() {
 	action_kit_sdk.RegisterAction(extcontainer.NewNetworkLimitBandwidthContainerAction(r, client))
 	action_kit_sdk.RegisterAction(extcontainer.NewNetworkCorruptPackagesContainerAction(r, client))
 	action_kit_sdk.RegisterAction(extcontainer.NewNetworkPackageLossContainerAction(r, client))
+	action_kit_sdk.RegisterAction(extcontainer.NewNetworkTcpResetContainerAction(r, client))
 	action_kit_sdk.RegisterAction(extcontainer.NewFillDiskContainerAction(r, client))
 	action_kit_sdk.RegisterAction(extcontainer.NewFillMemoryContainerAction(r, client))
 

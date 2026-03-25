@@ -175,6 +175,8 @@ github.com/grpc-ecosystem/grpc-gateway/v2 v2.16.0/go.mod h1:YN5jB8ie0yfIUg6VvR9K
 github.com/jarcoal/httpmock v1.4.1 h1:0Ju+VCFuARfFlhVXFc2HxlcQkfB+Xq12/EotHko+x2A=
 github.com/jarcoal/httpmock v1.4.1/go.mod h1:ftW1xULwo+j0R0JJkJIIi7UKigZUXCLLanykgjwBXL0=
 github.com/jessevdk/go-flags v1.4.0/go.mod h1:4FA24M0QyGHXBuZZK/XkWh8h0e1EYbRYJSGM75WSRxI=
+github.com/joeyb/steadybit-action-kit/go/action_kit_commons v0.0.0-20260326012351-cb03981bc71d h1:7gM1aNTQkvkKv0zs7cCr7POL4NjFtmW/ZTzSwxGkc3Y=
+github.com/joeyb/steadybit-action-kit/go/action_kit_commons v0.0.0-20260326012351-cb03981bc71d/go.mod h1:jpPWsDVYCYXm75inrZa8dGheM37ink6rqfU3E9gJ+X8=
 github.com/josharian/intern v1.0.0 h1:vlS4z54oSdjm0bgjRigI+G1HpF+tI+9rE5LLzOg8HmY=
 github.com/josharian/intern v1.0.0/go.mod h1:5DoeVV0s6jJacbCEi61lwdGj/aVlrQvzHFFd8Hwg//Y=
 github.com/json-iterator/go v1.1.12 h1:PV8peI4a0ysnczrg+LtxykD8LfKY9ML6u2jnxaEnrnM=
@@ -292,8 +294,6 @@ github.com/spf13/pflag v1.0.10/go.mod h1:McXfInJRrz4CZXVZOBLb0bTZqETkiAhM9Iw0y3A
 github.com/spkg/bom v0.0.0-20160624110644-59b7046e48ad/go.mod h1:qLr4V1qq6nMqFKkMo8ZTx3f+BZEkzsRUY10Xsm2mwU0=
 github.com/steadybit/action-kit/go/action_kit_api/v2 v2.10.5 h1:WQkcNX2us3JyOrdnI3ttxX96nF2JAEQSx/zM8IQGwDo=
 github.com/steadybit/action-kit/go/action_kit_api/v2 v2.10.5/go.mod h1:g8gkKZCnaZaxtQseZ/L6/flv3Hutwy0xcVO7P1cbUMQ=
-github.com/steadybit/action-kit/go/action_kit_commons v1.5.15 h1:DH7s/1n3rX3VOxLLPWCVuwE8o/L8L7AfxgoVEMhz41I=
-github.com/steadybit/action-kit/go/action_kit_commons v1.5.15/go.mod h1:/r4IVwATFgEDmFqLVcg41uT7hms35FCGsDC9sANu1JY=
 github.com/steadybit/action-kit/go/action_kit_sdk v1.3.1 h1:c83hiU+RLWjqouWR9baiidmYcTtDTdRa5rkWKFvdbc8=
 github.com/steadybit/action-kit/go/action_kit_sdk v1.3.1/go.mod h1:DMMqDn4QNetxAoEXSpS7xF/vV+aD6YIDl/CgWOi5ii8=
 github.com/steadybit/action-kit/go/action_kit_test v1.4.7 h1:DyW3xYKQTOpCy4GLOShUXYpzfTXH/JgWOcUi5WeC55k=
@@ -399,8 +399,8 @@ golang.org/x/sys v0.0.0-20220715151400-c0bba94af5f8/go.mod h1:oPkhp1MJrh7nUepCBc
 golang.org/x/sys v0.0.0-20220811171246-fbc7d0a398ab/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 golang.org/x/sys v0.6.0/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 golang.org/x/sys v0.12.0/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
-golang.org/x/sys v0.41.0 h1:Ivj+2Cp/ylzLiEU89QhWblYnOE9zerudt9Ftecq2C6k=
-golang.org/x/sys v0.41.0/go.mod h1:OgkHotnGiDImocRcuBABYBEXf8A9a87e/uXjp9XT3ks=
+golang.org/x/sys v0.42.0 h1:omrd2nAlyT5ESRdCLYdm3+fMfNFE/+Rf4bDIQImRJeo=
+golang.org/x/sys v0.42.0/go.mod h1:4GL1E5IUh+htKOUEOaiffhrAeqysfVGipDYzABqnCmw=
 golang.org/x/term v0.39.0 h1:RclSuaJf32jOqZz74CkPA9qFuVTX7vhLlpfj/IGWlqY=
 golang.org/x/term v0.39.0/go.mod h1:yxzUCTP/U+FzoxfdKmLaA0RV1WgE0VY7hXBwKtY/4ww=
 golang.org/x/text v0.3.0/go.mod h1:NqM8EUOU14njkJ3fqMW+pc6Ldnwhi/IjpwHt7yyuwOQ=

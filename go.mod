@@ -5,6 +5,8 @@ go 1.25.7
 //https://github.com/containerd/containerd/issues/12493
 replace github.com/opencontainers/runtime-spec => github.com/opencontainers/runtime-spec v1.2.1
 
+replace github.com/steadybit/action-kit/go/action_kit_commons => github.com/joeyb/steadybit-action-kit/go/action_kit_commons v0.0.0-20260326012351-cb03981bc71d
+
 require (
 	github.com/KimMachineGun/automemlimit v0.7.5
 	github.com/containerd/containerd v1.7.30
@@ -138,7 +140,7 @@ require (
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/net v0.49.0 // indirect
 	golang.org/x/oauth2 v0.35.0 // indirect
-	golang.org/x/sys v0.41.0 // indirect
+	golang.org/x/sys v0.42.0 // indirect
 	golang.org/x/term v0.39.0 // indirect
 	golang.org/x/text v0.34.0 // indirect
 	golang.org/x/time v0.14.0 // indirect
