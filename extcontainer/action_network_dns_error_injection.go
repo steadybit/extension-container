@@ -76,7 +76,7 @@ func (a *dnsErrorInjectionAction) Describe() action_kit_api.ActionDescription {
 				Append:      false,
 			},
 		}),
-		Parameters : dnsErrorInjectionParameters(),
+		Parameters: dnsErrorInjectionParameters(),
 	}
 }
 
