@@ -116,13 +116,8 @@ func (a *dnsErrorInjectionAction) Prepare(ctx context.Context, state *DNSErrorIn
 		return nil, err
 	}
 
-	sidecar := dnsinject.SidecarOpts{
-		TargetProcess: processInfo,
-		IdSuffix:      containerId[:min(8, len(containerId))],
-		ExecutionId:   request.ExecutionId,
-	}
-
-	handle, err := dnsinject.NewProcess(ctx, a.ociRuntime, sidecar, opts)
+	sidecarId := fmt.Sprintf("%s-%s", request.ExecutionId.String()[24:], containerId[:min(8, len(containerId))])
+	handle, err := dnsinject.NewProcess(ctx, a.ociRuntime, processInfo, sidecarId, opts)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create dns-inject process: %w", err)
 	}
@@ -248,7 +243,7 @@ func dnsErrorInjectionParameters() []action_kit_api.ActionParameter {
 			DefaultValue: extutil.Ptr("true"),
 			Required:     extutil.Ptr(true),
 			Order:        extutil.Ptr(100),
-		}
+		},
 	}
 }
 

@@ -22,8 +22,6 @@ RUN echo 'deb [trusted=yes] https://repo.goreleaser.com/apt/ /' > /etc/apt/sourc
     && apt-get -qq install -y --no-install-recommends build-essential libcap2-bin goreleaser gpg curl
 
 COPY . .
-COPY --from=action-kit go/action_kit_commons ./action-kit/go/action_kit_commons
-RUN sed -i 's|=> ../action-kit|=> ./action-kit|g' go.mod && go mod tidy
 
 #Ambient set of capabilities are not really working, therefore we set the capabilities on the binary directly. More on this: https://github.com/kubernetes/kubernetes/issues/56374
 RUN --mount=type=cache,target="/root/.cache/go-build" GOCACHE=/root/.cache/go-build GOOS=$TARGETOS GOARCH=$TARGETARCH goreleaser build --snapshot="${BUILD_SNAPSHOT}" --single-target -o extension \

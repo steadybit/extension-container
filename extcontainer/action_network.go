@@ -16,6 +16,8 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
 	"github.com/steadybit/action-kit/go/action_kit_commons/network"
+	"github.com/steadybit/action-kit/go/action_kit_commons/network/dnsresolve"
+	"github.com/steadybit/action-kit/go/action_kit_commons/network/netfault"
 	"github.com/steadybit/action-kit/go/action_kit_commons/ociruntime"
 	"github.com/steadybit/action-kit/go/action_kit_sdk"
 	"github.com/steadybit/extension-container/config"
@@ -24,9 +26,9 @@ import (
 	"github.com/steadybit/extension-kit/extutil"
 )
 
-type networkOptsProvider func(ctx context.Context, sidecar network.SidecarOpts, request action_kit_api.PrepareActionRequestBody) (network.Opts, action_kit_api.Messages, error)
+type networkOptsProvider func(ctx context.Context, sidecar netfault.SidecarOpts, request action_kit_api.PrepareActionRequestBody) (netfault.Opts, action_kit_api.Messages, error)
 
-type networkOptsDecoder func(data json.RawMessage) (network.Opts, error)
+type networkOptsDecoder func(data json.RawMessage) (netfault.Opts, error)
 
 type networkAction struct {
 	ociRuntime   ociruntime.OciRuntime
@@ -39,7 +41,7 @@ type networkAction struct {
 type NetworkActionState struct {
 	ExecutionId uuid.UUID
 	NetworkOpts json.RawMessage
-	Sidecar     network.SidecarOpts
+	Sidecar     netfault.SidecarOpts
 	ContainerID string
 	TargetLabel string
 }
@@ -118,10 +120,9 @@ func (a *networkAction) Prepare(ctx context.Context, state *NetworkActionState, 
 		return nil, extension_kit.ToError("Failed to read target process info", err)
 	}
 
-	state.Sidecar = network.SidecarOpts{
+	state.Sidecar = netfault.SidecarOpts{
 		TargetProcess: processInfo,
-		IdSuffix:      RemovePrefix(state.ContainerID)[:8],
-		ExecutionId:   request.ExecutionId,
+		Id:            fmt.Sprintf("%s-%s", request.ExecutionId.String()[24:], RemovePrefix(state.ContainerID)[:8]),
 	}
 
 	if isUsingHostNetwork(processInfo.Namespaces) {
@@ -192,9 +193,9 @@ func (a *networkAction) Start(ctx context.Context, state *NetworkActionState) (*
 		},
 	}}
 
-	err = network.Apply(ctx, a.runner(state.Sidecar), opts)
+	err = netfault.Apply(ctx, netfault.NewRuncRunner(a.ociRuntime, state.Sidecar), opts)
 	if err != nil {
-		var toomany *network.ErrTooManyTcCommands
+		var toomany *netfault.ErrTooManyTcCommands
 		if errors.As(err, &toomany) {
 			result.Messages = extutil.Ptr(append(*result.Messages, action_kit_api.Message{
 				Level:   extutil.Ptr(action_kit_api.Error),
@@ -232,21 +233,10 @@ func (a *networkAction) Stop(_ context.Context, state *NetworkActionState) (*act
 		}, nil
 	}
 
-	if err := network.Revert(ctx, a.runner(state.Sidecar), opts); err != nil {
+	if err := netfault.Revert(ctx, netfault.NewRuncRunner(a.ociRuntime, state.Sidecar), opts); err != nil {
 		return nil, extension_kit.ToError("Failed to revert network settings.", err)
 	}
 	return nil, nil
-}
-
-func (a *networkAction) runner(sidecar network.SidecarOpts) network.CommandRunner {
-	// For DNS error injection, we need to run on the host to target the container's veth interface
-	// Check if this is a DNS error injection action by looking at the description
-	if a.description.Id == "com.steadybit.extension_container.network_dns_error_injection" {
-		return network.NewProcessRunner()
-	}
-
-	// For other network actions, use the container runner
-	return network.NewRuncRunner(a.ociRuntime, sidecar)
 }
 
 func parsePortRanges(raw []string) ([]network.PortRange, error) {
@@ -270,16 +260,15 @@ func parsePortRanges(raw []string) ([]network.PortRange, error) {
 	return ranges, nil
 }
 
-func mapToNetworkFilter(ctx context.Context, r ociruntime.OciRuntime, sidecar network.SidecarOpts, actionConfig map[string]interface{}, restrictedEndpoints []action_kit_api.RestrictedEndpoint) (network.Filter, action_kit_api.Messages, error) {
+func mapToNetworkFilter(ctx context.Context, r ociruntime.OciRuntime, sidecar netfault.SidecarOpts, actionConfig map[string]interface{}, restrictedEndpoints []action_kit_api.RestrictedEndpoint) (netfault.Filter, action_kit_api.Messages, error) {
 	includeCidrs, unresolved := network.ParseCIDRs(append(
 		extutil.ToStringArray(actionConfig["ip"]),
 		extutil.ToStringArray(actionConfig["hostname"])...,
 	))
 
-	dig := network.HostnameResolver{Dig: &network.RuncDigRunner{Runc: r, Sidecar: sidecar}}
-	resolved, err := dig.Resolve(ctx, unresolved...)
+	resolved, err := dnsresolve.NewDigRunc(r, sidecar.TargetProcess).Resolve(ctx, unresolved...)
 	if err != nil {
-		return network.Filter{}, nil, err
+		return netfault.Filter{}, nil, err
 	}
 	includeCidrs = append(includeCidrs, network.IpsToNets(resolved)...)
 
@@ -290,7 +279,7 @@ func mapToNetworkFilter(ctx context.Context, r ociruntime.OciRuntime, sidecar ne
 
 	portRanges, err := parsePortRanges(extutil.ToStringArray(actionConfig["port"]))
 	if err != nil {
-		return network.Filter{}, nil, err
+		return netfault.Filter{}, nil, err
 	}
 	if len(portRanges) == 0 {
 		//if no hostname/ip specified we affect all ports
@@ -306,7 +295,7 @@ func mapToNetworkFilter(ctx context.Context, r ociruntime.OciRuntime, sidecar ne
 
 	excludes, err := toExcludes(restrictedEndpoints)
 	if err != nil {
-		return network.Filter{}, nil, err
+		return netfault.Filter{}, nil, err
 	}
 	excludes = append(excludes, network.ComputeExcludesForOwnIpAndPorts(config.Config.Port, config.Config.HealthPort)...)
 
@@ -323,12 +312,12 @@ func mapToNetworkFilter(ctx context.Context, r ociruntime.OciRuntime, sidecar ne
 		})
 	}
 
-	return network.Filter{Include: includes, Exclude: excludes}, messages, nil
+	return netfault.Filter{Include: includes, Exclude: excludes}, messages, nil
 }
 
 func condenseExcludes(excludes []network.NetWithPortRange) ([]network.NetWithPortRange, bool) {
 	l := len(excludes)
-	excludes = network.CondenseNetWithPortRange(excludes, 500)
+	excludes = netfault.CondenseNetWithPortRange(excludes, 500)
 	return excludes, l != len(excludes)
 }
 
@@ -359,8 +348,8 @@ func toExcludes(restrictedEndpoints []action_kit_api.RestrictedEndpoint) ([]netw
 	return excludes, nil
 }
 
-func mapToExecutionContext(request action_kit_api.PrepareActionRequestBody) network.ExecutionContext {
-	eCtx := network.ExecutionContext{}
+func mapToExecutionContext(request action_kit_api.PrepareActionRequestBody) netfault.ExecutionContext {
+	eCtx := netfault.ExecutionContext{}
 	if request.ExecutionContext.ExperimentKey != nil {
 		eCtx.ExperimentKey = *request.ExecutionContext.ExperimentKey
 	}

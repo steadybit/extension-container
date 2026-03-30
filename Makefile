@@ -100,7 +100,7 @@ run: tidy build
 ## container: build the container image
 .PHONY: container
 container:
-	docker buildx build --build-context action-kit=../action-kit --build-arg BUILD_WITH_COVERAGE="true" --build-arg SKIP_LICENSES_REPORT="true" -t extension-container:latest --output=type=docker .
+	docker buildx build --build-arg BUILD_WITH_COVERAGE="true" --build-arg SKIP_LICENSES_REPORT="true" -t extension-container:latest --output=type=docker .
 
 ## container: build the linux packages
 .PHONY: linuxpkg
