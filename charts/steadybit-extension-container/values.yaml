@@ -143,6 +143,7 @@ containerSecurityContext:
       - SYS_CHROOT
       - SYS_PTRACE
       - NET_ADMIN
+      - BPF
       - DAC_OVERRIDE
       - SETUID
       - SETGID

@@ -20,7 +20,7 @@ import (
 	"github.com/steadybit/action-kit/go/action_kit_sdk"
 	"github.com/steadybit/extension-container/config"
 	"github.com/steadybit/extension-container/extcontainer/container/types"
-	"github.com/steadybit/extension-kit"
+	extension_kit "github.com/steadybit/extension-kit"
 	"github.com/steadybit/extension-kit/extutil"
 )
 
@@ -239,6 +239,13 @@ func (a *networkAction) Stop(_ context.Context, state *NetworkActionState) (*act
 }
 
 func (a *networkAction) runner(sidecar network.SidecarOpts) network.CommandRunner {
+	// For DNS error injection, we need to run on the host to target the container's veth interface
+	// Check if this is a DNS error injection action by looking at the description
+	if a.description.Id == "com.steadybit.extension_container.network_dns_error_injection" {
+		return network.NewProcessRunner()
+	}
+
+	// For other network actions, use the container runner
 	return network.NewRuncRunner(a.ociRuntime, sidecar)
 }
 

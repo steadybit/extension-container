@@ -117,6 +117,18 @@ func TestWithMinikube(t *testing.T) {
 			Test: testNetworkBlockDns,
 		},
 		{
+			Name: "network dns error injection",
+			Test: testNetworkDNSErrorInjection,
+		},
+		{
+			Name: "network dns error injection on two containers",
+			Test: testNetworkDNSErrorInjectionTwoContainers,
+		},
+		{
+			Name: "network dns error injection host network",
+			Test: testNetworkDNSErrorInjectionHostNetwork,
+		},
+		{
 			Name: "network limit bandwidth",
 			Test: testNetworkLimitBandwidth,
 		},
@@ -893,6 +905,185 @@ func testNetworkBlockDns(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			require.NoError(t, action.Cancel())
 			nginx.AssertIsReachable(t, true)
 			nginx.AssertCanReach(t, "https://steadybit.com", true)
+		})
+	}
+	requireAllSidecarsCleanedUp(t, m, e)
+}
+
+func testNetworkDNSErrorInjection(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
+	if m.Runtime == "cri-o" && m.Driver == "docker" {
+		t.Skip("Due to https://github.com/kubernetes/minikube/issues/16371 this test is skipped for cri-o")
+	}
+
+	nginx := e2e.Nginx{Minikube: m}
+	err := nginx.Deploy("nginx-dns-inject")
+	require.NoError(t, err, "failed to create pod")
+	defer func() { _ = nginx.Delete() }()
+
+	target, err := nginx.Target()
+	require.NoError(t, err)
+
+	tests := []struct {
+		name           string
+		dnsErrorType   []string
+		port           string
+		wantResolution bool
+	}{
+		{
+			name:           "should inject NXDOMAIN",
+			dnsErrorType:   []string{"NXDOMAIN"},
+			wantResolution: false,
+		},
+		{
+			name:           "should inject SERVFAIL",
+			dnsErrorType:   []string{"SERVFAIL"},
+			wantResolution: false,
+		},
+		{
+			name:           "should inject TIMEOUT",
+			dnsErrorType:   []string{"TIMEOUT"},
+			wantResolution: false,
+		},
+		{
+			name:           "should not affect non-matching port range",
+			dnsErrorType:   []string{"NXDOMAIN"},
+			port:           "8888-9999",
+			wantResolution: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			config := map[string]interface{}{
+				"duration":     10000,
+				"dnsErrorType": tt.dnsErrorType,
+			}
+			if tt.port != "" {
+				config["port"] = tt.port
+			}
+
+			action, err := e.RunAction(fmt.Sprintf("%s.network_dns_error_injection", extcontainer.BaseActionID), target, config, &action_kit_api.ExecutionContext{})
+			defer func() { _ = action.Cancel() }()
+			require.NoError(t, err)
+
+			e2e.Retry(t, 8, 500*time.Millisecond, func(r *e2e.R) {
+				out, err := m.PodExec(nginx.Pod, "nginx", "nslookup", "steadybit.com")
+				combined := out
+				if err != nil {
+					combined = fmt.Sprintf("%s %v", out, err)
+				}
+				if tt.wantResolution && err != nil {
+					r.Failed = true
+					_, _ = fmt.Fprintf(r.Log, "expected nslookup to succeed, but got: %s", combined)
+				} else if !tt.wantResolution && err == nil {
+					r.Failed = true
+					_, _ = fmt.Fprintf(r.Log, "expected nslookup to fail, but succeeded: %s", combined)
+				}
+			})
+
+			require.NoError(t, action.Cancel())
+		})
+	}
+	requireAllSidecarsCleanedUp(t, m, e)
+}
+
+func testNetworkDNSErrorInjectionTwoContainers(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
+	if m.Runtime == "cri-o" && m.Driver == "docker" {
+		t.Skip("Due to https://github.com/kubernetes/minikube/issues/16371 this test is skipped for cri-o")
+	}
+
+	nginx := e2e.Nginx{Minikube: m}
+	err := nginx.Deploy("nginx-dns-inject-two", func(pod *acorev1.PodApplyConfiguration) {
+		pod.Spec.Containers = append(pod.Spec.Containers, acorev1.ContainerApplyConfiguration{
+			Name:    extutil.Ptr("sleeper"),
+			Image:   extutil.Ptr("alpine:latest"),
+			Command: []string{"sleep", "10000"},
+		})
+	})
+	require.NoError(t, err, "failed to create pod")
+	defer func() { _ = nginx.Delete() }()
+
+	target1, err := nginx.Target()
+	require.NoError(t, err)
+	target2, err := e2e.NewContainerTarget(m, nginx.Pod, "sleeper")
+	require.NoError(t, err)
+
+	action1, err := e.RunAction(fmt.Sprintf("%s.network_dns_error_injection", extcontainer.BaseActionID), target1, map[string]interface{}{
+		"duration":     10000,
+		"dnsErrorType": []string{"NXDOMAIN"},
+	}, &action_kit_api.ExecutionContext{
+		ExperimentKey: extutil.Ptr("TEST-1"),
+		ExecutionId:   extutil.Ptr(12345),
+	})
+	defer func() { _ = action1.Cancel() }()
+	require.NoError(t, err)
+
+	action2, err := e.RunAction(fmt.Sprintf("%s.network_dns_error_injection", extcontainer.BaseActionID), target2, map[string]interface{}{
+		"duration":     10000,
+		"dnsErrorType": []string{"SERVFAIL"},
+	}, &action_kit_api.ExecutionContext{
+		ExperimentKey: extutil.Ptr("TEST-2"),
+		ExecutionId:   extutil.Ptr(6789),
+	})
+	defer func() { _ = action2.Cancel() }()
+	require.NoError(t, err)
+
+	nginx.AssertCannotReach(t, "https://steadybit.com", "Could not resolve host")
+
+	require.NoError(t, action1.Cancel())
+	require.NoError(t, action2.Cancel())
+	requireAllSidecarsCleanedUp(t, m, e)
+}
+
+func testNetworkDNSErrorInjectionHostNetwork(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
+	if m.Runtime == "cri-o" && m.Driver == "docker" {
+		t.Skip("Due to https://github.com/kubernetes/minikube/issues/16371 this test is skipped for cri-o")
+	}
+
+	nginx := e2e.Nginx{Minikube: m}
+	err := nginx.Deploy("nginx-dns-inject-hostnet", func(pod *acorev1.PodApplyConfiguration) {
+		pod.Spec.HostNetwork = extutil.Ptr(true)
+	})
+	require.NoError(t, err, "failed to create pod")
+	defer func() { _ = nginx.Delete() }()
+
+	target, err := nginx.Target()
+	require.NoError(t, err)
+
+	tests := []struct {
+		name              string
+		failOnHostNetwork bool
+		wantedError       bool
+	}{
+		{
+			name:              "should fail with host network",
+			failOnHostNetwork: true,
+			wantedError:       true,
+		},
+		{
+			name:              "should allow host network",
+			failOnHostNetwork: false,
+			wantedError:       false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			config := map[string]interface{}{
+				"duration":          10000,
+				"dnsErrorType":      []string{"NXDOMAIN"},
+				"failOnHostNetwork": tt.failOnHostNetwork,
+			}
+
+			action, err := e.RunAction(fmt.Sprintf("%s.network_dns_error_injection", extcontainer.BaseActionID), target, config, &action_kit_api.ExecutionContext{})
+			defer func() { _ = action.Cancel() }()
+
+			if tt.wantedError {
+				require.ErrorContains(t, err, "Container is using host network")
+			} else {
+				require.NoError(t, err)
+				require.NoError(t, action.Cancel())
+			}
 		})
 	}
 	requireAllSidecarsCleanedUp(t, m, e)

@@ -22,10 +22,12 @@ RUN echo 'deb [trusted=yes] https://repo.goreleaser.com/apt/ /' > /etc/apt/sourc
     && apt-get -qq install -y --no-install-recommends build-essential libcap2-bin goreleaser gpg curl
 
 COPY . .
+COPY --from=action-kit go/action_kit_commons ./action-kit/go/action_kit_commons
+RUN sed -i 's|=> ../action-kit|=> ./action-kit|g' go.mod && go mod tidy
 
 #Ambient set of capabilities are not really working, therefore we set the capabilities on the binary directly. More on this: https://github.com/kubernetes/kubernetes/issues/56374
 RUN --mount=type=cache,target="/root/.cache/go-build" GOCACHE=/root/.cache/go-build GOOS=$TARGETOS GOARCH=$TARGETARCH goreleaser build --snapshot="${BUILD_SNAPSHOT}" --single-target -o extension \
-    && setcap "cap_setuid,cap_sys_chroot,cap_setgid,cap_sys_admin,cap_dac_override,cap_sys_ptrace+eip" ./extension
+    && setcap "cap_setuid,cap_sys_chroot,cap_setgid,cap_net_admin,cap_bpf,cap_sys_admin,cap_dac_override,cap_sys_ptrace+eip" ./extension
 
 # As of today the runc binary from debian is built using golang 1.19.8 and will be flagged by CVE scanners as vulnerable to several CVEs.
 # We are dowonloading the runc binary from the official github release page and will use it instead of the one from the debian package.
@@ -59,6 +61,7 @@ ARG TARGETARCH
 
 ENV STEADYBIT_EXTENSION_NSMOUNT_PATH="/nsmount"
 ENV STEADYBIT_EXTENSION_MEMFILL_PATH="/memfill"
+ENV STEADYBIT_EXTENSION_DNS_INJECT_PATH="/dns-inject"
 
 RUN groupadd --gid $USER_GID $USERNAME \
     && useradd --uid $USER_UID --gid $USER_GID -m $USERNAME
@@ -79,6 +82,7 @@ WORKDIR /
 
 COPY --from=build /app/dist/nsmount.${TARGETARCH} /nsmount
 COPY --from=build /app/dist/memfill.${TARGETARCH} /memfill
+COPY --from=build /app/dist/dns-inject.${TARGETARCH} /dns-inject
 COPY --from=build /app/extension /extension
 COPY --from=build /app/licenses /licenses
 
