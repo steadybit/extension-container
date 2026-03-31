@@ -17,6 +17,7 @@ builds:
       - CGO_ENABLED=0
       - MEMFILL_VERSION=v1.3.0
       - NSMOUNT_VERSION=v1.1.0
+      - DNS_INJECT_VERSION=v0.1.0
     goos:
       - linux
     goarch:
@@ -31,7 +32,7 @@ builds:
       - -X github.com/steadybit/extension-kit/extbuild.Version={{.Version}}
       - -X github.com/steadybit/extension-kit/extbuild.Revision={{.Commit}}
     hooks:
-      post: sh -c "curl -sfL \"https://github.com/steadybit/nsmount/releases/download/${NSMOUNT_VERSION}/nsmount.{{ .Arch }}\" -o \"./dist/nsmount.{{ .Arch }}\" && chmod a+x \"./dist/nsmount.{{ .Arch }}\" && curl -sfL \"https://github.com/steadybit/memfill/releases/download/${MEMFILL_VERSION}/memfill.{{ .Arch }}\" -o \"./dist/memfill.{{ .Arch }}\" && chmod a+x \"./dist/memfill.{{ .Arch }}\""
+      post: sh -c "curl -sfL \"https://github.com/steadybit/nsmount/releases/download/${NSMOUNT_VERSION}/nsmount.{{ .Arch }}\" -o \"./dist/nsmount.{{ .Arch }}\" && chmod a+x \"./dist/nsmount.{{ .Arch }}\" && curl -sfL \"https://github.com/steadybit/memfill/releases/download/${MEMFILL_VERSION}/memfill.{{ .Arch }}\" -o \"./dist/memfill.{{ .Arch }}\" && chmod a+x \"./dist/memfill.{{ .Arch }}\" && curl -sfL \"https://github.com/steadybit/dns-inject/releases/download/${DNS_INJECT_VERSION}/dns-inject_${DNS_INJECT_VERSION#v}_{{ .Arch }}.tar.gz\" | tar -xzf - -C ./dist dns-inject && mv ./dist/dns-inject \"./dist/dns-inject.{{ .Arch }}\" && chmod a+x \"./dist/dns-inject.{{ .Arch }}\""
 
 archives:
   - name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
@@ -83,6 +84,8 @@ nfpms:
         dst: /opt/steadybit/extension-container/nsmount
       - src: ./dist/memfill.{{ .Arch }}
         dst: /opt/steadybit/extension-container/memfill
+      - src: ./dist/dns-inject.{{ .Arch }}
+        dst: /opt/steadybit/extension-container/dns-inject
       - src: ./licenses
         dst: /opt/steadybit/extension-container/licenses
 

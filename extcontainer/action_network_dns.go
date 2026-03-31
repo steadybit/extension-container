@@ -9,6 +9,7 @@ import (
 
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
 	"github.com/steadybit/action-kit/go/action_kit_commons/network"
+	"github.com/steadybit/action-kit/go/action_kit_commons/network/netfault"
 	"github.com/steadybit/action-kit/go/action_kit_commons/ociruntime"
 	"github.com/steadybit/action-kit/go/action_kit_sdk"
 	"github.com/steadybit/extension-container/extcontainer/container/types"
@@ -67,11 +68,11 @@ func getNetworkBlockDnsDescription() action_kit_api.ActionDescription {
 }
 
 func blockDns(_ ociruntime.OciRuntime) networkOptsProvider {
-	return func(ctx context.Context, sidecar network.SidecarOpts, request action_kit_api.PrepareActionRequestBody) (network.Opts, action_kit_api.Messages, error) {
+	return func(ctx context.Context, sidecar netfault.SidecarOpts, request action_kit_api.PrepareActionRequestBody) (netfault.Opts, action_kit_api.Messages, error) {
 		dnsPort := uint16(extutil.ToUInt(request.Config["dnsPort"]))
 
-		return &network.BlackholeOpts{
-			Filter:           network.Filter{Include: network.NewNetWithPortRanges(network.NetAny, network.PortRange{From: dnsPort, To: dnsPort})},
+		return &netfault.BlackholeOpts{
+			Filter:           netfault.Filter{Include: network.NewNetWithPortRanges(network.NetAny, network.PortRange{From: dnsPort, To: dnsPort})},
 			ExecutionContext: mapToExecutionContext(request),
 		}, nil, nil
 	}

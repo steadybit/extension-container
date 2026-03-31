@@ -81,6 +81,7 @@ func main() {
 	action_kit_sdk.RegisterAction(extcontainer.NewNetworkBlackholeContainerAction(r, client))
 	action_kit_sdk.RegisterAction(extcontainer.NewNetworkBlockDnsContainerAction(r, client))
 	action_kit_sdk.RegisterAction(extcontainer.NewNetworkDelayContainerAction(r, client))
+	action_kit_sdk.RegisterAction(extcontainer.NewNetworkDNSErrorInjectionAction(r, client))
 	action_kit_sdk.RegisterAction(extcontainer.NewNetworkLimitBandwidthContainerAction(r, client))
 	action_kit_sdk.RegisterAction(extcontainer.NewNetworkCorruptPackagesContainerAction(r, client))
 	action_kit_sdk.RegisterAction(extcontainer.NewNetworkPackageLossContainerAction(r, client))

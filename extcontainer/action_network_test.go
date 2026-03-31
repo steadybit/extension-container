@@ -9,6 +9,7 @@ import (
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
 	"github.com/steadybit/action-kit/go/action_kit_commons/network"
+	"github.com/steadybit/action-kit/go/action_kit_commons/network/netfault"
 	"github.com/steadybit/action-kit/go/action_kit_commons/ociruntime"
 	"github.com/steadybit/extension-container/extcontainer/container/types"
 	"github.com/steadybit/extension-kit/extconversion"
@@ -32,10 +33,10 @@ func Test_should_revert_event_when_namespace_is_missing(t *testing.T) {
 		ociRuntime:  newMockedRunc(),
 		client:      newMockedContainerClient().addContainer("test-container", nil),
 		description: action_kit_api.ActionDescription{},
-		optsProvider: func(ctx context.Context, sidecar network.SidecarOpts, request action_kit_api.PrepareActionRequestBody) (network.Opts, action_kit_api.Messages, error) {
+		optsProvider: func(ctx context.Context, sidecar netfault.SidecarOpts, request action_kit_api.PrepareActionRequestBody) (netfault.Opts, action_kit_api.Messages, error) {
 			port := uint16(rand.IntN(65535))
-			return &network.BlackholeOpts{
-				Filter: network.Filter{
+			return &netfault.BlackholeOpts{
+				Filter: netfault.Filter{
 					Include: []network.NetWithPortRange{
 						{Net: network.NetAnyIpv4, PortRange: network.PortRange{From: port, To: port}},
 					},

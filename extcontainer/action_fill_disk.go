@@ -216,8 +216,7 @@ func (a *fillDiskAction) Prepare(ctx context.Context, state *FillDiskActionState
 
 	state.Sidecar = diskfill.SidecarOpts{
 		TargetProcess: processInfo,
-		IdSuffix:      RemovePrefix(state.ContainerID)[:8],
-		ExecutionId:   request.ExecutionId,
+		Id:            fmt.Sprintf("%s-%s", request.ExecutionId.String()[24:], RemovePrefix(state.ContainerID)[:8]),
 	}
 	state.FillDiskOpts = opts
 	state.ExecutionId = request.ExecutionId

@@ -9,7 +9,7 @@ import (
 	"fmt"
 
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
-	"github.com/steadybit/action-kit/go/action_kit_commons/network"
+	"github.com/steadybit/action-kit/go/action_kit_commons/network/netfault"
 	"github.com/steadybit/action-kit/go/action_kit_commons/ociruntime"
 	"github.com/steadybit/action-kit/go/action_kit_sdk"
 	"github.com/steadybit/extension-container/extcontainer/container/types"
@@ -47,21 +47,21 @@ func getNetworkBlackholeDescription() action_kit_api.ActionDescription {
 }
 
 func blackhole(r ociruntime.OciRuntime) networkOptsProvider {
-	return func(ctx context.Context, sidecar network.SidecarOpts, request action_kit_api.PrepareActionRequestBody) (network.Opts, action_kit_api.Messages, error) {
+	return func(ctx context.Context, sidecar netfault.SidecarOpts, request action_kit_api.PrepareActionRequestBody) (netfault.Opts, action_kit_api.Messages, error) {
 		filter, messages, err := mapToNetworkFilter(ctx, r, sidecar, request.Config, getRestrictedEndpoints(request))
 		if err != nil {
 			return nil, nil, err
 		}
 
-		return &network.BlackholeOpts{
+		return &netfault.BlackholeOpts{
 			Filter:           filter,
 			ExecutionContext: mapToExecutionContext(request),
 		}, messages, nil
 	}
 }
 
-func blackholeDecode(data json.RawMessage) (network.Opts, error) {
-	var opts network.BlackholeOpts
+func blackholeDecode(data json.RawMessage) (netfault.Opts, error) {
+	var opts netfault.BlackholeOpts
 	err := json.Unmarshal(data, &opts)
 	return &opts, err
 }

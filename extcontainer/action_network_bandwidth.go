@@ -8,7 +8,7 @@ import (
 	"fmt"
 
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
-	"github.com/steadybit/action-kit/go/action_kit_commons/network"
+	"github.com/steadybit/action-kit/go/action_kit_commons/network/netfault"
 	"github.com/steadybit/action-kit/go/action_kit_commons/ociruntime"
 	"github.com/steadybit/action-kit/go/action_kit_sdk"
 	"github.com/steadybit/extension-container/extcontainer/container/types"
@@ -66,7 +66,7 @@ func getNetworkLimitBandwidthDescription() action_kit_api.ActionDescription {
 }
 
 func limitBandwidth(r ociruntime.OciRuntime) networkOptsProvider {
-	return func(ctx context.Context, sidecar network.SidecarOpts, request action_kit_api.PrepareActionRequestBody) (network.Opts, action_kit_api.Messages, error) {
+	return func(ctx context.Context, sidecar netfault.SidecarOpts, request action_kit_api.PrepareActionRequestBody) (netfault.Opts, action_kit_api.Messages, error) {
 		bandwidth := extutil.ToString(request.Config["bandwidth"])
 
 		filter, messages, err := mapToNetworkFilter(ctx, r, sidecar, request.Config, getRestrictedEndpoints(request))
@@ -76,7 +76,7 @@ func limitBandwidth(r ociruntime.OciRuntime) networkOptsProvider {
 
 		interfaces := extutil.ToStringArray(request.Config["networkInterface"])
 		if len(interfaces) == 0 {
-			interfaces, err = network.ListNonLoopbackInterfaceNames(ctx, network.NewRuncRunner(r, sidecar))
+			interfaces, err = netfault.ListNonLoopbackInterfaceNames(ctx, netfault.NewRuncRunner(r, sidecar))
 			if err != nil {
 				return nil, nil, err
 			}
@@ -86,7 +86,7 @@ func limitBandwidth(r ociruntime.OciRuntime) networkOptsProvider {
 			return nil, nil, fmt.Errorf("no network interfaces specified")
 		}
 
-		return &network.LimitBandwidthOpts{
+		return &netfault.LimitBandwidthOpts{
 			ExecutionContext: mapToExecutionContext(request),
 			Filter:           filter,
 			Bandwidth:        bandwidth,
@@ -95,8 +95,8 @@ func limitBandwidth(r ociruntime.OciRuntime) networkOptsProvider {
 	}
 }
 
-func limitBandwidthDecode(data json.RawMessage) (network.Opts, error) {
-	var opts network.LimitBandwidthOpts
+func limitBandwidthDecode(data json.RawMessage) (netfault.Opts, error) {
+	var opts netfault.LimitBandwidthOpts
 	err := json.Unmarshal(data, &opts)
 	return &opts, err
 }
