@@ -6,9 +6,7 @@ package docker
 import (
 	"context"
 	"fmt"
-	dcontainer "github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/filters"
-	dclient "github.com/docker/docker/client"
+	dclient "github.com/moby/moby/client"
 	"github.com/steadybit/extension-container/extcontainer"
 	"github.com/steadybit/extension-container/extcontainer/container/types"
 	"github.com/steadybit/extension-kit/extutil"
@@ -39,54 +37,54 @@ func New(address string) (types.Client, error) {
 }
 
 func (c *client) List(ctx context.Context) ([]types.Container, error) {
-	listFilters := filters.NewArgs()
-	listFilters.Add("status", "restarting")
-	listFilters.Add("status", "running")
-	listFilters.Add("status", "paused")
+	listFilters := make(dclient.Filters)
+	listFilters.Add("status", "restarting", "running", "paused")
 
-	containers, err := c.docker.ContainerList(ctx, dcontainer.ListOptions{Filters: listFilters})
+	listResult, err := c.docker.ContainerList(ctx, dclient.ContainerListOptions{Filters: listFilters})
 	if err != nil {
 		return nil, fmt.Errorf("failed to list containers: %w", err)
 	}
 
-	result := make([]types.Container, 0, len(containers))
-	for _, container := range containers {
+	result := make([]types.Container, 0, len(listResult.Items))
+	for _, container := range listResult.Items {
 		result = append(result, newContainer(container))
 	}
 	return result, nil
 }
 
 func (c *client) Info(ctx context.Context, id string) (types.Container, error) {
-	r, err := c.docker.ContainerInspect(ctx, id)
+	r, err := c.docker.ContainerInspect(ctx, id, dclient.ContainerInspectOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get docker container %s: %w", id, err)
 	}
-	return newContainerFromInspect(r), nil
+	return newContainerFromInspect(r.Container), nil
 }
 
 func (c *client) GetPid(ctx context.Context, containerId string) (int, error) {
-	info, err := c.docker.ContainerInspect(ctx, extcontainer.RemovePrefix(containerId))
+	info, err := c.docker.ContainerInspect(ctx, extcontainer.RemovePrefix(containerId), dclient.ContainerInspectOptions{})
 	if err != nil {
 		return 0, fmt.Errorf("failed to inspect container: %w", err)
 	}
-	return info.State.Pid, nil
+	return info.Container.State.Pid, nil
 }
 
 func (c *client) Pause(ctx context.Context, id string) error {
-	return c.docker.ContainerPause(ctx, id)
+	_, err := c.docker.ContainerPause(ctx, id, dclient.ContainerPauseOptions{})
+	return err
 }
 
 func (c *client) Unpause(ctx context.Context, id string) error {
-	return c.docker.ContainerUnpause(ctx, id)
+	_, err := c.docker.ContainerUnpause(ctx, id, dclient.ContainerUnpauseOptions{})
+	return err
 }
 
 func (c *client) Stop(ctx context.Context, id string, graceful bool) error {
-	opt := dcontainer.StopOptions{}
+	opt := dclient.ContainerStopOptions{}
 	if !graceful {
 		opt.Timeout = extutil.Ptr(0)
 	}
 
-	err := c.docker.ContainerStop(ctx, id, opt)
+	_, err := c.docker.ContainerStop(ctx, id, opt)
 	if err != nil {
 		return fmt.Errorf("failed to stop container %s: %w", id, err)
 	}
@@ -94,7 +92,7 @@ func (c *client) Stop(ctx context.Context, id string, graceful bool) error {
 }
 
 func (c *client) Version(ctx context.Context) (string, error) {
-	version, err := c.docker.ServerVersion(ctx)
+	version, err := c.docker.ServerVersion(ctx, dclient.ServerVersionOptions{})
 	if err != nil {
 		return "", err
 	}
