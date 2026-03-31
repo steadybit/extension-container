@@ -4,7 +4,7 @@
 package docker
 
 import (
-	typecontainer "github.com/docker/docker/api/types/container"
+	typecontainer "github.com/moby/moby/api/types/container"
 )
 
 // container implements the types.Container interface for Docker
