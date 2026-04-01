@@ -17,7 +17,7 @@ builds:
       - CGO_ENABLED=0
       - MEMFILL_VERSION=v1.3.0
       - NSMOUNT_VERSION=v1.1.0
-      - DNS_INJECT_VERSION=v0.1.1
+      - DNS_INJECT_VERSION=v0.1.2
     goos:
       - linux
     goarch:
