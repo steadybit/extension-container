@@ -105,6 +105,10 @@ func TestWithMinikube(t *testing.T) {
 			Test: testNetworkBlackhole3Containers,
 		},
 		{
+			Name: "network tcp reset",
+			Test: testNetworkTcpReset,
+		},
+		{
 			Name: "network delay",
 			Test: testNetworkDelay,
 		},
@@ -143,6 +147,10 @@ func TestWithMinikube(t *testing.T) {
 		{
 			Name: "host network detection",
 			Test: testHostNetwork,
+		},
+		{
+			Name: "network tcp reset two containers on the same network",
+			Test: testNetworkTcpResetOnTwoContainers,
 		},
 		{
 			Name: "network delay two containers on the same network",
@@ -844,6 +852,161 @@ func testNetworkBlackhole3Containers(t *testing.T, m *e2e.Minikube, e *e2e.Exten
 
 	nginx.AssertIsReachable(t, true)
 	nginx.AssertCanReach(t, "https://steadybit.com", true)
+	requireAllSidecarsCleanedUp(t, m, e)
+}
+
+func testNetworkTcpReset(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
+	if m.Runtime == "cri-o" && m.Driver == "docker" {
+		t.Skip("Due to https://github.com/kubernetes/minikube/issues/16371 this test is skipped for cri-o")
+	}
+
+	nginx := e2e.Nginx{Minikube: m}
+	err := nginx.Deploy("nginx-network-tcp-reset")
+	require.NoError(t, err, "failed to create pod")
+	defer func() { _ = nginx.Delete() }()
+
+	target, err := nginx.Target()
+	require.NoError(t, err)
+
+	tests := []struct {
+		name             string
+		ip               []string
+		hostname         []string
+		port             []string
+		interfaces       []string
+		wantedReachable  bool
+		wantedReachesUrl bool
+	}{
+		{
+			name:             "should reset all traffic",
+			wantedReachable:  false,
+			wantedReachesUrl: false,
+		},
+		{
+			name:             "should reset only port 8080 traffic",
+			port:             []string{"8080"},
+			wantedReachable:  true,
+			wantedReachesUrl: true,
+		},
+		{
+			name:             "should reset only port 80, 443 traffic",
+			port:             []string{"80", "443"},
+			wantedReachable:  false,
+			wantedReachesUrl: false,
+		},
+		{
+			name:             "should reset only traffic for steadybit.com",
+			hostname:         []string{"steadybit.com"},
+			wantedReachable:  true,
+			wantedReachesUrl: false,
+		},
+		{
+			name:             "should reset only traffic for steadybit.com using CIDRs",
+			ip:               steadybitCIDRs,
+			wantedReachable:  true,
+			wantedReachesUrl: false,
+		},
+		{
+			name:             "should not reset traffic for non-matching ip",
+			ip:               []string{"8.8.0.0/16"},
+			wantedReachable:  true,
+			wantedReachesUrl: true,
+		},
+		{
+			name:             "should reset only port 80, 443 traffic on eth0",
+			port:             []string{"80", "443"},
+			interfaces:       []string{"eth0"},
+			wantedReachable:  false,
+			wantedReachesUrl: false,
+		},
+	}
+
+	for _, tt := range tests {
+		config := map[string]interface{}{
+			"duration":         10000,
+			"ip":               tt.ip,
+			"hostname":         tt.hostname,
+			"port":             tt.port,
+			"networkInterface": tt.interfaces,
+		}
+
+		hostnameBefore, err := m.PodExec(nginx.Pod, "nginx", "hostname")
+		require.NoError(t, err)
+
+		t.Run(tt.name, func(t *testing.T) {
+			nginx.AssertIsReachable(t, true)
+			nginx.AssertCanReach(t, "https://steadybit.com", true)
+
+			action, err := e.RunAction(fmt.Sprintf("%s.network_tcp_reset", extcontainer.BaseActionID), target, config, &action_kit_api.ExecutionContext{})
+			defer func() { _ = action.Cancel() }()
+			require.NoError(t, err)
+
+			nginx.AssertIsReachable(t, tt.wantedReachable)
+			nginx.AssertCanReach(t, "https://steadybit.com", tt.wantedReachesUrl)
+
+			require.NoError(t, action.Cancel())
+			nginx.AssertIsReachable(t, true)
+			nginx.AssertCanReach(t, "https://steadybit.com", true)
+		})
+
+		hostnameAfter, err := m.PodExec(nginx.Pod, "nginx", "hostname")
+		require.NoError(t, err)
+
+		require.Equal(t, hostnameBefore, hostnameAfter, "must not alter the hostname")
+	}
+	requireAllSidecarsCleanedUp(t, m, e)
+}
+
+func testNetworkTcpResetOnTwoContainers(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
+	if m.Runtime == "cri-o" && m.Driver == "docker" {
+		t.Skip("Due to https://github.com/kubernetes/minikube/issues/16371 this test is skipped for cri-o")
+	}
+
+	nginx := e2e.Nginx{Minikube: m}
+	err := nginx.Deploy("nginx-tcp-reset-double", func(pod *acorev1.PodApplyConfiguration) {
+		pod.Spec.Containers = append(pod.Spec.Containers, acorev1.ContainerApplyConfiguration{
+			Name:    extutil.Ptr("sleeper"),
+			Image:   extutil.Ptr("alpine:latest"),
+			Command: []string{"sleep", "10000"},
+		})
+	})
+	require.NoError(t, err, "failed to create pod")
+	defer func() { _ = nginx.Delete() }()
+
+	target, err := nginx.Target()
+	require.NoError(t, err)
+	target2, err := e2e.NewContainerTarget(m, nginx.Pod, "sleeper")
+	require.NoError(t, err)
+
+	config := map[string]interface{}{
+		"duration": 10000,
+	}
+
+	nginx.AssertIsReachable(t, true)
+
+	action, err := e.RunAction(fmt.Sprintf("%s.network_tcp_reset", extcontainer.BaseActionID), target, config, &action_kit_api.ExecutionContext{
+		ExperimentKey: extutil.Ptr("TEST-1"),
+		ExecutionId:   extutil.Ptr(12345),
+	})
+	defer func() { _ = action.Cancel() }()
+	require.NoError(t, err)
+
+	nginx.AssertIsReachable(t, false)
+
+	action2, err2 := e.RunAction(fmt.Sprintf("%s.network_tcp_reset", extcontainer.BaseActionID), target2, config, &action_kit_api.ExecutionContext{
+		ExperimentKey: extutil.Ptr("TEST-2"),
+		ExecutionId:   extutil.Ptr(6789),
+	})
+	defer func() { _ = action2.Cancel() }()
+	require.NoError(t, err2)
+
+	nginx.AssertIsReachable(t, false)
+
+	require.NoError(t, action.Cancel())
+	require.NoError(t, action2.Cancel())
+
+	nginx.AssertIsReachable(t, true)
+
 	requireAllSidecarsCleanedUp(t, m, e)
 }
 
