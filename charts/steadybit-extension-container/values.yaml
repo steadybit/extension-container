@@ -142,6 +142,7 @@ containerSecurityContext:
       - SYS_ADMIN
       - SYS_CHROOT
       - SYS_PTRACE
+      - NET_RAW
       - NET_ADMIN
       - BPF
       - DAC_OVERRIDE
