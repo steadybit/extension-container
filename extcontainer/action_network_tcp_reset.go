@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/rs/zerolog/log"
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
 	"github.com/steadybit/action-kit/go/action_kit_commons/network/netfault"
 	"github.com/steadybit/action-kit/go/action_kit_commons/ociruntime"
@@ -64,9 +65,11 @@ func tcpReset(r ociruntime.OciRuntime) networkOptsProvider {
 			return nil, nil, err
 		}
 
+		runner := netfault.NewRuncRunner(r, sidecar)
+
 		interfaces := extutil.ToStringArray(request.Config["networkInterface"])
 		if len(interfaces) == 0 {
-			interfaces, err = netfault.ListNonLoopbackInterfaceNames(ctx, netfault.NewRuncRunner(r, sidecar))
+			interfaces, err = netfault.ListNonLoopbackInterfaceNames(ctx, runner)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -76,10 +79,24 @@ func tcpReset(r ociruntime.OciRuntime) networkOptsProvider {
 			return nil, nil, fmt.Errorf("no network interfaces specified")
 		}
 
+		var useMangleChain bool
+		istio, istioErr := netfault.HasIstioRedirect(ctx, runner)
+		if istioErr != nil {
+			log.Warn().Err(istioErr).Msg("failed to detect Istio, falling back to filter table")
+		}
+		if istio {
+			useMangleChain = true
+			messages = append(messages, action_kit_api.Message{
+				Level:   extutil.Ptr(action_kit_api.Info),
+				Message: "Istio sidecar detected, using mangle+filter mark-based approach for TCP reset rules.",
+			})
+		}
+
 		return &netfault.TcpResetOpts{
 			Filter:           filter,
 			ExecutionContext: mapToExecutionContext(request),
 			Interfaces:       interfaces,
+			UseMangleChain:    useMangleChain,
 		}, messages, nil
 	}
 }
