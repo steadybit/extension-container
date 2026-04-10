@@ -39,11 +39,14 @@ The capabilities needed by this extension are: (which are provided by the helm c
 - `NET_RAW`
 - `NET_ADMIN`
 - `NET_BIND_SERVICE`
+- `BPF`
 - `DAC_OVERRIDE`
 - `SETUID`
 - `SETGID`
 - `KILL`
 - `AUDIT_WRITE`
+- `SETPCAP`
+- `MKNOD`
 
 Optional:
 
