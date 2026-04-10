@@ -34,7 +34,7 @@ func getNetworkTcpResetDescription() action_kit_api.ActionDescription {
 		Label:       "Reset TCP Connection",
 		Description: "Injects TCP resets for matching connections (incoming and outgoing).",
 		Version:     extbuild.GetSemverVersionStringOrUnknown(),
-		Icon:        extutil.Ptr(blackHoleIcon),
+		Icon:        extutil.Ptr(tcpResetIcon),
 		TargetSelection: &action_kit_api.TargetSelection{
 			TargetType:         targetID,
 			SelectionTemplates: &targetSelectionTemplates,
