@@ -56,7 +56,7 @@ func (a *dnsErrorInjectionAction) Describe() action_kit_api.ActionDescription {
 		Label:       "DNS Error Injection",
 		Description: "Inject DNS errors (NXDOMAIN/SERVFAIL/TIMEOUT) into DNS queries using eBPF.",
 		Version:     extbuild.GetSemverVersionStringOrUnknown(),
-		Icon:        extutil.Ptr(dnsIcon),
+		Icon:        extutil.Ptr(dnsErrorInjectIcon),
 		TargetSelection: &action_kit_api.TargetSelection{
 			TargetType:         targetID,
 			SelectionTemplates: &targetSelectionTemplates,
@@ -311,13 +311,11 @@ func formatDNSMetricsMessages(metrics *dnsinject.Metrics) []action_kit_api.Messa
 		metrics.Injected,
 	)
 
-	now := time.Now()
-	messageType := "dns_stats_markdown"
 	return []action_kit_api.Message{
 		{
 			Message:   markdown,
-			Timestamp: &now,
-			Type:      &messageType,
+			Timestamp: extutil.Ptr(time.Now()),
+			Type:      extutil.Ptr("dns_stats_markdown"),
 		},
 	}
 }
