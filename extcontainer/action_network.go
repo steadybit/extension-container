@@ -54,47 +54,47 @@ var commonNetworkParameters = []action_kit_api.ActionParameter{
 	{
 		Name:         "duration",
 		Label:        "Duration",
-		Description:  extutil.Ptr("How long should the network be affected?"),
+		Description:  new("How long should the network be affected?"),
 		Type:         action_kit_api.ActionParameterTypeDuration,
-		DefaultValue: extutil.Ptr("30s"),
-		Required:     extutil.Ptr(true),
-		Order:        extutil.Ptr(0),
+		DefaultValue: new("30s"),
+		Required:     new(true),
+		Order:        new(0),
 	},
 	{
 		Name:         "failOnHostNetwork",
 		Label:        "Fail on Host Network",
-		Description:  extutil.Ptr("Should the action fail if the container is using host network?"),
+		Description:  new("Should the action fail if the container is using host network?"),
 		Type:         action_kit_api.ActionParameterTypeBoolean,
-		DefaultValue: extutil.Ptr("true"),
-		Required:     extutil.Ptr(true),
-		Order:        extutil.Ptr(100),
+		DefaultValue: new("true"),
+		Required:     new(true),
+		Order:        new(100),
 	},
 	{
 		Name:         "hostname",
 		Label:        "Hostnames",
-		Description:  extutil.Ptr("Restrict to/from which hosts the traffic is affected."),
+		Description:  new("Restrict to/from which hosts the traffic is affected."),
 		Type:         action_kit_api.ActionParameterTypeStringArray,
-		DefaultValue: extutil.Ptr(""),
-		Advanced:     extutil.Ptr(true),
-		Order:        extutil.Ptr(101),
+		DefaultValue: new(""),
+		Advanced:     new(true),
+		Order:        new(101),
 	},
 	{
 		Name:         "ip",
 		Label:        "IPs/CIDRs",
-		Description:  extutil.Ptr("Restrict to/from which IP addresses or blocks the traffic is affected."),
+		Description:  new("Restrict to/from which IP addresses or blocks the traffic is affected."),
 		Type:         action_kit_api.ActionParameterTypeStringArray,
-		DefaultValue: extutil.Ptr(""),
-		Advanced:     extutil.Ptr(true),
-		Order:        extutil.Ptr(102),
+		DefaultValue: new(""),
+		Advanced:     new(true),
+		Order:        new(102),
 	},
 	{
 		Name:         "port",
 		Label:        "Ports",
-		Description:  extutil.Ptr("Restrict to/from which ports the traffic is affected."),
+		Description:  new("Restrict to/from which ports the traffic is affected."),
 		Type:         action_kit_api.ActionParameterTypeStringArray,
-		DefaultValue: extutil.Ptr(""),
-		Advanced:     extutil.Ptr(true),
-		Order:        extutil.Ptr(103),
+		DefaultValue: new(""),
+		Advanced:     new(true),
+		Order:        new(103),
 	},
 }
 
@@ -197,7 +197,7 @@ func (a *networkAction) Start(ctx context.Context, state *NetworkActionState) (*
 	if err != nil {
 		var toomany *netfault.ErrTooManyTcCommands
 		if errors.As(err, &toomany) {
-			result.Messages = extutil.Ptr(append(*result.Messages, action_kit_api.Message{
+			result.Messages = new(append(*result.Messages, action_kit_api.Message{
 				Level:   extutil.Ptr(action_kit_api.Error),
 				Message: fmt.Sprintf("Too many tc commands (%d) generated. This happens when too many excludes for steadybit agent and extensions are needed. Please configure a more specific attack by adding ports, and/or CIDRs to the parameters.", toomany.Count),
 			}))
@@ -260,7 +260,7 @@ func parsePortRanges(raw []string) ([]network.PortRange, error) {
 	return ranges, nil
 }
 
-func mapToNetworkFilter(ctx context.Context, r ociruntime.OciRuntime, sidecar netfault.SidecarOpts, actionConfig map[string]interface{}, restrictedEndpoints []action_kit_api.RestrictedEndpoint) (netfault.Filter, action_kit_api.Messages, error) {
+func mapToNetworkFilter(ctx context.Context, r ociruntime.OciRuntime, sidecar netfault.SidecarOpts, actionConfig map[string]any, restrictedEndpoints []action_kit_api.RestrictedEndpoint) (netfault.Filter, action_kit_api.Messages, error) {
 	includeCidrs, unresolved := network.ParseCIDRs(append(
 		extutil.ToStringArray(actionConfig["ip"]),
 		extutil.ToStringArray(actionConfig["hostname"])...,

@@ -10,8 +10,7 @@ import (
 )
 
 func Test_schedule(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	var wantedTargets = []discovery_kit_api.Target{{
 		Id: "id",

@@ -13,7 +13,6 @@ import (
 	"github.com/steadybit/extension-container/config"
 	"github.com/steadybit/extension-container/extcontainer/container/types"
 	"github.com/steadybit/extension-kit/extbuild"
-	"github.com/steadybit/extension-kit/extutil"
 	"net"
 	"os"
 	"strings"
@@ -46,7 +45,7 @@ func (d *containerDiscovery) Describe() discovery_kit_api.DiscoveryDescription {
 	return discovery_kit_api.DiscoveryDescription{
 		Id: targetID,
 		Discover: discovery_kit_api.DescribingEndpointReferenceWithCallInterval{
-			CallInterval: extutil.Ptr(config.Config.DiscoveryCallInterval),
+			CallInterval: new(config.Config.DiscoveryCallInterval),
 		},
 	}
 }
@@ -55,13 +54,13 @@ func (d *containerDiscovery) DescribeTarget() discovery_kit_api.TargetDescriptio
 	return discovery_kit_api.TargetDescription{
 		Id:      targetID,
 		Version: extbuild.GetSemverVersionStringOrUnknown(),
-		Icon:    extutil.Ptr(targetIcon),
+		Icon:    new(targetIcon),
 
 		// Labels used in the UI
 		Label: discovery_kit_api.PluralLabel{One: "Container", Other: "Containers"},
 
 		// Category for the targets to appear in
-		Category: extutil.Ptr("basic"),
+		Category: new("basic"),
 
 		// Specify attributes shown in table columns and to be used for sorting
 		Table: discovery_kit_api.Table{
@@ -240,8 +239,8 @@ func (d *containerDiscovery) mapTarget(container types.Container, hostname, fqdn
 }
 
 func addLabelOrK8sAttribute(attributes map[string][]string, key, value string) {
-	if strings.HasPrefix(key, labelPrefixAppKubernetes) {
-		key = fmt.Sprintf("k8s.app.%s", strings.TrimPrefix(key, labelPrefixAppKubernetes))
+	if after, ok := strings.CutPrefix(key, labelPrefixAppKubernetes); ok {
+		key = fmt.Sprintf("k8s.app.%s", after)
 		attributes[key] = append(attributes[key], value)
 		return
 	}

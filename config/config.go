@@ -51,7 +51,7 @@ func parseArgs(cfg *Specification) error {
 
 	cfg.DisallowHostNetwork = cfg.DisallowHostNetwork || *disallowHostNetwork
 
-	for _, s := range strings.Split(strings.TrimSpace(*disallowK8sNamespaces), ",") {
+	for s := range strings.SplitSeq(strings.TrimSpace(*disallowK8sNamespaces), ",") {
 		if s == "" {
 			continue
 		}

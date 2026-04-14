@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"os/exec"
+	"slices"
 	"strings"
 
 	"github.com/google/uuid"
@@ -115,7 +116,7 @@ func (a *stressAction) Start(ctx context.Context, state *StressActionState) (*ac
 	}
 
 	return &action_kit_api.StartResult{
-		Messages: extutil.Ptr([]action_kit_api.Message{
+		Messages: new([]action_kit_api.Message{
 			{
 				Level:   extutil.Ptr(action_kit_api.Info),
 				Message: fmt.Sprintf("Starting stress container %s with args %s", state.TargetLabel, strings.Join(state.StressOpts.Args(), " ")),
@@ -170,22 +171,20 @@ func (a *stressAction) Status(ctx context.Context, state *StressActionState) (*a
 			}
 		}
 
-		for _, ignore := range state.IgnoreExitCodes {
-			if exitCode == ignore {
-				return &action_kit_api.StatusResult{
-					Completed: true,
-					Messages: &[]action_kit_api.Message{
-						{
-							Level:   extutil.Ptr(action_kit_api.Warn),
-							Message: fmt.Sprintf("stress-ng exited unexpectedly: %s", errMessage),
-						},
+		if slices.Contains(state.IgnoreExitCodes, exitCode) {
+			return &action_kit_api.StatusResult{
+				Completed: true,
+				Messages: &[]action_kit_api.Message{
+					{
+						Level:   extutil.Ptr(action_kit_api.Warn),
+						Message: fmt.Sprintf("stress-ng exited unexpectedly: %s", errMessage),
 					},
-					Summary: &action_kit_api.Summary{
-						Level: action_kit_api.SummaryLevelWarning,
-						Text:  "stress-ng exited unexpectedly",
-					},
-				}, nil
-			}
+				},
+				Summary: &action_kit_api.Summary{
+					Level: action_kit_api.SummaryLevelWarning,
+					Text:  "stress-ng exited unexpectedly",
+				},
+			}, nil
 		}
 	}
 
@@ -194,7 +193,7 @@ func (a *stressAction) Status(ctx context.Context, state *StressActionState) (*a
 		Error: &action_kit_api.ActionKitError{
 			Status: extutil.Ptr(action_kit_api.Errored),
 			Title:  "Failed to stress container",
-			Detail: extutil.Ptr(errMessage),
+			Detail: new(errMessage),
 		},
 	}, nil
 }

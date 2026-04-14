@@ -11,7 +11,6 @@ import (
 	"github.com/steadybit/action-kit/go/action_kit_commons/ociruntime"
 	"github.com/steadybit/action-kit/go/action_kit_commons/stress"
 	"github.com/steadybit/action-kit/go/action_kit_commons/utils"
-	"github.com/steadybit/extension-kit/extutil"
 	"math"
 	"os"
 	"path/filepath"
@@ -52,7 +51,7 @@ func readAndAdaptToContainerLimits(_ context.Context, p ociruntime.LinuxProcessI
 
 func adaptToAllowedCpus(pid int, opts *stress.Opts) {
 	if cpuCount, err := utils.ReadCpusAllowedCount(fmt.Sprintf("/proc/%d/status", pid)); err == nil {
-		opts.CpuWorkers = extutil.Ptr(cpuCount)
+		opts.CpuWorkers = new(cpuCount)
 	} else {
 		log.Debug().Err(err).Msg("failed to read cpus_allowed count.")
 	}
@@ -79,7 +78,7 @@ func adaptToCpuContainerLimits(cpuLimitInMilliCpu int, opts *stress.Opts) {
 	if *opts.CpuWorkers == 0 {
 		// user didn't specify the number of workers. we start as many workers as we need to reach the desired cpu consumption
 		cpuWorkers := int(mathx.RoundUp(float64(cpuLoadInMillis)/1000, 0))
-		opts.CpuWorkers = extutil.Ptr(cpuWorkers)
+		opts.CpuWorkers = new(cpuWorkers)
 	}
 
 	opts.CpuLoad = int(math.Round(float64(cpuLoadInMillis)/float64(*opts.CpuWorkers)) / 10)

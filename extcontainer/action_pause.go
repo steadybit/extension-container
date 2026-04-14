@@ -43,30 +43,30 @@ func (a *pauseAction) Describe() action_kit_api.ActionDescription {
 		Label:       "Pause Container",
 		Description: "Pauses the container for the given duration.",
 		Version:     extbuild.GetSemverVersionStringOrUnknown(),
-		Icon:        extutil.Ptr(pauseIcon),
+		Icon:        new(pauseIcon),
 		TargetSelection: &action_kit_api.TargetSelection{
 			TargetType:         targetID,
 			SelectionTemplates: &targetSelectionTemplates,
 		},
-		Technology:  extutil.Ptr("Container"),
-		Category:    extutil.Ptr("State"),
+		Technology:  new("Container"),
+		Category:    new("State"),
 		Kind:        action_kit_api.Attack,
 		TimeControl: action_kit_api.TimeControlExternal,
 		Parameters: []action_kit_api.ActionParameter{
 			{
 				Name:         "duration",
 				Label:        "Duration",
-				Description:  extutil.Ptr("How long should the container be paused?"),
+				Description:  new("How long should the container be paused?"),
 				Type:         action_kit_api.ActionParameterTypeDuration,
-				DefaultValue: extutil.Ptr("30s"),
-				Required:     extutil.Ptr(true),
-				Order:        extutil.Ptr(0),
+				DefaultValue: new("30s"),
+				Required:     new(true),
+				Order:        new(0),
 			},
 		},
-		Status: extutil.Ptr(action_kit_api.MutatingEndpointReferenceWithCallInterval{
-			CallInterval: extutil.Ptr("5s"),
+		Status: new(action_kit_api.MutatingEndpointReferenceWithCallInterval{
+			CallInterval: new("5s"),
 		}),
-		Stop: extutil.Ptr(action_kit_api.MutatingEndpointReference{}),
+		Stop: new(action_kit_api.MutatingEndpointReference{}),
 	}
 }
 
@@ -88,7 +88,7 @@ func (a *pauseAction) Start(ctx context.Context, state *PauseActionState) (*acti
 		return nil, extension_kit.ToError("Failed to pause container", err)
 	}
 	return &action_kit_api.StartResult{
-		Messages: extutil.Ptr([]action_kit_api.Message{
+		Messages: new([]action_kit_api.Message{
 			{
 				Level:   extutil.Ptr(action_kit_api.Info),
 				Message: fmt.Sprintf("Pausing container %s", state.TargetLabel),
@@ -102,7 +102,7 @@ func (a *pauseAction) Status(ctx context.Context, state *PauseActionState) (*act
 	if err != nil {
 		return &action_kit_api.StatusResult{
 			Completed: true,
-			Messages: extutil.Ptr([]action_kit_api.Message{
+			Messages: new([]action_kit_api.Message{
 				{
 					Level:   extutil.Ptr(action_kit_api.Warn),
 					Message: fmt.Sprintf("Container %s is not running anymore", state.TargetLabel),
@@ -120,7 +120,7 @@ func (a *pauseAction) Stop(_ context.Context, state *PauseActionState) (*action_
 	_, err := a.client.GetPid(ctx, RemovePrefix(state.ContainerId))
 	if err != nil {
 		return &action_kit_api.StopResult{
-			Messages: extutil.Ptr([]action_kit_api.Message{
+			Messages: new([]action_kit_api.Message{
 				{
 					Level:   extutil.Ptr(action_kit_api.Warn),
 					Message: fmt.Sprintf("Container %s is not running anymore", state.TargetLabel),
@@ -135,7 +135,7 @@ func (a *pauseAction) Stop(_ context.Context, state *PauseActionState) (*action_
 	}
 
 	return &action_kit_api.StopResult{
-		Messages: extutil.Ptr([]action_kit_api.Message{
+		Messages: new([]action_kit_api.Message{
 			{
 				Level:   extutil.Ptr(action_kit_api.Info),
 				Message: fmt.Sprintf("Unpaused container %s", state.TargetLabel),

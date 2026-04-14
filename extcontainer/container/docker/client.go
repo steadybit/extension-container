@@ -9,7 +9,6 @@ import (
 	dclient "github.com/moby/moby/client"
 	"github.com/steadybit/extension-container/extcontainer"
 	"github.com/steadybit/extension-container/extcontainer/container/types"
-	"github.com/steadybit/extension-kit/extutil"
 	"strings"
 )
 
@@ -29,7 +28,7 @@ func New(address string) (types.Client, error) {
 	if !strings.Contains(address, "://") {
 		address = "unix://" + address
 	}
-	dockerClient, err := dclient.NewClientWithOpts(dclient.WithHost(address), dclient.WithAPIVersionNegotiation())
+	dockerClient, err := dclient.New(dclient.WithHost(address), dclient.WithAPIVersionNegotiation())
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Docker dclient: %w", err)
 	}
@@ -81,7 +80,7 @@ func (c *client) Unpause(ctx context.Context, id string) error {
 func (c *client) Stop(ctx context.Context, id string, graceful bool) error {
 	opt := dclient.ContainerStopOptions{}
 	if !graceful {
-		opt.Timeout = extutil.Ptr(0)
+		opt.Timeout = new(0)
 	}
 
 	_, err := c.docker.ContainerStop(ctx, id, opt)

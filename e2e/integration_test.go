@@ -25,7 +25,6 @@ import (
 	"github.com/steadybit/discovery-kit/go/discovery_kit_api"
 	"github.com/steadybit/discovery-kit/go/discovery_kit_test/validate"
 	"github.com/steadybit/extension-container/extcontainer"
-	"github.com/steadybit/extension-kit/extutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -188,7 +187,7 @@ func getMinikubeOptions() e2e.MinikubeOpts {
 	if rawRuntimes, _ := os.LookupEnv("E2E_RUNTIMES"); rawRuntimes != "" {
 		runtimes = []e2e.Runtime{}
 	OUTER:
-		for _, rawRuntime := range strings.Split(rawRuntimes, ",") {
+		for rawRuntime := range strings.SplitSeq(rawRuntimes, ",") {
 			lower := strings.ToLower(strings.TrimSpace(rawRuntime))
 			for _, runtime := range e2e.AllRuntimes {
 				if lower == string(runtime) {
@@ -274,7 +273,7 @@ func testNetworkDelay(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 
 	for _, tt := range tests {
 		delay := 200
-		config := map[string]interface{}{
+		config := map[string]any{
 			"duration":           20000,
 			"networkDelay":       delay,
 			"networkDelayJitter": false,
@@ -374,7 +373,7 @@ func testNetworkDelayTcpPsh(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 
 	for _, tt := range tests {
 		delay := 500
-		config := map[string]interface{}{
+		config := map[string]any{
 			"duration":           20000,
 			"networkDelay":       delay,
 			"networkDelayJitter": false,
@@ -409,7 +408,7 @@ func generateRestrictedEndpoints(count int) []action_kit_api.RestrictedEndpoint 
 	address := net.IPv4(192, 168, 0, 1)
 	result := make([]action_kit_api.RestrictedEndpoint, 0, count)
 
-	for i := 0; i < count; i++ {
+	for range count {
 		result = append(result, action_kit_api.RestrictedEndpoint{
 			Cidr:    fmt.Sprintf("%s/32", address.String()),
 			PortMin: 8085,
@@ -477,7 +476,7 @@ func testNetworkPackageLoss(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 
 	for _, tt := range tests {
 		loss := 10
-		config := map[string]interface{}{
+		config := map[string]any{
 			"duration":         20000,
 			"networkLoss":      loss,
 			"ip":               tt.ip,
@@ -544,7 +543,7 @@ func testNetworkPackageCorruption(t *testing.T, m *e2e.Minikube, e *e2e.Extensio
 
 	for _, tt := range tests {
 		corruption := 10
-		config := map[string]interface{}{
+		config := map[string]any{
 			"duration":          20000,
 			"networkCorruption": corruption,
 			"ip":                tt.ip,
@@ -615,7 +614,7 @@ func testNetworkLimitBandwidth(t *testing.T, m *e2e.Minikube, e *e2e.Extension) 
 	limited := unlimited / 3
 
 	for _, tt := range tests {
-		config := map[string]interface{}{
+		config := map[string]any{
 			"duration":         20000,
 			"bandwidth":        fmt.Sprintf("%dmbit", int(limited)),
 			"ip":               tt.ip,
@@ -694,7 +693,7 @@ func testNetworkBlackhole(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	}
 
 	for _, tt := range tests {
-		config := map[string]interface{}{
+		config := map[string]any{
 			"duration": 10000,
 			"ip":       tt.ip,
 			"hostname": tt.hostname,
@@ -737,10 +736,10 @@ func testNetworkBlackhole3Containers(t *testing.T, m *e2e.Minikube, e *e2e.Exten
 
 	nginx := e2e.Nginx{Minikube: m}
 	err := nginx.Deploy("nginx-network-blackhole", func(pod *acorev1.PodApplyConfiguration) {
-		for i := 0; i < additionalContainers; i++ {
+		for i := range additionalContainers {
 			pod.Spec.Containers = append(pod.Spec.Containers, acorev1.ContainerApplyConfiguration{
-				Name:    extutil.Ptr(fmt.Sprintf("bb-%d", i)),
-				Image:   extutil.Ptr("busybox"),
+				Name:    new(fmt.Sprintf("bb-%d", i)),
+				Image:   new("busybox"),
 				Command: []string{"sleep", "300"},
 			})
 		}
@@ -753,13 +752,13 @@ func testNetworkBlackhole3Containers(t *testing.T, m *e2e.Minikube, e *e2e.Exten
 	require.NoError(t, err)
 	targets := []*action_kit_api.Target{targetNginx}
 
-	for i := 0; i < additionalContainers; i++ {
+	for i := range additionalContainers {
 		target, err := e2e.NewContainerTarget(m, nginx.Pod, fmt.Sprintf("bb-%d", i))
 		require.NoError(t, err)
 		targets = append(targets, target)
 	}
 
-	config := map[string]interface{}{
+	config := map[string]any{
 		"duration": 10000,
 	}
 
@@ -768,7 +767,7 @@ func testNetworkBlackhole3Containers(t *testing.T, m *e2e.Minikube, e *e2e.Exten
 
 	executionContext := &action_kit_api.ExecutionContext{
 		AgentAwsAccountId: nil,
-		RestrictedEndpoints: extutil.Ptr([]action_kit_api.RestrictedEndpoint{
+		RestrictedEndpoints: new([]action_kit_api.RestrictedEndpoint{
 			{Cidr: "192.168.2.1/32", PortMin: 8086, PortMax: 8088},
 			{Cidr: "192.168.2.2/32", PortMin: 8086, PortMax: 8088},
 			{Cidr: "192.168.2.3/32", PortMin: 8086, PortMax: 8088},
@@ -922,7 +921,7 @@ func testNetworkTcpReset(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	}
 
 	for _, tt := range tests {
-		config := map[string]interface{}{
+		config := map[string]any{
 			"duration":         10000,
 			"ip":               tt.ip,
 			"hostname":         tt.hostname,
@@ -965,8 +964,8 @@ func testNetworkTcpResetOnTwoContainers(t *testing.T, m *e2e.Minikube, e *e2e.Ex
 	nginx := e2e.Nginx{Minikube: m}
 	err := nginx.Deploy("nginx-tcp-reset-double", func(pod *acorev1.PodApplyConfiguration) {
 		pod.Spec.Containers = append(pod.Spec.Containers, acorev1.ContainerApplyConfiguration{
-			Name:    extutil.Ptr("sleeper"),
-			Image:   extutil.Ptr("alpine:latest"),
+			Name:    new("sleeper"),
+			Image:   new("alpine:latest"),
 			Command: []string{"sleep", "10000"},
 		})
 	})
@@ -978,15 +977,15 @@ func testNetworkTcpResetOnTwoContainers(t *testing.T, m *e2e.Minikube, e *e2e.Ex
 	target2, err := e2e.NewContainerTarget(m, nginx.Pod, "sleeper")
 	require.NoError(t, err)
 
-	config := map[string]interface{}{
+	config := map[string]any{
 		"duration": 10000,
 	}
 
 	nginx.AssertIsReachable(t, true)
 
 	action, err := e.RunAction(fmt.Sprintf("%s.network_tcp_reset", extcontainer.BaseActionID), target, config, &action_kit_api.ExecutionContext{
-		ExperimentKey: extutil.Ptr("TEST-1"),
-		ExecutionId:   extutil.Ptr(12345),
+		ExperimentKey: new("TEST-1"),
+		ExecutionId:   new(12345),
 	})
 	defer func() { _ = action.Cancel() }()
 	require.NoError(t, err)
@@ -994,8 +993,8 @@ func testNetworkTcpResetOnTwoContainers(t *testing.T, m *e2e.Minikube, e *e2e.Ex
 	nginx.AssertIsReachable(t, false)
 
 	action2, err2 := e.RunAction(fmt.Sprintf("%s.network_tcp_reset", extcontainer.BaseActionID), target2, config, &action_kit_api.ExecutionContext{
-		ExperimentKey: extutil.Ptr("TEST-2"),
-		ExecutionId:   extutil.Ptr(6789),
+		ExperimentKey: new("TEST-2"),
+		ExecutionId:   new(6789),
 	})
 	defer func() { _ = action2.Cancel() }()
 	require.NoError(t, err2)
@@ -1046,7 +1045,7 @@ func testNetworkBlockDns(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	}
 
 	for _, tt := range tests {
-		config := map[string]interface{}{
+		config := map[string]any{
 			"duration": 10000,
 			"dnsPort":  tt.dnsPort,
 		}
@@ -1117,7 +1116,7 @@ func testNetworkDNSErrorInjection(t *testing.T, m *e2e.Minikube, e *e2e.Extensio
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			config := map[string]interface{}{
+			config := map[string]any{
 				"duration":     10000,
 				"dnsErrorType": tt.dnsErrorType,
 			}
@@ -1158,8 +1157,8 @@ func testNetworkDNSErrorInjectionTwoContainers(t *testing.T, m *e2e.Minikube, e 
 	nginx := e2e.Nginx{Minikube: m}
 	err := nginx.Deploy("nginx-dns-inject-two", func(pod *acorev1.PodApplyConfiguration) {
 		pod.Spec.Containers = append(pod.Spec.Containers, acorev1.ContainerApplyConfiguration{
-			Name:    extutil.Ptr("sleeper"),
-			Image:   extutil.Ptr("alpine:latest"),
+			Name:    new("sleeper"),
+			Image:   new("alpine:latest"),
 			Command: []string{"sleep", "10000"},
 		})
 	})
@@ -1171,22 +1170,22 @@ func testNetworkDNSErrorInjectionTwoContainers(t *testing.T, m *e2e.Minikube, e 
 	target2, err := e2e.NewContainerTarget(m, nginx.Pod, "sleeper")
 	require.NoError(t, err)
 
-	action1, err := e.RunAction(fmt.Sprintf("%s.network_dns_error_injection", extcontainer.BaseActionID), target1, map[string]interface{}{
+	action1, err := e.RunAction(fmt.Sprintf("%s.network_dns_error_injection", extcontainer.BaseActionID), target1, map[string]any{
 		"duration":     10000,
 		"dnsErrorType": []string{"NXDOMAIN"},
 	}, &action_kit_api.ExecutionContext{
-		ExperimentKey: extutil.Ptr("TEST-1"),
-		ExecutionId:   extutil.Ptr(12345),
+		ExperimentKey: new("TEST-1"),
+		ExecutionId:   new(12345),
 	})
 	defer func() { _ = action1.Cancel() }()
 	require.NoError(t, err)
 
-	action2, err := e.RunAction(fmt.Sprintf("%s.network_dns_error_injection", extcontainer.BaseActionID), target2, map[string]interface{}{
+	action2, err := e.RunAction(fmt.Sprintf("%s.network_dns_error_injection", extcontainer.BaseActionID), target2, map[string]any{
 		"duration":     10000,
 		"dnsErrorType": []string{"SERVFAIL"},
 	}, &action_kit_api.ExecutionContext{
-		ExperimentKey: extutil.Ptr("TEST-2"),
-		ExecutionId:   extutil.Ptr(6789),
+		ExperimentKey: new("TEST-2"),
+		ExecutionId:   new(6789),
 	})
 	defer func() { _ = action2.Cancel() }()
 	require.NoError(t, err)
@@ -1205,7 +1204,7 @@ func testNetworkDNSErrorInjectionHostNetwork(t *testing.T, m *e2e.Minikube, e *e
 
 	nginx := e2e.Nginx{Minikube: m}
 	err := nginx.Deploy("nginx-dns-inject-hostnet", func(pod *acorev1.PodApplyConfiguration) {
-		pod.Spec.HostNetwork = extutil.Ptr(true)
+		pod.Spec.HostNetwork = new(true)
 	})
 	require.NoError(t, err, "failed to create pod")
 	defer func() { _ = nginx.Delete() }()
@@ -1232,7 +1231,7 @@ func testNetworkDNSErrorInjectionHostNetwork(t *testing.T, m *e2e.Minikube, e *e
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			config := map[string]interface{}{
+			config := map[string]any{
 				"duration":          10000,
 				"dnsErrorType":      []string{"NXDOMAIN"},
 				"failOnHostNetwork": tt.failOnHostNetwork,
@@ -1276,7 +1275,7 @@ func testStressCpu(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	target, err := nginx.Target()
 	require.NoError(t, err)
 
-	config := map[string]interface{}{
+	config := map[string]any{
 		"duration": 5000,
 		"cpuLoad":  50,
 		"workers":  0,
@@ -1316,7 +1315,7 @@ func testStressMemory(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			name:          "should fail on oom kill",
 			failOnOomKill: true,
 			performKill:   true,
-			wantedErr:     extutil.Ptr("exit status 137"),
+			wantedErr:     new("exit status 137"),
 		}, {
 			name:          "should not fail on oom kill",
 			failOnOomKill: false,
@@ -1341,7 +1340,7 @@ func testStressMemory(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			target, err := nginx.Target()
 			require.NoError(t, err)
 
-			config := map[string]interface{}{
+			config := map[string]any{
 				"duration":      10000,
 				"percentage":    1,
 				"failOnOomKill": tt.failOnOomKill,
@@ -1375,16 +1374,16 @@ func testStressIo(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	err := nginx.Deploy("nginx-stress-io", func(c *acorev1.PodApplyConfiguration) {
 		c.Spec.Containers[0].VolumeMounts = []acorev1.VolumeMountApplyConfiguration{
 			{
-				Name:      extutil.Ptr("host-tmp"),
-				MountPath: extutil.Ptr("/host-tmp"),
+				Name:      new("host-tmp"),
+				MountPath: new("/host-tmp"),
 			},
 		}
 		c.Spec.Volumes = []acorev1.VolumeApplyConfiguration{
 			{
-				Name: extutil.Ptr("host-tmp"),
+				Name: new("host-tmp"),
 				VolumeSourceApplyConfiguration: acorev1.VolumeSourceApplyConfiguration{
 					HostPath: &acorev1.HostPathVolumeSourceApplyConfiguration{
-						Path: extutil.Ptr("/tmp"),
+						Path: new("/tmp"),
 					},
 				},
 			},
@@ -1401,7 +1400,7 @@ func testStressIo(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 
 	for _, mode := range []string{"read_write_and_flush", "read_write", "flush"} {
 		t.Run(mode, func(t *testing.T) {
-			config := map[string]interface{}{
+			config := map[string]any{
 				"duration":          20000,
 				"path":              "/host-tmp/stressng",
 				"mbytes_per_worker": 50,
@@ -1431,16 +1430,16 @@ func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	err := nginx.Deploy("nginx-fill-disk", func(c *acorev1.PodApplyConfiguration) {
 		c.Spec.Containers[0].VolumeMounts = []acorev1.VolumeMountApplyConfiguration{
 			{
-				Name:      extutil.Ptr("host-tmp"),
-				MountPath: extutil.Ptr("/host-tmp"),
+				Name:      new("host-tmp"),
+				MountPath: new("/host-tmp"),
 			},
 		}
 		c.Spec.Volumes = []acorev1.VolumeApplyConfiguration{
 			{
-				Name: extutil.Ptr("host-tmp"),
+				Name: new("host-tmp"),
 				VolumeSourceApplyConfiguration: acorev1.VolumeSourceApplyConfiguration{
 					HostPath: &acorev1.HostPathVolumeSourceApplyConfiguration{
-						Path: extutil.Ptr("/tmp"),
+						Path: new("/tmp"),
 					},
 				},
 			},
@@ -1571,13 +1570,13 @@ func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 				return 4 * 1024 // 4GB
 			},
 			wantedDelta: -1,
-			wantedLog:   extutil.Ptr("disk is already filled up to"),
+			wantedLog:   new("disk is already filled up to"),
 		},
 	}
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			config := map[string]interface{}{
+			config := map[string]any{
 				"duration":  60000,
 				"path":      pathToFill,
 				"size":      testCase.size,
@@ -1623,7 +1622,7 @@ func testFillDiskInvalidPath(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 		target, err := nginx.Target()
 		require.NoError(t, err)
 
-		config := map[string]interface{}{
+		config := map[string]any{
 			"duration":  30000,
 			"path":      "/non-existent-path",
 			"size":      100,
@@ -1643,14 +1642,14 @@ func testFillDiskInvalidPath(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			readOnly := true
 			c.Spec.Containers[0].VolumeMounts = []acorev1.VolumeMountApplyConfiguration{
 				{
-					Name:      extutil.Ptr("readonly-vol"),
-					MountPath: extutil.Ptr("/readonly-vol"),
+					Name:      new("readonly-vol"),
+					MountPath: new("/readonly-vol"),
 					ReadOnly:  &readOnly,
 				},
 			}
 			c.Spec.Volumes = []acorev1.VolumeApplyConfiguration{
 				{
-					Name: extutil.Ptr("readonly-vol"),
+					Name: new("readonly-vol"),
 					VolumeSourceApplyConfiguration: acorev1.VolumeSourceApplyConfiguration{
 						EmptyDir: &acorev1.EmptyDirVolumeSourceApplyConfiguration{},
 					},
@@ -1663,7 +1662,7 @@ func testFillDiskInvalidPath(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 		target, err := nginx.Target()
 		require.NoError(t, err)
 
-		config := map[string]interface{}{
+		config := map[string]any{
 			"duration":  30000,
 			"path":      "/readonly-vol",
 			"size":      100,
@@ -1689,7 +1688,7 @@ func testFillDiskOomKill(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 		{
 			name:          "should fail on oom kill",
 			failOnOomKill: true,
-			wantedErr:     extutil.Ptr("exit status 137"),
+			wantedErr:     new("exit status 137"),
 		},
 		{
 			name:          "should not fail on oom kill",
@@ -1710,13 +1709,13 @@ func testFillDiskOomKill(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 				}
 				c.Spec.Containers[0].VolumeMounts = []acorev1.VolumeMountApplyConfiguration{
 					{
-						Name:      extutil.Ptr("memory-disk"),
-						MountPath: extutil.Ptr("/memory-disk"),
+						Name:      new("memory-disk"),
+						MountPath: new("/memory-disk"),
 					},
 				}
 				c.Spec.Volumes = []acorev1.VolumeApplyConfiguration{
 					{
-						Name: extutil.Ptr("memory-disk"),
+						Name: new("memory-disk"),
 						VolumeSourceApplyConfiguration: acorev1.VolumeSourceApplyConfiguration{
 							EmptyDir: &acorev1.EmptyDirVolumeSourceApplyConfiguration{
 								Medium: &medium,
@@ -1731,7 +1730,7 @@ func testFillDiskOomKill(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			target, err := nginx.Target()
 			require.NoError(t, err)
 
-			config := map[string]interface{}{
+			config := map[string]any{
 				"duration":      60000,
 				"path":          "/memory-disk",
 				"size":          200,
@@ -1784,7 +1783,7 @@ func testPauseContainer(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 		ts <- time.Now()
 	}()
 
-	config := map[string]interface{}{
+	config := map[string]any{
 		"duration": 5000,
 	}
 	action, err := e.RunAction(fmt.Sprintf("%s.pause", extcontainer.BaseActionID), target, config, &action_kit_api.ExecutionContext{})
@@ -1826,7 +1825,7 @@ func testStopContainer(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	target2, err := nginx2.Target()
 	require.NoError(t, err)
 
-	config := map[string]interface{}{
+	config := map[string]any{
 		"graceful": true,
 	}
 	go func() {
@@ -1893,7 +1892,7 @@ func testHostNetwork(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 
 	nginx := e2e.Nginx{Minikube: m}
 	err := nginx.Deploy("nginx-network-host", func(pod *acorev1.PodApplyConfiguration) {
-		pod.Spec.HostNetwork = extutil.Ptr(true)
+		pod.Spec.HostNetwork = new(true)
 	})
 	require.NoError(t, err, "failed to create pod")
 	defer func() { _ = nginx.Delete() }()
@@ -1919,7 +1918,7 @@ func testHostNetwork(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	}
 
 	for _, tt := range tests {
-		config := map[string]interface{}{
+		config := map[string]any{
 			"duration":          10000,
 			"port":              []string{"80"},
 			"failOnHostNetwork": tt.failOnHostNetwork,
@@ -1948,8 +1947,8 @@ func testNetworkDelayOnTwoContainers(t *testing.T, m *e2e.Minikube, e *e2e.Exten
 	nginx := e2e.Nginx{Minikube: m}
 	err := nginx.Deploy("nginx-double", func(pod *acorev1.PodApplyConfiguration) {
 		pod.Spec.Containers = append(pod.Spec.Containers, acorev1.ContainerApplyConfiguration{
-			Name:    extutil.Ptr("sleeper"),
-			Image:   extutil.Ptr("alpine:latest"),
+			Name:    new("sleeper"),
+			Image:   new("alpine:latest"),
 			Command: []string{"sleep", "10000"},
 		},
 		)
@@ -1962,21 +1961,21 @@ func testNetworkDelayOnTwoContainers(t *testing.T, m *e2e.Minikube, e *e2e.Exten
 	target2, err := e2e.NewContainerTarget(m, nginx.Pod, "sleeper")
 	require.NoError(t, err)
 
-	config := map[string]interface{}{
+	config := map[string]any{
 		"duration":     10000,
 		"networkDelay": 200,
 	}
 
 	action, err := e.RunAction(fmt.Sprintf("%s.network_delay", extcontainer.BaseActionID), target, config, &action_kit_api.ExecutionContext{
-		ExperimentKey: extutil.Ptr("TEST-1"),
-		ExecutionId:   extutil.Ptr(12345),
+		ExperimentKey: new("TEST-1"),
+		ExecutionId:   new(12345),
 	})
 	defer func() { _ = action.Cancel() }()
 	require.NoError(t, err)
 
 	action2, err2 := e.RunAction(fmt.Sprintf("%s.network_delay", extcontainer.BaseActionID), target2, config, &action_kit_api.ExecutionContext{
-		ExperimentKey: extutil.Ptr("TEST-2"),
-		ExecutionId:   extutil.Ptr(6789),
+		ExperimentKey: new("TEST-2"),
+		ExecutionId:   new(6789),
 	})
 	defer func() { _ = action2.Cancel() }()
 	require.NoError(t, err2)
@@ -1997,7 +1996,7 @@ func testNetworkDelayAndBandwidthOnSameContainer(t *testing.T, m *e2e.Minikube, 
 	target, err := nginx.Target()
 	require.NoError(t, err)
 
-	configDelay := map[string]interface{}{
+	configDelay := map[string]any{
 		"duration":     10000,
 		"networkDelay": 200,
 	}
@@ -2005,7 +2004,7 @@ func testNetworkDelayAndBandwidthOnSameContainer(t *testing.T, m *e2e.Minikube, 
 	defer func() { _ = actionDelay.Cancel() }()
 	require.NoError(t, err)
 
-	configLimit := map[string]interface{}{
+	configLimit := map[string]any{
 		"duration":  10000,
 		"bandwidth": "200mbit",
 	}
@@ -2031,7 +2030,7 @@ func testStressCombined(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	target, err := nginx.Target()
 	require.NoError(t, err)
 
-	memConfig := map[string]interface{}{
+	memConfig := map[string]any{
 		"duration":   10_000,
 		"percentage": 1,
 	}
@@ -2039,7 +2038,7 @@ func testStressCombined(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	defer func() { _ = memAction.Cancel() }()
 	require.NoError(t, err)
 
-	cpuConfig := map[string]interface{}{
+	cpuConfig := map[string]any{
 		"duration": 10_000,
 		"cpuLoad":  10,
 		"workers":  1,
@@ -2074,7 +2073,7 @@ func testFillMemory(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			name:          "should fail on oom kill",
 			failOnOomKill: true,
 			performKill:   true,
-			wantedErr:     extutil.Ptr("signal: killed"),
+			wantedErr:     new("signal: killed"),
 		}, {
 			name:          "should not fail on oom kill",
 			failOnOomKill: false,
@@ -2099,7 +2098,7 @@ func testFillMemory(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			target, err := nginx.Target()
 			require.NoError(t, err)
 
-			config := map[string]interface{}{
+			config := map[string]any{
 				"duration":      10000,
 				"size":          80,
 				"unit":          "%",
@@ -2144,7 +2143,7 @@ func testFillMemoryWithContainerStop(t *testing.T, m *e2e.Minikube, e *e2e.Exten
 	target, err := nginx.Target()
 	require.NoError(t, err)
 
-	config := map[string]interface{}{
+	config := map[string]any{
 		"duration":      60000,
 		"size":          50,
 		"unit":          "%",
