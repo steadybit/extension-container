@@ -56,30 +56,30 @@ func (a *stopAction) Describe() action_kit_api.ActionDescription {
 		Label:       "Stop Container",
 		Description: "Stops or kills the Container",
 		Version:     extbuild.GetSemverVersionStringOrUnknown(),
-		Icon:        extutil.Ptr(stopIcon),
+		Icon:        new(stopIcon),
 		TargetSelection: &action_kit_api.TargetSelection{
 			TargetType:         targetID,
 			SelectionTemplates: &targetSelectionTemplates,
 		},
-		Technology:  extutil.Ptr("Container"),
-		Category:    extutil.Ptr("State"),
+		Technology:  new("Container"),
+		Category:    new("State"),
 		Kind:        action_kit_api.Attack,
 		TimeControl: action_kit_api.TimeControlInternal,
 		Parameters: []action_kit_api.ActionParameter{
 			{
 				Name:         "graceful",
 				Label:        "Graceful",
-				Description:  extutil.Ptr("Stopped the container gracefully using SIGTERM or immediately killed using the SIGKILL signal?"),
+				Description:  new("Stopped the container gracefully using SIGTERM or immediately killed using the SIGKILL signal?"),
 				Type:         action_kit_api.ActionParameterTypeBoolean,
-				DefaultValue: extutil.Ptr("true"),
-				Required:     extutil.Ptr(true),
-				Order:        extutil.Ptr(0),
+				DefaultValue: new("true"),
+				Required:     new(true),
+				Order:        new(0),
 			},
 		},
-		Status: extutil.Ptr(action_kit_api.MutatingEndpointReferenceWithCallInterval{
-			CallInterval: extutil.Ptr("1s"),
+		Status: new(action_kit_api.MutatingEndpointReferenceWithCallInterval{
+			CallInterval: new("1s"),
 		}),
-		Stop: extutil.Ptr(action_kit_api.MutatingEndpointReference{}),
+		Stop: new(action_kit_api.MutatingEndpointReference{}),
 	}
 }
 
@@ -104,7 +104,7 @@ func (a *stopAction) Start(_ context.Context, state *StopActionState) (*action_k
 	}
 
 	return &action_kit_api.StartResult{
-		Messages: extutil.Ptr([]action_kit_api.Message{
+		Messages: new([]action_kit_api.Message{
 			{
 				Level:   extutil.Ptr(action_kit_api.Info),
 				Message: fmt.Sprintf("Stopping container %s (graceful=%t)", state.TargetLabel, state.Graceful),

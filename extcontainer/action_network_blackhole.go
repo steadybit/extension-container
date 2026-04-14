@@ -14,7 +14,6 @@ import (
 	"github.com/steadybit/action-kit/go/action_kit_sdk"
 	"github.com/steadybit/extension-container/extcontainer/container/types"
 	"github.com/steadybit/extension-kit/extbuild"
-	"github.com/steadybit/extension-kit/extutil"
 )
 
 func NewNetworkBlackholeContainerAction(r ociruntime.OciRuntime, client types.Client) action_kit_sdk.Action[NetworkActionState] {
@@ -33,13 +32,13 @@ func getNetworkBlackholeDescription() action_kit_api.ActionDescription {
 		Label:       "Block Traffic",
 		Description: "Blocks network traffic (incoming and outgoing).",
 		Version:     extbuild.GetSemverVersionStringOrUnknown(),
-		Icon:        extutil.Ptr(blackHoleIcon),
+		Icon:        new(blackHoleIcon),
 		TargetSelection: &action_kit_api.TargetSelection{
 			TargetType:         targetID,
 			SelectionTemplates: &targetSelectionTemplates,
 		},
-		Technology:  extutil.Ptr("Container"),
-		Category:    extutil.Ptr("Network"),
+		Technology:  new("Container"),
+		Category:    new("Network"),
 		Kind:        action_kit_api.Attack,
 		TimeControl: action_kit_api.TimeControlExternal,
 		Parameters:  commonNetworkParameters,

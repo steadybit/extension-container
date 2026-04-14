@@ -34,13 +34,13 @@ func getNetworkTcpResetDescription() action_kit_api.ActionDescription {
 		Label:       "Reset TCP Connection",
 		Description: "Injects TCP resets for matching connections (incoming and outgoing).",
 		Version:     extbuild.GetSemverVersionStringOrUnknown(),
-		Icon:        extutil.Ptr(tcpResetIcon),
+		Icon:        new(tcpResetIcon),
 		TargetSelection: &action_kit_api.TargetSelection{
 			TargetType:         targetID,
 			SelectionTemplates: &targetSelectionTemplates,
 		},
-		Technology:  extutil.Ptr("Container"),
-		Category:    extutil.Ptr("Network"),
+		Technology:  new("Container"),
+		Category:    new("Network"),
 		Kind:        action_kit_api.Attack,
 		TimeControl: action_kit_api.TimeControlExternal,
 		Parameters: append(
@@ -48,11 +48,11 @@ func getNetworkTcpResetDescription() action_kit_api.ActionDescription {
 			action_kit_api.ActionParameter{
 				Name:        "networkInterface",
 				Label:       "Network Interface",
-				Description: extutil.Ptr("Target Network Interface which should be affected. All if none specified."),
+				Description: new("Target Network Interface which should be affected. All if none specified."),
 				Type:        action_kit_api.ActionParameterTypeStringArray,
-				Required:    extutil.Ptr(false),
-				Advanced:    extutil.Ptr(true),
-				Order:       extutil.Ptr(104),
+				Required:    new(false),
+				Advanced:    new(true),
+				Order:       new(104),
 			},
 		),
 	}
@@ -96,7 +96,7 @@ func tcpReset(r ociruntime.OciRuntime) networkOptsProvider {
 			Filter:           filter,
 			ExecutionContext: mapToExecutionContext(request),
 			Interfaces:       interfaces,
-			UseMangleChain:    useMangleChain,
+			UseMangleChain:   useMangleChain,
 		}, messages, nil
 	}
 }

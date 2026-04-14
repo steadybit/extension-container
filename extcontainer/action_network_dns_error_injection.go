@@ -56,19 +56,19 @@ func (a *dnsErrorInjectionAction) Describe() action_kit_api.ActionDescription {
 		Label:       "DNS Error Injection",
 		Description: "Inject DNS errors (NXDOMAIN/SERVFAIL/TIMEOUT) into DNS queries using eBPF.",
 		Version:     extbuild.GetSemverVersionStringOrUnknown(),
-		Icon:        extutil.Ptr(dnsErrorInjectIcon),
+		Icon:        new(dnsErrorInjectIcon),
 		TargetSelection: &action_kit_api.TargetSelection{
 			TargetType:         targetID,
 			SelectionTemplates: &targetSelectionTemplates,
 		},
-		Technology:  extutil.Ptr("Container"),
-		Category:    extutil.Ptr("Network"),
+		Technology:  new("Container"),
+		Category:    new("Network"),
 		Kind:        action_kit_api.Attack,
 		TimeControl: action_kit_api.TimeControlExternal,
-		Status: extutil.Ptr(action_kit_api.MutatingEndpointReferenceWithCallInterval{
-			CallInterval: extutil.Ptr("2s"),
+		Status: new(action_kit_api.MutatingEndpointReferenceWithCallInterval{
+			CallInterval: new("2s"),
 		}),
-		Widgets: extutil.Ptr([]action_kit_api.Widget{
+		Widgets: new([]action_kit_api.Widget{
 			action_kit_api.MarkdownWidget{
 				Type:        action_kit_api.ComSteadybitWidgetMarkdown,
 				Title:       "DNS Error Injection Statistics",
@@ -173,7 +173,7 @@ func (a *dnsErrorInjectionAction) Status(_ context.Context, state *DNSErrorInjec
 
 	return &action_kit_api.StatusResult{
 		Completed: false,
-		Messages:  extutil.Ptr(formatDNSMetricsMessages(metrics)),
+		Messages:  new(formatDNSMetricsMessages(metrics)),
 	}, nil
 }
 
@@ -198,56 +198,56 @@ func dnsErrorInjectionParameters() []action_kit_api.ActionParameter {
 		{
 			Name:         "duration",
 			Label:        "Duration",
-			Description:  extutil.Ptr("How long should the DNS errors be injected?"),
+			Description:  new("How long should the DNS errors be injected?"),
 			Type:         action_kit_api.ActionParameterTypeDuration,
-			DefaultValue: extutil.Ptr("30s"),
-			Required:     extutil.Ptr(true),
-			Order:        extutil.Ptr(0),
+			DefaultValue: new("30s"),
+			Required:     new(true),
+			Order:        new(0),
 		},
 		{
 			Name:         "dnsErrorType",
 			Label:        "DNS Error Type",
-			Description:  extutil.Ptr("Which DNS errors to inject? Multiple types can be selected for random injection."),
+			Description:  new("Which DNS errors to inject? Multiple types can be selected for random injection."),
 			Type:         action_kit_api.ActionParameterTypeStringArray,
-			DefaultValue: extutil.Ptr("[\"NXDOMAIN\"]"),
-			Required:     extutil.Ptr(true),
-			Options: extutil.Ptr([]action_kit_api.ParameterOption{
+			DefaultValue: new("[\"NXDOMAIN\"]"),
+			Required:     new(true),
+			Options: new([]action_kit_api.ParameterOption{
 				action_kit_api.ExplicitParameterOption{Label: "NXDOMAIN", Value: "NXDOMAIN"},
 				action_kit_api.ExplicitParameterOption{Label: "SERVFAIL", Value: "SERVFAIL"},
 				action_kit_api.ExplicitParameterOption{Label: "TIMEOUT", Value: "TIMEOUT"},
 			}),
-			Order: extutil.Ptr(1),
+			Order: new(1),
 		},
 		{
 			Name:         "port",
 			Label:        "DNS Port",
-			Description:  extutil.Ptr("DNS port or port range to intercept (e.g. 53 or 1-65535)."),
+			Description:  new("DNS port or port range to intercept (e.g. 53 or 1-65535)."),
 			Type:         action_kit_api.ActionParameterTypeString,
-			DefaultValue: extutil.Ptr("53"),
-			Required:     extutil.Ptr(false),
-			Order:        extutil.Ptr(2),
+			DefaultValue: new("53"),
+			Required:     new(false),
+			Order:        new(2),
 		},
 		{
 			Name:        "cidr",
 			Label:       "Target CIDRs",
-			Description: extutil.Ptr("IP CIDRs to match. If empty, all DNS traffic is affected."),
+			Description: new("IP CIDRs to match. If empty, all DNS traffic is affected."),
 			Type:        action_kit_api.ActionParameterTypeStringArray,
-			Required:    extutil.Ptr(false),
-			Order:       extutil.Ptr(3),
+			Required:    new(false),
+			Order:       new(3),
 		},
 		{
 			Name:         "failOnHostNetwork",
 			Label:        "Fail on Host Network",
-			Description:  extutil.Ptr("Should the action fail if the container is using host network?"),
+			Description:  new("Should the action fail if the container is using host network?"),
 			Type:         action_kit_api.ActionParameterTypeBoolean,
-			DefaultValue: extutil.Ptr("true"),
-			Required:     extutil.Ptr(true),
-			Order:        extutil.Ptr(100),
+			DefaultValue: new("true"),
+			Required:     new(true),
+			Order:        new(100),
 		},
 	}
 }
 
-func parseDNSInjectOpts(config map[string]interface{}) (dnsinject.Opts, error) {
+func parseDNSInjectOpts(config map[string]any) (dnsinject.Opts, error) {
 	errorTypeStrings := extutil.ToStringArray(config["dnsErrorType"])
 	if len(errorTypeStrings) == 0 {
 		return dnsinject.Opts{}, fmt.Errorf("at least one DNS error type must be selected")
@@ -314,8 +314,8 @@ func formatDNSMetricsMessages(metrics *dnsinject.Metrics) []action_kit_api.Messa
 	return []action_kit_api.Message{
 		{
 			Message:   markdown,
-			Timestamp: extutil.Ptr(time.Now()),
-			Type:      extutil.Ptr("dns_stats_markdown"),
+			Timestamp: new(time.Now()),
+			Type:      new("dns_stats_markdown"),
 		},
 	}
 }

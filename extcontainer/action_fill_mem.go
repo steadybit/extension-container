@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"os/exec"
+	"slices"
 	"strings"
 	"time"
 
@@ -61,36 +62,36 @@ func (a *fillMemoryAction) Describe() action_kit_api.ActionDescription {
 		Label:       "Fill Memory",
 		Description: "Fills the memory of the container for the given duration.",
 		Version:     extbuild.GetSemverVersionStringOrUnknown(),
-		Icon:        extutil.Ptr(fillMemoryIcon),
+		Icon:        new(fillMemoryIcon),
 		TargetSelection: &action_kit_api.TargetSelection{
 			TargetType:         targetID,
 			SelectionTemplates: &targetSelectionTemplates,
 		},
-		Technology:  extutil.Ptr("Container"),
-		Category:    extutil.Ptr("Resource"),
+		Technology:  new("Container"),
+		Category:    new("Resource"),
 		Kind:        action_kit_api.Attack,
 		TimeControl: action_kit_api.TimeControlExternal,
 		Parameters: []action_kit_api.ActionParameter{
 			{
 				Name:         "duration",
 				Label:        "Duration",
-				Description:  extutil.Ptr("How long should the memory be filled?"),
+				Description:  new("How long should the memory be filled?"),
 				Type:         action_kit_api.ActionParameterTypeDuration,
-				DefaultValue: extutil.Ptr("30s"),
-				Required:     extutil.Ptr(true),
-				Order:        extutil.Ptr(1),
+				DefaultValue: new("30s"),
+				Required:     new(true),
+				Order:        new(1),
 			},
 			{
 				Name:  "mode",
 				Label: "Mode",
-				Description: extutil.Ptr("*Fill and meet specified usage:* Fill up the memory until the desired usage is met. Memory allocation will be adjusted constantly to meet the target." +
+				Description: new("*Fill and meet specified usage:* Fill up the memory until the desired usage is met. Memory allocation will be adjusted constantly to meet the target." +
 					"\n\n" +
 					"*Fill the specified amount:* Allocate and hold the specified amount of Memory."),
 				Type:         action_kit_api.ActionParameterTypeString,
 				DefaultValue: extutil.Ptr(string(memfill.ModeUsage)),
-				Required:     extutil.Ptr(true),
-				Order:        extutil.Ptr(2),
-				Options: extutil.Ptr([]action_kit_api.ParameterOption{
+				Required:     new(true),
+				Order:        new(2),
+				Options: new([]action_kit_api.ParameterOption{
 					action_kit_api.ExplicitParameterOption{
 						Label: "Fill and meet specified usage",
 						Value: string(memfill.ModeUsage),
@@ -104,21 +105,21 @@ func (a *fillMemoryAction) Describe() action_kit_api.ActionDescription {
 			{
 				Name:         "size",
 				Label:        "Size",
-				Description:  extutil.Ptr("How much of the *total container memory* should be used to stress the memory?\n\nThe used memory percentage is calculated based on the memory limit of the container (or the host memory if no limit is set)."),
+				Description:  new("How much of the *total container memory* should be used to stress the memory?\n\nThe used memory percentage is calculated based on the memory limit of the container (or the host memory if no limit is set)."),
 				Type:         action_kit_api.ActionParameterTypeInteger,
-				DefaultValue: extutil.Ptr("80"),
-				Required:     extutil.Ptr(true),
-				Order:        extutil.Ptr(3),
+				DefaultValue: new("80"),
+				Required:     new(true),
+				Order:        new(3),
 			},
 			{
 				Name:         "unit",
 				Label:        "Unit",
-				Description:  extutil.Ptr("Unit for the size parameter."),
+				Description:  new("Unit for the size parameter."),
 				Type:         action_kit_api.ActionParameterTypeString,
 				DefaultValue: extutil.Ptr(string(memfill.UnitPercent)),
-				Required:     extutil.Ptr(true),
-				Order:        extutil.Ptr(4),
-				Options: extutil.Ptr([]action_kit_api.ParameterOption{
+				Required:     new(true),
+				Order:        new(4),
+				Options: new([]action_kit_api.ParameterOption{
 					action_kit_api.ExplicitParameterOption{
 						Label: "Megabytes",
 						Value: string(memfill.UnitMegabyte),
@@ -132,11 +133,11 @@ func (a *fillMemoryAction) Describe() action_kit_api.ActionDescription {
 			{
 				Name:         "failOnOomKill",
 				Label:        "Fail on OOM Kill",
-				Description:  extutil.Ptr("Should an OOM kill be considered a failure?"),
+				Description:  new("Should an OOM kill be considered a failure?"),
 				Type:         action_kit_api.ActionParameterTypeBoolean,
-				DefaultValue: extutil.Ptr("false"),
-				Required:     extutil.Ptr(true),
-				Order:        extutil.Ptr(5),
+				DefaultValue: new("false"),
+				Required:     new(true),
+				Order:        new(5),
 			},
 		},
 	}
@@ -195,7 +196,7 @@ func (a *fillMemoryAction) Start(_ context.Context, state *FillMemoryActionState
 	}
 
 	return &action_kit_api.StartResult{
-		Messages: extutil.Ptr([]action_kit_api.Message{
+		Messages: new([]action_kit_api.Message{
 			{
 				Level:   extutil.Ptr(action_kit_api.Info),
 				Message: fmt.Sprintf("Starting fill memory in container %s with args %s", state.TargetLabel, strings.Join(memFill.Args(), " ")),
@@ -252,22 +253,20 @@ func (a *fillMemoryAction) Status(ctx context.Context, state *FillMemoryActionSt
 			}
 		}
 
-		for _, ignore := range state.IgnoreExitCodes {
-			if exitCode == ignore {
-				return &action_kit_api.StatusResult{
-					Completed: true,
-					Messages: &[]action_kit_api.Message{
-						{
-							Level:   extutil.Ptr(action_kit_api.Warn),
-							Message: fmt.Sprintf("memfill exited unexpectedly: %s", errMessage),
-						},
+		if slices.Contains(state.IgnoreExitCodes, exitCode) {
+			return &action_kit_api.StatusResult{
+				Completed: true,
+				Messages: &[]action_kit_api.Message{
+					{
+						Level:   extutil.Ptr(action_kit_api.Warn),
+						Message: fmt.Sprintf("memfill exited unexpectedly: %s", errMessage),
 					},
-					Summary: &action_kit_api.Summary{
-						Level: action_kit_api.SummaryLevelWarning,
-						Text:  "memfill exited unexpectedly",
-					},
-				}, nil
-			}
+				},
+				Summary: &action_kit_api.Summary{
+					Level: action_kit_api.SummaryLevelWarning,
+					Text:  "memfill exited unexpectedly",
+				},
+			}, nil
 		}
 	}
 
@@ -276,7 +275,7 @@ func (a *fillMemoryAction) Status(ctx context.Context, state *FillMemoryActionSt
 		Error: &action_kit_api.ActionKitError{
 			Status: extutil.Ptr(action_kit_api.Errored),
 			Title:  "Failed to fill memory for container",
-			Detail: extutil.Ptr(errMessage),
+			Detail: new(errMessage),
 		},
 	}, nil
 }
