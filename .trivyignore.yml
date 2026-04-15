@@ -17,8 +17,8 @@ vulnerabilities:
   - id: CVE-2026-32280
     statement: Wait for runc release with fix
     paths:
-      - /usr/sbin/runc
+      - usr/sbin/runc
   - id: CVE-2026-32282
     statement: Wait for runc release with fix
     paths:
-      - /usr/sbin/runc
+      - usr/sbin/runc
