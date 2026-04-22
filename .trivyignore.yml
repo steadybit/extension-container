@@ -22,6 +22,16 @@ vulnerabilities:
     statement: Wait for runc release with fix
     paths:
       - usr/sbin/runc
+  - id: CVE-2026-32283
+    statement: waiting for runc release
+    expired_at: 2026-09-01
+    paths:
+      - usr/sbin/runc
+  - id: CVE-2026-32281
+    statement: waiting for runc release
+    expired_at: 2026-09-01
+    paths:
+      - usr/sbin/runc
   - id: CVE-2026-40393
     statement: Wait for upstream fix in debian
     expired_at: 2026-09-01
