@@ -19,7 +19,7 @@ require (
 	github.com/moby/moby/client v0.4.1
 	github.com/novln/docker-parser v1.0.0
 	github.com/opencontainers/runtime-spec v1.3.0
-	github.com/rs/zerolog v1.35.0
+	github.com/rs/zerolog v1.35.1
 	github.com/steadybit/action-kit/go/action_kit_api/v2 v2.10.5
 	github.com/steadybit/action-kit/go/action_kit_commons v1.6.1
 	github.com/steadybit/action-kit/go/action_kit_sdk v1.3.1
