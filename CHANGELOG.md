@@ -1,8 +1,9 @@
 # Changelog
 
-## (next)
+## v1.6.1
 
 - Bump Go to 1.26.3
+- Update dependencies
 
 ## v1.6.0
 
