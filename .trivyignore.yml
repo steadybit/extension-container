@@ -41,3 +41,28 @@ vulnerabilities:
   - id: CVE-2026-6732
     statement: Wait for upstream fix in debian
     expired_at: 2026-09-01
+  - id: CVE-2026-33811
+    statement: waiting for runc release
+    expired_at: 2026-09-01
+    paths:
+      - usr/sbin/runc
+  - id: CVE-2026-33814
+    statement: waiting for runc release
+    expired_at: 2026-09-01
+    paths:
+      - usr/sbin/runc
+  - id: CVE-2026-39820
+    statement: waiting for runc release
+    expired_at: 2026-09-01
+    paths:
+      - usr/sbin/runc
+  - id: CVE-2026-39836
+    statement: waiting for runc release
+    expired_at: 2026-09-01
+    paths:
+      - usr/sbin/runc
+  - id: CVE-2026-42499
+    statement: waiting for runc release
+    expired_at: 2026-09-01
+    paths:
+      - usr/sbin/runc
