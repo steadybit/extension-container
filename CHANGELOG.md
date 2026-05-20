@@ -3,6 +3,7 @@
 ## v1.6.2
 
 - Fix Linux package: `STEADYBIT_EXTENSION_DNS_INJECT_PATH` was unset, causing DNS error injection attacks to fail on `.deb`/`.rpm` installations
+- Update dependencies
 
 ## v1.6.1
 
