@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.6.3
+
+- Bump bundled `nsmount` to v1.1.1 — lowers the GLIBC requirement from 2.30 to 2.28, restoring `.deb`/`.rpm` installation on RHEL 8 / Debian 10
+- Bump bundled `memfill` to v1.3.1
+
 ## v1.6.2
 
 - Fix Linux package: `STEADYBIT_EXTENSION_DNS_INJECT_PATH` was unset, causing DNS error injection attacks to fail on `.deb`/`.rpm` installations
