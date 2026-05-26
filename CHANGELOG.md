@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.6.5
+
+- Update dependencies
+
 ## v1.6.4
 
 - Support discovery group attribute via `STEADYBIT_EXTENSION_DISCOVERY_GROUP` env var (or `discovery.group` Helm value) — when set, the extension adds `steadybit.group=<value>` to every discovered target
