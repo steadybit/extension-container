@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.6.6
+
+- DNS Error Injection: new `hostname` parameter to restrict injection to DNS queries with matching query names (exact, case-insensitive, IDN-aware); also exposes the new `hostname_filtered` metric in the live statistics widget
+- DNS Error Injection: clarify labels and descriptions for the `port` and `cidr` parameters — they apply to the DNS server, not to the queried domain
+- Bump bundled `dns-inject` to v0.2.0
+
 ## v1.6.5
 
 - Update dependencies

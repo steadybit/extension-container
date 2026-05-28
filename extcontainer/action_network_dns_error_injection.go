@@ -219,21 +219,29 @@ func dnsErrorInjectionParameters() []action_kit_api.ActionParameter {
 			Order: new(1),
 		},
 		{
+			Name:        "hostname",
+			Label:       "DNS Hostnames",
+			Description: new("Restrict injection to DNS queries whose name matches one of these hostnames exactly (case-insensitive; IDN and underscores allowed, e.g. _dmarc.example.com). If empty, all queries on the matching DNS server ports/CIDRs are affected."),
+			Type:        action_kit_api.ActionParameterTypeStringArray,
+			Required:    new(false),
+			Order:       new(2),
+		},
+		{
 			Name:         "port",
-			Label:        "DNS Port",
-			Description:  new("DNS port or port range to intercept (e.g. 53 or 1-65535)."),
+			Label:        "DNS Server Port",
+			Description:  new("Port (or range) the DNS server listens on (typically 53). Only DNS traffic to/from this port is intercepted."),
 			Type:         action_kit_api.ActionParameterTypeString,
 			DefaultValue: new("53"),
 			Required:     new(false),
-			Order:        new(2),
+			Order:        new(3),
 		},
 		{
 			Name:        "cidr",
-			Label:       "Target CIDRs",
-			Description: new("IP CIDRs to match. If empty, all DNS traffic is affected."),
+			Label:       "DNS Server CIDRs",
+			Description: new("IP CIDRs of the DNS server(s). Only queries destined for these IPs are affected. If empty, all DNS traffic on the matching port is affected."),
 			Type:        action_kit_api.ActionParameterTypeStringArray,
 			Required:    new(false),
-			Order:       new(3),
+			Order:       new(4),
 		},
 		{
 			Name:         "failOnHostNetwork",
@@ -286,10 +294,13 @@ func parseDNSInjectOpts(config map[string]any) (dnsinject.Opts, error) {
 		cidrs = append(cidrs, *cidr)
 	}
 
+	hostnames := extutil.ToStringArray(config["hostname"])
+
 	return dnsinject.Opts{
 		ErrorTypes: errorTypes,
 		CIDRs:      cidrs,
 		PortRange:  portRange,
+		Hostnames:  hostnames,
 	}, nil
 }
 
@@ -297,6 +308,7 @@ func formatDNSMetricsMessages(metrics *dnsinject.Metrics) []action_kit_api.Messa
 	markdown := fmt.Sprintf(`### Packets Processed
 - **Total Packets:** %d
 - **DNS Requests Matched:** %d
+- **Hostname Filtered:** %d
 
 ### Injections by Type
 - **NXDOMAIN:** %d
@@ -305,6 +317,7 @@ func formatDNSMetricsMessages(metrics *dnsinject.Metrics) []action_kit_api.Messa
 - **Total Injected:** %d`,
 		metrics.Seen,
 		metrics.DnsMatched,
+		metrics.HostnameFiltered,
 		metrics.InjectedNxdomain,
 		metrics.InjectedServfail,
 		metrics.InjectedTimeout,
