@@ -96,6 +96,11 @@ vulnerabilities:
     expired_at: 2026-09-01
     paths:
       - usr/sbin/runc
+  - id: CVE-2026-39826
+    statement: waiting for runc release
+    expired_at: 2026-09-01
+    paths:
+      - usr/sbin/runc
   - id: CVE-2026-42499
     statement: waiting for runc release
     expired_at: 2026-09-01
