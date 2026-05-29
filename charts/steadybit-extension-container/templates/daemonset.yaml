@@ -32,7 +32,7 @@ spec:
         {{- toYaml . | nindent 8 }}
         {{- end }}
         {{if eq .Values.platform "gke-autopilot" -}}
-        cloud.google.com/matching-allowlist: steadybit-extension-container-v1.0.0
+        cloud.google.com/matching-allowlist: steadybit-extension-container-v1.1.0
         {{- end}}
       annotations:
         {{- if semverCompare "<1.30-0" .Capabilities.KubeVersion.Version}}
