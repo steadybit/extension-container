@@ -193,7 +193,13 @@ func (a *networkAction) Start(ctx context.Context, state *NetworkActionState) (*
 		},
 	}}
 
-	err = netfault.Apply(ctx, netfault.NewRuncRunner(a.ociRuntime, state.Sidecar), opts)
+	warnings, err := netfault.Apply(ctx, netfault.NewRuncRunner(a.ociRuntime, state.Sidecar), opts)
+	for _, w := range warnings {
+		result.Messages = new(append(*result.Messages, action_kit_api.Message{
+			Level:   extutil.Ptr(action_kit_api.Warn),
+			Message: w,
+		}))
+	}
 	if err != nil {
 		var toomany *netfault.ErrTooManyTcCommands
 		if errors.As(err, &toomany) {
