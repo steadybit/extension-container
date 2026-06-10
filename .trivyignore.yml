@@ -120,3 +120,9 @@ vulnerabilities:
   - id: CVE-2026-9538
     statement: Waiting for debian upstream fix
     expired_at: 2026-09-01
+  - id: CVE-2026-48959
+    statement: Waiting for debian upstream fix
+    expired_at: 2026-09-01
+  - id: CVE-2026-45447
+    statement: Waiting for debian upstream fix
+    expired_at: 2026-09-01
