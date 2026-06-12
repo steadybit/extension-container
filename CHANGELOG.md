@@ -6,11 +6,19 @@
 - If the target interface carries a user- or CNI-installed root qdisc (e.g. `htb`, `cake`) that cannot be restored afterwards, the attack now fails fast in the prepare step with a clear error instead of silently replacing it.
 - Optional fallback: set `STEADYBIT_EXTENSION_NETWORK_STRICT_ROOT_QDISC=true` (e.g. via `extraEnv`) to make network attacks refuse any interface whose root qdisc is not `noqueue` — including the kernel default `mq` — instead of replacing it. Off by default.
 
+## v1.6.7
+
+- build(deps): bump golang.org/x/sync from 0.20.0 to 0.21.0
+- chore: update dns-inject v0.2.1
+- chore: update to go 1.26.4
+- feat: add weekly auto patch-release workflow
+
 ## v1.6.6
 
 - DNS Error Injection: new `hostname` parameter to restrict injection to DNS queries with matching query names (exact, case-insensitive, IDN-aware); also exposes the new `hostname_filtered` metric in the live statistics widget
 - DNS Error Injection: clarify labels and descriptions for the `port` and `cidr` parameters — they apply to the DNS server, not to the queried domain
 - Bump bundled `dns-inject` to v0.2.0
+- Update dependencies
 
 ## v1.6.5
 
