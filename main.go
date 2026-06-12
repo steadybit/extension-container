@@ -10,6 +10,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
+	"github.com/steadybit/action-kit/go/action_kit_commons/network/netfault"
 	"github.com/steadybit/action-kit/go/action_kit_commons/ociruntime"
 	"github.com/steadybit/action-kit/go/action_kit_sdk"
 	"github.com/steadybit/discovery-kit/go/discovery_kit_api"
@@ -41,6 +42,10 @@ func main() {
 	config.ValidateConfiguration()
 
 	log.Debug().Any("config", config.Config).Msg("Configuration loaded.")
+
+	// Opt-in fallback: refuse network attacks on interfaces whose root qdisc is
+	// not `noqueue` (incl. the kernel default `mq`) instead of replacing it.
+	netfault.SetStrictRootQdisc(config.Config.NetworkStrictRootQdisc)
 
 	exthealth.SetReady(false)
 	exthealth.StartProbes(int(config.Config.HealthPort))
