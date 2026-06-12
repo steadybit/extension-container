@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.6.7
+
+- build(deps): bump golang.org/x/sync from 0.20.0 to 0.21.0
+- chore: add CVE-2026-48959 and CVE-2026-45447 to trivyignore
+- chore: add ignore to .trivyignore.yml
+- chore: update dns-inject v0.2.1
+- chore: update to go 1.26.4
+- feat: add weekly auto patch-release workflow
+
 ## v1.6.6
 
 - DNS Error Injection: new `hostname` parameter to restrict injection to DNS queries with matching query names (exact, case-insensitive, IDN-aware); also exposes the new `hostname_filtered` metric in the live statistics widget
