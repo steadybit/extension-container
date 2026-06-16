@@ -10,6 +10,7 @@ allowHostPID: true
 allowHostPorts: true
 allowHostDirVolumePlugin: true
 allowPrivilegeEscalation: true
+allowPrivilegedContainer: {{ .Values.privileged | default false }}
 runAsUser:
   type: MustRunAsNonRoot
 seccompProfiles:

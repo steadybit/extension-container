@@ -170,6 +170,20 @@ For OpenShift >= 4.18 the extension needs to be configured to use `crun` as the 
 By setting the helm value `containerEngines.cri-o.ociRuntime.path=crun` or for non-Kubernetes the environment variable
 `STEADYBIT_EXTENSION_OCIRUNTIME_PATH=crun`
 
+## Hardened nodes (`nosuid` root filesystem)
+
+The extension runs non-root and relies on file capabilities on its binary. On hardened nodes
+(e.g. CIS/STIG) the container root filesystem is mounted `nosuid`, which makes the kernel ignore
+those file capabilities — the extension then starts without effective capabilities and attacks fail
+with `fork/exec /usr/bin/nsenter: operation not permitted`.
+
+If the node configuration cannot be changed to drop `nosuid`, set `privileged=true` to run the
+extension in privileged mode (this also flips the managed `SecurityContextConstraint` to allow it):
+
+```sh
+--set privileged=true
+```
+
 ## Version and Revision
 
 The version and revision of the extension:
