@@ -32,6 +32,7 @@ forced rendering on kubernetes:
     allowHostPID: true
     allowHostPorts: true
     allowPrivilegeEscalation: true
+    allowPrivilegedContainer: false
     allowedCapabilities:
       - NET_BIND_SERVICE
       - KILL
@@ -93,6 +94,7 @@ rendering by default on openshift:
     allowHostPID: true
     allowHostPorts: true
     allowPrivilegeEscalation: true
+    allowPrivilegedContainer: false
     allowedCapabilities:
       - NET_BIND_SERVICE
       - KILL

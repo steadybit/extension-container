@@ -140,10 +140,13 @@ spec:
             httpGet:
               path: /health/readiness
               port: {{ .Values.containerPorts.health }}
-          {{- with (include "omitForKuberVersion" (list . "<1.30-0" .Values.containerSecurityContext "appArmorProfile" )) }}
           securityContext:
-          {{- . | nindent 12 }}
-          {{- end }}
+            {{- if .Values.privileged }}
+            privileged: true
+            {{- end }}
+            {{- with (include "omitForKuberVersion" (list . "<1.30-0" .Values.containerSecurityContext "appArmorProfile" )) }}
+            {{- . | nindent 12 }}
+            {{- end }}
       volumes:
         - name: tmp-dir
           emptyDir: {}

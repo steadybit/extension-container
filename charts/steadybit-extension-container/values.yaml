@@ -120,6 +120,9 @@ affinity: {}
 # priorityClassName -- Priority class used to influence pod scheduling priority.
 priorityClassName: null
 
+# privileged -- Run the extension container in privileged mode (also updates the SCC).
+privileged: false
+
 # podSecurityContext -- SecurityContext to apply to the pod.
 podSecurityContext:
   seccompProfile:
