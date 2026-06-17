@@ -6,6 +6,7 @@
 - If the target interface carries a user- or CNI-installed root qdisc (e.g. `htb`, `cake`) that cannot be restored afterwards, the attack now fails fast in the prepare step with a clear error instead of silently replacing it.
 - Optional fallback: set `STEADYBIT_EXTENSION_NETWORK_STRICT_ROOT_QDISC=true` (e.g. via `extraEnv`) to make network attacks refuse any interface whose root qdisc is not `noqueue` — including the kernel default `mq` — instead of replacing it. Off by default.
 - New `privileged` chart value (default `false`): runs the extension in privileged mode and switches the managed `SecurityContextConstraint` to allow it. Needed on hardened nodes (e.g. CIS/STIG) where the container root filesystem is mounted `nosuid`, which voids the binary's file capabilities and breaks fault injection (`nsenter: operation not permitted`).
+- Stress CPU with "All cores" on uncapped containers now uses every online CPU on hosts with more than 32 cores (previously capped at 32 due to a `Cpus_allowed` mask parsing bug).
 
 ## v1.6.7
 
