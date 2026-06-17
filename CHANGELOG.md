@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v1.6.8
 
 - Network attacks (delay, loss, corruption, bandwidth) on `hostNetwork: true` pods or on containers whose `eth0` already has a kernel-default root qdisc no longer fail with `NLM_F_REPLACE needed to override`. The root qdisc is now installed via `tc qdisc replace`; on revert the kernel restores its default (`mq`, `noqueue`, `fq_codel`, `pfifo_fast`, `fq`).
 - If the target interface carries a user- or CNI-installed root qdisc (e.g. `htb`, `cake`) that cannot be restored afterwards, the attack now fails fast in the prepare step with a clear error instead of silently replacing it.
