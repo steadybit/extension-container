@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- feat: lower `oom_score_adj` on startup via extension-kit's `extruntime.AdjustOOMScoreAdj()` to avoid being killed by the node OOM killer. The extension sets it directly using the `cap_sys_resource` file capability (default `-998`, configurable via `STEADYBIT_EXTENSION_OOM_SCORE_ADJ`).
+
 ## v1.6.8
 
 - Network attacks (delay, loss, corruption, bandwidth) on `hostNetwork: true` pods or on containers whose `eth0` already has a kernel-default root qdisc no longer fail with `NLM_F_REPLACE needed to override`. The root qdisc is now installed via `tc qdisc replace`; on revert the kernel restores its default (`mq`, `noqueue`, `fq_codel`, `pfifo_fast`, `fq`).

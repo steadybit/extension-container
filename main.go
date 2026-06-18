@@ -37,6 +37,7 @@ func main() {
 
 	extbuild.PrintBuildInformation()
 	extruntime.LogRuntimeInformation(zerolog.InfoLevel)
+	extruntime.AdjustOOMScoreAdj()
 
 	config.ParseConfiguration()
 	config.ValidateConfiguration()
