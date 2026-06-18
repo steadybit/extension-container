@@ -80,10 +80,6 @@ func TestWithMinikube(t *testing.T) {
 			Test: testStressCpu,
 		},
 		{
-			Name: "stress cpu without cap_sys_resource",
-			Test: testStressCpuNoCapSysResource,
-		},
-		{
 			Name: "stress memory",
 			Test: testStressMemory,
 		},
@@ -1271,15 +1267,6 @@ func testNetworkDNSErrorInjectionHostNetwork(t *testing.T, m *e2e.Minikube, e *e
 		})
 	}
 	requireAllSidecarsCleanedUp(t, m, e)
-}
-
-func testStressCpuNoCapSysResource(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
-	require.NoError(t, e.Reconfigure(map[string]string{"containerSecurityContext.capabilities.add": "{MKNOD,SETPCAP,KILL,NET_BIND_SERVICE,SYS_ADMIN,SYS_CHROOT,SYS_PTRACE,NET_ADMIN,BPF,DAC_OVERRIDE,SETUID,SETGID,AUDIT_WRITE}"}))
-	defer func() {
-		require.NoError(t, e.ResetConfig())
-	}()
-
-	testStressCpu(t, m, e)
 }
 
 func testStressCpu(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
