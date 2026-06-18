@@ -155,7 +155,9 @@ containerSecurityContext:
       # SETPCAP, MKNOD is needed to support the crun OCI runtime. Better performance / needed on openshift clusters >= 4.18
       - SETPCAP
       - MKNOD
-      # SYS_RESOURCE is optional. If you remove it is more likely that the stress cpu/io/memory, fill memory attack will more likely be oomkilled
+      # SYS_RESOURCE is required: it is set as a file capability (cap_sys_resource) on the binary so the
+      # extension can lower its own oom_score_adj and stress cpu/io/memory and fill-memory attacks are not
+      # oom-killed. Removing it here will prevent the extension from starting (execve fails with EPERM).
       - SYS_RESOURCE
 # extraEnv -- Array with extra environment variables to add to the container
 # e.g:
