@@ -31,6 +31,14 @@ type Specification struct {
 	// for customers who don't want attacks to replace a pre-existing root qdisc.
 	// STEADYBIT_EXTENSION_NETWORK_STRICT_ROOT_QDISC
 	NetworkStrictRootQdisc bool `json:"networkStrictRootQdisc" split_words:"true" required:"false" default:"true"`
+	// NetworkSnapshotRestore, when true, makes network attacks snapshot the
+	// root qdisc tree of every target interface before installing the attack,
+	// and replay it after revert. This preserves cloud-tuned root qdiscs
+	// (e.g. GKE's `mq + fq` with buckets=32768 horizon=2s) that would
+	// otherwise revert to kernel defaults after `tc qdisc del root` and leave
+	// the host network degraded until reboot.
+	// STEADYBIT_EXTENSION_NETWORK_SNAPSHOT_RESTORE
+	NetworkSnapshotRestore bool `json:"networkSnapshotRestore" split_words:"true" required:"false" default:"false"`
 }
 
 var (

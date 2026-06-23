@@ -48,6 +48,12 @@ func main() {
 	// not `noqueue` (incl. the kernel default `mq`) instead of replacing it.
 	netfault.SetStrictRootQdisc(config.Config.NetworkStrictRootQdisc)
 
+	// Opt-in snapshot/restore: capture the root qdisc tree before installing
+	// the attack and replay it on revert. Preserves cloud-tuned root qdiscs
+	// (e.g. GKE's mq + tuned fq children) that would otherwise revert to
+	// kernel defaults after `tc qdisc del root`.
+	netfault.SetSnapshotRestore(config.Config.NetworkSnapshotRestore)
+
 	exthealth.SetReady(false)
 	exthealth.StartProbes(int(config.Config.HealthPort))
 
