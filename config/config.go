@@ -4,11 +4,12 @@ package config
 
 import (
 	"flag"
+	"os"
+	"strings"
+
 	"github.com/gobwas/glob"
 	"github.com/kelseyhightower/envconfig"
 	"github.com/rs/zerolog/log"
-	"os"
-	"strings"
 )
 
 type Specification struct {
@@ -29,7 +30,7 @@ type Specification struct {
 	// including the kernel default `mq` on managed-cloud nodes. Opt-in fallback
 	// for customers who don't want attacks to replace a pre-existing root qdisc.
 	// STEADYBIT_EXTENSION_NETWORK_STRICT_ROOT_QDISC
-	NetworkStrictRootQdisc bool `json:"networkStrictRootQdisc" split_words:"true" required:"false" default:"false"`
+	NetworkStrictRootQdisc bool `json:"networkStrictRootQdisc" split_words:"true" required:"false" default:"true"`
 }
 
 var (
