@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.6.9
+
+- build(deps): bump actions/checkout from 6 to 7
+- chore(deps): runc 1.4.3 and dns-inject to v0.2.2
+- chore(deps): update dependencies
+- feat: lower oom_score_adj on startup via extension-kit (#456)
+- fix: switch back to use strict root qdisc checks
+
 ## Unreleased
 
 - feat: lower `oom_score_adj` on startup via extension-kit's `extruntime.AdjustOOMScoreAdj()` to avoid being killed by the node OOM killer. The extension sets it directly using the `cap_sys_resource` file capability (default `-998`, configurable via `STEADYBIT_EXTENSION_OOM_SCORE_ADJ`).
