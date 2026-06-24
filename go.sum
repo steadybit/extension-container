@@ -226,12 +226,13 @@ github.com/mdlayher/netlink v1.2.2-0.20210123213345-5cc92139ae3e/go.mod h1:bacnN
 github.com/mdlayher/netlink v1.3.0/go.mod h1:xK/BssKuwcRXHrtN04UBkwQ6dY9VviGGuriDdoPSWys=
 github.com/mdlayher/netlink v1.4.0/go.mod h1:dRJi5IABcZpBD2A3D0Mv/AiX8I9uDEu5oGkAVrekmf8=
 github.com/mdlayher/netlink v1.4.1/go.mod h1:e4/KuJ+s8UhfUpO9z00/fDZZmhSrs+oxyqAS9cNgn6Q=
-github.com/mdlayher/netlink v1.6.2 h1:D2zGSkvYsJ6NreeED3JiVTu1lj2sIYATqSaZlhPzUgQ=
 github.com/mdlayher/netlink v1.6.2/go.mod h1:O1HXX2sIWSMJ3Qn1BYZk1yZM+7iMki/uYGGiwGyq/iU=
+github.com/mdlayher/netlink v1.11.2 h1:HKh2jqe+omdSWcQ88nrT7INE61B0NXfiSPFdgL4YbNI=
+github.com/mdlayher/netlink v1.11.2/go.mod h1:uT2Yc/QLaZubzDpZIBi9d4GoeLwtp3x1AMeqSRrK2sA=
 github.com/mdlayher/socket v0.0.0-20210307095302-262dc9984e00/go.mod h1:GAFlyu4/XV68LkQKYzKhIo/WW7j3Zi0YRAz/BOoanUc=
 github.com/mdlayher/socket v0.2.3/go.mod h1:bz12/FozYNH/VbvC3q7TRIK/Y6dH1kCKsXaUeXi/FmY=
-github.com/mdlayher/socket v0.5.1 h1:VZaqt6RkGkt2OE9l3GcC6nZkqD3xKeQLyfleW/uBcos=
-github.com/mdlayher/socket v0.5.1/go.mod h1:TjPLHI1UgwEv5J1B5q0zTZq12A/6H7nKmtTanQE37IQ=
+github.com/mdlayher/socket v0.6.0 h1:ScZPaAGyO1icQnbFrhPM8mnXyMu9qukC1K4ZoM2IQKU=
+github.com/mdlayher/socket v0.6.0/go.mod h1:q7vozUAnxSqnjHc12Fik5yUKIzfZ8ITCfMkhOtE9z18=
 github.com/moby/docker-image-spec v1.3.1 h1:jMKff3w6PgbfSa69GfNg+zN/XLhfXJGnEx3Nl2EsFP0=
 github.com/moby/docker-image-spec v1.3.1/go.mod h1:eKmb5VW8vQEh/BAr2yvVNvuiJuY6UIocYsFu/DxxRpo=
 github.com/moby/locker v1.0.1 h1:fOXqR41zeveg4fFODix+1Ch4mj/gT0NE1XJbp/epuBg=
@@ -312,8 +313,8 @@ github.com/spf13/pflag v1.0.10/go.mod h1:McXfInJRrz4CZXVZOBLb0bTZqETkiAhM9Iw0y3A
 github.com/spkg/bom v0.0.0-20160624110644-59b7046e48ad/go.mod h1:qLr4V1qq6nMqFKkMo8ZTx3f+BZEkzsRUY10Xsm2mwU0=
 github.com/steadybit/action-kit/go/action_kit_api/v2 v2.10.5 h1:WQkcNX2us3JyOrdnI3ttxX96nF2JAEQSx/zM8IQGwDo=
 github.com/steadybit/action-kit/go/action_kit_api/v2 v2.10.5/go.mod h1:g8gkKZCnaZaxtQseZ/L6/flv3Hutwy0xcVO7P1cbUMQ=
-github.com/steadybit/action-kit/go/action_kit_commons v1.8.1-0.20260624130742-54323c2001af h1:rEmnYLkfUXA6pWySzRwI5L//P70PPCDFmywoSBLSePw=
-github.com/steadybit/action-kit/go/action_kit_commons v1.8.1-0.20260624130742-54323c2001af/go.mod h1:svDxd9vgWDo36tp3B6VeMnq0oLjSS/llXQqdevq27wc=
+github.com/steadybit/action-kit/go/action_kit_commons v1.8.1-0.20260624135340-86bd73d788af h1:z93Khe5J5ztLh7tIIqI0RmdZMNdUCiEGInMlvZgsDC4=
+github.com/steadybit/action-kit/go/action_kit_commons v1.8.1-0.20260624135340-86bd73d788af/go.mod h1:Dg5Q26LfchJnGKrMubHnVXzxaJL3ykx0naNbH05lL+Q=
 github.com/steadybit/action-kit/go/action_kit_sdk v1.3.1 h1:c83hiU+RLWjqouWR9baiidmYcTtDTdRa5rkWKFvdbc8=
 github.com/steadybit/action-kit/go/action_kit_sdk v1.3.1/go.mod h1:DMMqDn4QNetxAoEXSpS7xF/vV+aD6YIDl/CgWOi5ii8=
 github.com/steadybit/action-kit/go/action_kit_test v1.4.7 h1:DyW3xYKQTOpCy4GLOShUXYpzfTXH/JgWOcUi5WeC55k=

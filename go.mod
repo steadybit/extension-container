@@ -21,7 +21,7 @@ require (
 	github.com/opencontainers/runtime-spec v1.3.0
 	github.com/rs/zerolog v1.35.1
 	github.com/steadybit/action-kit/go/action_kit_api/v2 v2.10.5
-	github.com/steadybit/action-kit/go/action_kit_commons v1.8.1-0.20260624130742-54323c2001af
+	github.com/steadybit/action-kit/go/action_kit_commons v1.8.1-0.20260624135340-86bd73d788af
 	github.com/steadybit/action-kit/go/action_kit_sdk v1.3.1
 	github.com/steadybit/action-kit/go/action_kit_test v1.4.7
 	github.com/steadybit/discovery-kit/go/discovery_kit_api v1.7.1
@@ -92,8 +92,8 @@ require (
 	github.com/klauspost/compress v1.18.6 // indirect
 	github.com/mattn/go-colorable v0.1.15 // indirect
 	github.com/mattn/go-isatty v0.0.22 // indirect
-	github.com/mdlayher/netlink v1.6.2 // indirect
-	github.com/mdlayher/socket v0.5.1 // indirect
+	github.com/mdlayher/netlink v1.11.2 // indirect
+	github.com/mdlayher/socket v0.6.0 // indirect
 	github.com/moby/docker-image-spec v1.3.1 // indirect
 	github.com/moby/locker v1.0.1 // indirect
 	github.com/moby/spdystream v0.5.1 // indirect
