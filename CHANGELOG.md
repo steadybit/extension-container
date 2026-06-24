@@ -1,9 +1,17 @@
 # Changelog
 
-## Unreleased
+## v1.6.10
 
 - feat: lower `oom_score_adj` on startup via extension-kit's `extruntime.AdjustOOMScoreAdj()` to avoid being killed by the node OOM killer. The extension sets it directly using the `cap_sys_resource` file capability (default `-998`, configurable via `STEADYBIT_EXTENSION_OOM_SCORE_ADJ`).
 - feat: opt-in qdisc snapshot/restore for network attacks. Set `STEADYBIT_EXTENSION_NETWORK_SNAPSHOT_RESTORE=true` (e.g. via `extraEnv`) to make Apply capture the root qdisc tree (qdiscs + filters) of every target interface and Revert replay it after the attack's `tc del`. Preserves cloud-tuned root qdiscs (e.g. GKE's `mq + fq` with `buckets=32768 horizon=2s`) that would otherwise revert to kernel defaults after `tc qdisc del root` and leave the host network degraded until reboot. Off by default; Linux only.
+
+## v1.6.9
+
+- build(deps): bump actions/checkout from 6 to 7
+- chore(deps): runc 1.4.3 and dns-inject to v0.2.2
+- chore(deps): update dependencies
+- feat: lower oom_score_adj on startup via extension-kit (#456)
+- fix: switch back to use strict root qdisc checks
 
 ## v1.6.8
 
