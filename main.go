@@ -48,7 +48,6 @@ func main() {
 	// non-noqueue roots; lifting it activates the snapshot/restore path so
 	// cloud-tuned roots survive the attack.
 	netfault.SetStrictRootQdisc(config.Config.NetworkStrictRootQdisc)
-	netfault.SetSnapshotRestore(!config.Config.NetworkStrictRootQdisc)
 
 	exthealth.SetReady(false)
 	exthealth.StartProbes(int(config.Config.HealthPort))
