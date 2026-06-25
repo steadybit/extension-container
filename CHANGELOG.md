@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- One env var instead of two for network-attack root-qdisc handling. `STEADYBIT_EXTENSION_NETWORK_SNAPSHOT_RESTORE` is gone; the snapshot/restore path now auto-activates whenever `STEADYBIT_EXTENSION_NETWORK_STRICT_ROOT_QDISC=false`. Operators wanting the customer-friendly behaviour on managed-cloud nodes (run the attack and preserve the tuned root) set strict to false and get snapshot for free.
+
 ## v1.6.10
 
 - feat: lower `oom_score_adj` on startup via extension-kit's `extruntime.AdjustOOMScoreAdj()` to avoid being killed by the node OOM killer. The extension sets it directly using the `cap_sys_resource` file capability (default `-998`, configurable via `STEADYBIT_EXTENSION_OOM_SCORE_ADJ`).
