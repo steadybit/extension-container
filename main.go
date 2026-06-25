@@ -44,15 +44,11 @@ func main() {
 
 	log.Debug().Any("config", config.Config).Msg("Configuration loaded.")
 
-	// Opt-in fallback: refuse network attacks on interfaces whose root qdisc is
-	// not `noqueue` (incl. the kernel default `mq`) instead of replacing it.
+	// Single knob for the operator: strict mode refuses attacks on
+	// non-noqueue roots; lifting it activates the snapshot/restore path so
+	// cloud-tuned roots survive the attack.
 	netfault.SetStrictRootQdisc(config.Config.NetworkStrictRootQdisc)
-
-	// Opt-in snapshot/restore: capture the root qdisc tree before installing
-	// the attack and replay it on revert. Preserves cloud-tuned root qdiscs
-	// (e.g. GKE's mq + tuned fq children) that would otherwise revert to
-	// kernel defaults after `tc qdisc del root`.
-	netfault.SetSnapshotRestore(config.Config.NetworkSnapshotRestore)
+	netfault.SetSnapshotRestore(!config.Config.NetworkStrictRootQdisc)
 
 	exthealth.SetReady(false)
 	exthealth.StartProbes(int(config.Config.HealthPort))
