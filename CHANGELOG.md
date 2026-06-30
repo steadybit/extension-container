@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- The pre-attack qdisc snapshot now lives in the action's per-execution state instead of an in-memory map in the extension process. An extension pod restart between Start and Stop no longer loses the snapshot, so Stop still restores the cloud-tuned root tree. Requires `action_kit_commons` v1.10.0.
 - One env var instead of two for network-attack root-qdisc handling. `STEADYBIT_EXTENSION_NETWORK_SNAPSHOT_RESTORE` is gone; the snapshot/restore path now auto-activates whenever `STEADYBIT_EXTENSION_NETWORK_STRICT_ROOT_QDISC=false`. Operators wanting the customer-friendly behaviour on managed-cloud nodes (run the attack and preserve the tuned root) set strict to false and get snapshot for free.
 
 ## v1.6.10
