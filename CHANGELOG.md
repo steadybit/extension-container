@@ -1,14 +1,10 @@
 # Changelog
 
-## Unreleased
-
-- The pre-attack qdisc snapshot now lives in the action's per-execution state instead of an in-memory map in the extension process. An extension pod restart between Start and Stop no longer loses the snapshot, so Stop still restores the cloud-tuned root tree. Requires `action_kit_commons` v1.10.0.
-- One env var instead of two for network-attack root-qdisc handling. `STEADYBIT_EXTENSION_NETWORK_SNAPSHOT_RESTORE` is gone; the snapshot/restore path now auto-activates whenever `STEADYBIT_EXTENSION_NETWORK_STRICT_ROOT_QDISC=false`. Operators wanting the customer-friendly behaviour on managed-cloud nodes (run the attack and preserve the tuned root) set strict to false and get snapshot for free.
-
 ## v1.6.10
 
-- feat: lower `oom_score_adj` on startup via extension-kit's `extruntime.AdjustOOMScoreAdj()` to avoid being killed by the node OOM killer. The extension sets it directly using the `cap_sys_resource` file capability (default `-998`, configurable via `STEADYBIT_EXTENSION_OOM_SCORE_ADJ`).
-- feat: opt-in qdisc snapshot/restore for network attacks. Set `STEADYBIT_EXTENSION_NETWORK_SNAPSHOT_RESTORE=true` (e.g. via `extraEnv`) to make Apply capture the root qdisc tree (qdiscs + filters) of every target interface and Revert replay it after the attack's `tc del`. Preserves cloud-tuned root qdiscs (e.g. GKE's `mq + fq` with `buckets=32768 horizon=2s`) that would otherwise revert to kernel defaults after `tc qdisc del root` and leave the host network degraded until reboot. Off by default; Linux only.
+- feat: opt-in qdisc snapshot/restore for network attacks. Set `STEADYBIT_EXTENSION_NETWORK_STRICT_ROOT_QDISC=false` (e.g. via `extraEnv`) to make Apply capture the root qdisc tree (qdiscs + filters) of every target interface and Revert replay it after the attack's `tc del`. Preserves cloud-tuned root qdiscs (e.g. GKE's `mq + fq` with `buckets=32768 horizon=2s`) that would otherwise revert to kernel defaults after `tc qdisc del root` and leave the host network degraded until reboot. Off by default; Linux only.
+- The pre-attack qdisc snapshot lives in the action's per-execution state instead of an in-memory map in the extension process. An extension pod restart between Start and Stop no longer loses the snapshot, so Stop still restores the cloud-tuned root tree.
+- Update dependencies
 
 ## v1.6.9
 
