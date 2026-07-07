@@ -50,6 +50,14 @@ type NetworkActionState struct {
 	// root after the attack tree is torn down. Empty when strict-mode is on,
 	// the attack doesn't touch a tc root, or the capture itself errored.
 	QdiscSnapshot netfault.QdiscSnapshot
+	// IsShadow is true when this action's Start found another concurrent
+	// action already attacking the same netns (multi-container pods share a
+	// netns — see netns_dedup.go). Shadow actions do NOT install their own
+	// tc rules; only the first (primary) Start applies. Stop mirrors the
+	// same split: the primary reverts, shadows no-op. The flag lives on
+	// state so the primary/shadow decision survives an extension pod
+	// restart between Start and Stop.
+	IsShadow bool
 }
 
 // Make sure networkAction implements all required interfaces
@@ -203,9 +211,32 @@ func (a *networkAction) Start(ctx context.Context, state *NetworkActionState) (*
 		},
 	}}
 
+	// If another concurrent action is already attacking this netns
+	// (multi-container pods share a netns — see netns_dedup.go), mark this
+	// Start as a shadow and skip Apply. The primary Start does the actual
+	// tc install; Stop mirrors the decision via state.IsShadow.
+	nsID := netNsID(state.Sidecar.TargetProcess)
+	if !claimNetnsForAttack(nsID) {
+		state.IsShadow = true
+		log.Info().
+			Str("containerId", state.ContainerID).
+			Str("netNs", nsID).
+			Msg("skipping network attack apply — another container on the same netns already attacked it (shadow)")
+		result.Messages = new(append(*result.Messages, action_kit_api.Message{
+			Level:   extutil.Ptr(action_kit_api.Info),
+			Message: fmt.Sprintf("Skipping apply for container %s — the target's network namespace is already being attacked by a sibling container in the same pod.", state.TargetLabel),
+		}))
+		return &result, nil
+	}
+
 	snap, err := netfault.Apply(ctx, netfault.NewRuncRunner(a.ociRuntime, state.Sidecar), opts)
 	state.QdiscSnapshot = snap
 	if err != nil {
+		// Apply failed — release the netns claim so subsequent Starts have
+		// a chance to try. Without this a failed primary would permanently
+		// block sibling containers from being attacked in the same
+		// extension-container process.
+		releaseNetnsForAttack(nsID)
 		var toomany *netfault.ErrTooManyTcCommands
 		if errors.As(err, &toomany) {
 			result.Messages = new(append(*result.Messages, action_kit_api.Message{
@@ -222,6 +253,26 @@ func (a *networkAction) Start(ctx context.Context, state *NetworkActionState) (*
 
 func (a *networkAction) Stop(_ context.Context, state *NetworkActionState) (*action_kit_api.StopResult, error) {
 	ctx := context.Background() // don't use the context as the action should be stopped even if the request context is cancelled
+
+	// Shadow actions never applied — their Start deferred to a sibling
+	// container's primary. Their Stop must not revert, or the primary's
+	// attack would be torn down early. See netns_dedup.go for the full
+	// primary/shadow model.
+	if state.IsShadow {
+		releaseNetnsForAttack(netNsID(state.Sidecar.TargetProcess))
+		log.Info().
+			Str("containerId", state.ContainerID).
+			Msg("skipping network attack revert — this container was a shadow (sibling primary owns the attack)")
+		return &action_kit_api.StopResult{
+			Messages: &[]action_kit_api.Message{
+				{
+					Level:   extutil.Ptr(action_kit_api.Info),
+					Message: fmt.Sprintf("Skipping revert for container %s — a sibling container in the same pod owns the attack on the shared network namespace.", state.TargetLabel),
+				},
+			},
+		}, nil
+	}
+
 	opts, err := a.optsDecoder(state.NetworkOpts)
 	if err != nil {
 		return nil, extension_kit.ToError("Failed to deserialize network settings.", err)
@@ -234,6 +285,7 @@ func (a *networkAction) Stop(_ context.Context, state *NetworkActionState) (*act
 			Str("containerId", state.ContainerID).
 			Msg("target network namespace does not exist anymore, no revert necessary")
 
+		releaseNetnsForAttack(netNsID(state.Sidecar.TargetProcess))
 		return &action_kit_api.StopResult{
 			Messages: &[]action_kit_api.Message{
 				{
@@ -247,6 +299,7 @@ func (a *networkAction) Stop(_ context.Context, state *NetworkActionState) (*act
 	if err := netfault.Revert(ctx, netfault.NewRuncRunner(a.ociRuntime, state.Sidecar), opts, state.QdiscSnapshot); err != nil {
 		return nil, extension_kit.ToError("Failed to revert network settings.", err)
 	}
+	releaseNetnsForAttack(netNsID(state.Sidecar.TargetProcess))
 	return nil, nil
 }
 

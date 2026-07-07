@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- fix: dedupe network attacks across containers that share a pod's network namespace. In Kubernetes every container in a pod shares the pod's netns, so an experiment targeting multiple containers in the same pod fired multiple `tc` applies against the same netns — the second apply then collided at the kernel level (e.g. `htb.change` rejected because the first apply had installed active classes at handle `1:`). The first Start on a netns now applies the attack ("primary"), later Starts on the same netns no-op ("shadow"), and Stop mirrors the same split.
+
 ## v1.6.10
 
 - feat: opt-in qdisc snapshot/restore for network attacks. Set `STEADYBIT_EXTENSION_NETWORK_STRICT_ROOT_QDISC=false` (e.g. via `extraEnv`) to make Apply capture the root qdisc tree (qdiscs + filters) of every target interface and Revert replay it after the attack's `tc del`. Preserves cloud-tuned root qdiscs (e.g. GKE's `mq + fq` with `buckets=32768 horizon=2s`) that would otherwise revert to kernel defaults after `tc qdisc del root` and leave the host network degraded until reboot. Off by default; Linux only.
