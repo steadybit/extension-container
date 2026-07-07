@@ -45,6 +45,70 @@ func TestClaimAndRelease_PrimaryThenShadowThenReleaseCycle(t *testing.T) {
 	assert.Equal(t, ClaimPrimary, claimNetnsForAttack(id, opts), "fully released netns claims fresh as primary again")
 }
 
+// TestClaim_SiblingContainersDifferentExecutionIdsStillDedup is the real
+// regression for the customer bug. Extension-container's
+// mapToExecutionContext injects request.ExecutionId into opts as
+// TargetExecutionId, and Steadybit fires one action per container target
+// — so two containers of the same pod running the same experiment have
+// DIFFERENT state.NetworkOpts bytes even though the attack is
+// semantically identical. Without normalization the tracker would
+// classify them as passthrough and both would apply, reproducing the
+// "Change operation not supported by specified qdisc" collision this
+// dedup is here to prevent.
+func TestClaim_SiblingContainersDifferentExecutionIdsStillDedup(t *testing.T) {
+	const id = "test-netns-siblings"
+	// Two opts JSON blobs that differ ONLY in TargetExecutionId + the
+	// per-experiment ExperimentExecutionId — the exact shape produced by
+	// two sibling container actions in one Steadybit experiment.
+	optsA := json.RawMessage(`{"Bandwidth":"1mbit","Interfaces":["eth0"],"Include":[],"Exclude":[],"ExperimentKey":"GITHUB-99","ExperimentExecutionId":42,"TargetExecutionId":"exec-container-a"}`)
+	optsB := json.RawMessage(`{"Bandwidth":"1mbit","Interfaces":["eth0"],"Include":[],"Exclude":[],"ExperimentKey":"GITHUB-99","ExperimentExecutionId":42,"TargetExecutionId":"exec-container-b"}`)
+	t.Cleanup(func() { fullyRelease(id) })
+
+	assert.Equal(t, ClaimPrimary, claimNetnsForAttack(id, optsA), "first sibling claims primary")
+	assert.Equal(t, ClaimShadow, claimNetnsForAttack(id, optsB), "second sibling shadows despite different TargetExecutionId")
+}
+
+// TestClaim_SiblingContainersEvenWhenExperimentExecutionIdDiffers covers a
+// slightly stricter case: not only is TargetExecutionId different, but
+// ExperimentExecutionId too. Some platform code paths generate a per-target
+// experiment execution id — defensive stripping ensures dedup still fires.
+func TestClaim_SiblingContainersEvenWhenExperimentExecutionIdDiffers(t *testing.T) {
+	const id = "test-netns-siblings-exp-diff"
+	optsA := json.RawMessage(`{"Bandwidth":"1mbit","ExperimentKey":"GITHUB-99","ExperimentExecutionId":42,"TargetExecutionId":"a"}`)
+	optsB := json.RawMessage(`{"Bandwidth":"1mbit","ExperimentKey":"GITHUB-99","ExperimentExecutionId":43,"TargetExecutionId":"b"}`)
+	t.Cleanup(func() { fullyRelease(id) })
+
+	assert.Equal(t, ClaimPrimary, claimNetnsForAttack(id, optsA))
+	assert.Equal(t, ClaimShadow, claimNetnsForAttack(id, optsB), "differing per-execution nonces must not defeat the dedup")
+}
+
+// TestNormalizeOptsForDedup_StripsExecutionNonces is a direct unit test for
+// the helper: two opts JSONs that differ ONLY in TargetExecutionId /
+// ExperimentExecutionId must produce equal normalized bytes.
+func TestNormalizeOptsForDedup_StripsExecutionNonces(t *testing.T) {
+	a := json.RawMessage(`{"Bandwidth":"1mbit","TargetExecutionId":"a","ExperimentExecutionId":1,"ExperimentKey":"E"}`)
+	b := json.RawMessage(`{"Bandwidth":"1mbit","TargetExecutionId":"b","ExperimentExecutionId":2,"ExperimentKey":"E"}`)
+	assert.Equal(t, string(normalizeOptsForDedup(a)), string(normalizeOptsForDedup(b)))
+}
+
+// TestNormalizeOptsForDedup_PreservesRealDifferences verifies that
+// materially-different opts (different Bandwidth) still compare unequal
+// after normalization — otherwise the dedup would eat legitimately
+// distinct attacks.
+func TestNormalizeOptsForDedup_PreservesRealDifferences(t *testing.T) {
+	a := json.RawMessage(`{"Bandwidth":"1mbit","TargetExecutionId":"a"}`)
+	b := json.RawMessage(`{"Bandwidth":"5mbit","TargetExecutionId":"a"}`)
+	assert.NotEqual(t, string(normalizeOptsForDedup(a)), string(normalizeOptsForDedup(b)))
+}
+
+// TestNormalizeOptsForDedup_MalformedFallsBackToRaw covers the safety net:
+// unparseable JSON falls back to raw bytes so we degrade to byte-identical
+// comparison instead of panicking.
+func TestNormalizeOptsForDedup_MalformedFallsBackToRaw(t *testing.T) {
+	raw := json.RawMessage(`not json at all`)
+	assert.Equal(t, string(raw), string(normalizeOptsForDedup(raw)))
+}
+
 // TestClaim_DifferentOptsPassThrough is the fix for Claude review finding
 // #2: a sibling container running a DIFFERENT attack on the same netns
 // must not be silently shadowed — it must pass through to netfault so the

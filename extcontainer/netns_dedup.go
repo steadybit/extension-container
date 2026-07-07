@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"github.com/opencontainers/runtime-spec/specs-go"
+	"github.com/rs/zerolog/log"
 	"github.com/steadybit/action-kit/go/action_kit_commons/ociruntime"
 )
 
@@ -57,12 +58,21 @@ type netnsEntry struct {
 	// count is the number of live primary+shadow claims. Passthroughs are
 	// not counted (they don't touch the tracker).
 	count int
-	// opts is the serialized attack opts of the primary. Later Starts on
-	// this netns compare their opts against this: identical -> shadow,
-	// different -> passthrough. json.RawMessage bytes come from the same
-	// json.Marshal in the same process across sibling containers, so byte
-	// equality is a reliable "same attack" check for the dedup case.
-	opts json.RawMessage
+	// opts is the NORMALIZED attack opts of the primary — the raw
+	// state.NetworkOpts run through normalizeOptsForDedup, which strips
+	// the per-execution nonce fields (TargetExecutionId,
+	// ExperimentExecutionId). Later Starts compare their own normalized
+	// opts against this: identical -> shadow, different -> passthrough.
+	//
+	// The stripping is essential: extension-container's mapToExecutionContext
+	// sets TargetExecutionId = request.ExecutionId, and Steadybit fires a
+	// separate ExecutionId per container target. Two sibling containers
+	// of the same pod running the same experiment therefore have DIFFERENT
+	// state.NetworkOpts bytes, and a naive byte comparison would always
+	// disagree, forcing every sibling into the passthrough branch and
+	// reproducing the "Change operation not supported" collision this
+	// tracker exists to prevent.
+	opts []byte
 }
 
 // ClaimResult is what claimNetnsForAttack tells Start to do.
@@ -104,9 +114,10 @@ func netNsID(process ociruntime.LinuxProcessInfo) string {
 
 // claimNetnsForAttack inspects the tracker for the given netns and returns
 // what the caller's Start should do. See the doc on ClaimResult for the
-// three outcomes. `opts` is the serialized attack opts (state.NetworkOpts)
-// — the same JSON bytes any sibling container would produce for the same
-// attack in the same process.
+// three outcomes. `opts` is state.NetworkOpts — the serialized attack
+// config — which we normalize (strip per-execution nonces) before
+// comparison so sibling containers with different ExecutionIds still
+// resolve to the same identity.
 //
 // Empty id short-circuits to ClaimPrimary so an unknown-netns target still
 // applies — safer than silently no-op'ing.
@@ -114,14 +125,15 @@ func claimNetnsForAttack(id string, opts json.RawMessage) ClaimResult {
 	if id == "" {
 		return ClaimPrimary
 	}
+	normalized := normalizeOptsForDedup(opts)
 	netnsAttackTracker.Lock()
 	defer netnsAttackTracker.Unlock()
 	entry, exists := netnsAttackTracker.active[id]
 	if !exists {
-		netnsAttackTracker.active[id] = &netnsEntry{count: 1, opts: opts}
+		netnsAttackTracker.active[id] = &netnsEntry{count: 1, opts: normalized}
 		return ClaimPrimary
 	}
-	if bytes.Equal(entry.opts, opts) {
+	if bytes.Equal(entry.opts, normalized) {
 		entry.count++
 		return ClaimShadow
 	}
@@ -129,6 +141,44 @@ func claimNetnsForAttack(id string, opts json.RawMessage) ClaimResult {
 	// tracker. Netfault's own doesConflictWith / pushActiveNetfault will
 	// either allow both or reject the newcomer with a visible error.
 	return ClaimPassthrough
+}
+
+// normalizeOptsForDedup strips per-execution nonce fields from serialized
+// attack opts so two sibling containers of the same pod running the same
+// experiment produce identical output. Without this the tracker would
+// never match siblings, because extension-container's mapToExecutionContext
+// injects request.ExecutionId (unique per action target) into the opts as
+// TargetExecutionId — and Steadybit fires one action target per container.
+//
+// Also strips ExperimentExecutionId defensively; it's meant to be
+// experiment-wide but experiments that fan out per-container may carry a
+// per-target value on some platform versions.
+//
+// Unmarshaling to a map and remarshaling also normalizes key order to
+// alphabetical, so any incidental field-order drift in the source
+// wouldn't cause a false-negative comparison. Marshal-error fallback
+// returns the raw bytes: comparison still works for byte-identical
+// inputs, just won't dedup across execution ids — closer to pre-fix
+// behavior than crashing.
+func normalizeOptsForDedup(raw json.RawMessage) []byte {
+	if len(raw) == 0 {
+		return nil
+	}
+	var m map[string]interface{}
+	if err := json.Unmarshal(raw, &m); err != nil {
+		log.Warn().Err(err).Msg("dedup: failed to parse opts for normalization; falling back to raw byte compare")
+		return raw
+	}
+	// LimitBandwidthOpts (and siblings) embed ExecutionContext, so its
+	// fields appear at the top level of the serialized JSON.
+	delete(m, "TargetExecutionId")
+	delete(m, "ExperimentExecutionId")
+	out, err := json.Marshal(m)
+	if err != nil {
+		log.Warn().Err(err).Msg("dedup: failed to re-marshal normalized opts; falling back to raw byte compare")
+		return raw
+	}
+	return out
 }
 
 // releaseNetnsForAttack decrements the netns counter after a Stop. Only
