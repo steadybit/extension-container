@@ -60,9 +60,9 @@ type netnsEntry struct {
 	count int
 	// opts is the NORMALIZED attack opts of the primary — the raw
 	// state.NetworkOpts run through normalizeOptsForDedup, which strips
-	// the per-execution nonce fields (TargetExecutionId,
-	// ExperimentExecutionId). Later Starts compare their own normalized
-	// opts against this: identical -> shadow, different -> passthrough.
+	// the per-target TargetExecutionId nonce. Later Starts compare their
+	// own normalized opts against this: identical -> shadow, different
+	// -> passthrough.
 	//
 	// The stripping is essential: extension-container's mapToExecutionContext
 	// sets TargetExecutionId = request.ExecutionId, and Steadybit fires a
@@ -72,6 +72,14 @@ type netnsEntry struct {
 	// disagree, forcing every sibling into the passthrough branch and
 	// reproducing the "Change operation not supported" collision this
 	// tracker exists to prevent.
+	//
+	// Note ExperimentExecutionId is deliberately KEPT in the comparison:
+	// per action_kit_api it's experiment-scoped (shared by every sibling
+	// target within one experiment run), so leaving it in correctly
+	// scopes dedup to "same experiment, sibling container" and prevents
+	// two unrelated experiments on the same pod from being folded into a
+	// single Primary/Shadow pair — where the primary's Stop would tear
+	// down the other experiment's still-active attack.
 	opts []byte
 }
 
@@ -143,23 +151,28 @@ func claimNetnsForAttack(id string, opts json.RawMessage) ClaimResult {
 	return ClaimPassthrough
 }
 
-// normalizeOptsForDedup strips per-execution nonce fields from serialized
-// attack opts so two sibling containers of the same pod running the same
-// experiment produce identical output. Without this the tracker would
-// never match siblings, because extension-container's mapToExecutionContext
-// injects request.ExecutionId (unique per action target) into the opts as
-// TargetExecutionId — and Steadybit fires one action target per container.
+// normalizeOptsForDedup strips the per-target TargetExecutionId nonce from
+// serialized attack opts so two sibling containers of the same pod running
+// the same experiment produce identical output. Without this the tracker
+// would never match siblings, because extension-container's
+// mapToExecutionContext injects request.ExecutionId (unique per action
+// target) into the opts as TargetExecutionId — and Steadybit fires one
+// action target per container.
 //
-// Also strips ExperimentExecutionId defensively; it's meant to be
-// experiment-wide but experiments that fan out per-container may carry a
-// per-target value on some platform versions.
+// ExperimentExecutionId is deliberately NOT stripped: per action_kit_api
+// it's the ExecutionContext.ExecutionId, shared by every sibling target
+// within one experiment run, so leaving it in the comparison scopes
+// dedup correctly to "same experiment, sibling container." Stripping it
+// would collapse two unrelated experiments running the same attack on
+// the same pod into a single Primary/Shadow pair, letting whichever
+// experiment finishes first tear down the other's still-active attack.
 //
 // Unmarshaling to a map and remarshaling also normalizes key order to
-// alphabetical, so any incidental field-order drift in the source
-// wouldn't cause a false-negative comparison. Marshal-error fallback
-// returns the raw bytes: comparison still works for byte-identical
-// inputs, just won't dedup across execution ids — closer to pre-fix
-// behavior than crashing.
+// alphabetical, so incidental field-order drift wouldn't cause a
+// false-negative comparison. Marshal-error fallback returns the raw
+// bytes: comparison still works for byte-identical inputs, just won't
+// dedup across sibling ExecutionIds — closer to pre-fix behavior than
+// crashing.
 func normalizeOptsForDedup(raw json.RawMessage) []byte {
 	if len(raw) == 0 {
 		return nil
@@ -172,7 +185,6 @@ func normalizeOptsForDedup(raw json.RawMessage) []byte {
 	// LimitBandwidthOpts (and siblings) embed ExecutionContext, so its
 	// fields appear at the top level of the serialized JSON.
 	delete(m, "TargetExecutionId")
-	delete(m, "ExperimentExecutionId")
 	out, err := json.Marshal(m)
 	if err != nil {
 		log.Warn().Err(err).Msg("dedup: failed to re-marshal normalized opts; falling back to raw byte compare")

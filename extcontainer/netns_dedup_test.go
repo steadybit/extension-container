@@ -68,27 +68,42 @@ func TestClaim_SiblingContainersDifferentExecutionIdsStillDedup(t *testing.T) {
 	assert.Equal(t, ClaimShadow, claimNetnsForAttack(id, optsB), "second sibling shadows despite different TargetExecutionId")
 }
 
-// TestClaim_SiblingContainersEvenWhenExperimentExecutionIdDiffers covers a
-// slightly stricter case: not only is TargetExecutionId different, but
-// ExperimentExecutionId too. Some platform code paths generate a per-target
-// experiment execution id — defensive stripping ensures dedup still fires.
-func TestClaim_SiblingContainersEvenWhenExperimentExecutionIdDiffers(t *testing.T) {
-	const id = "test-netns-siblings-exp-diff"
+// TestClaim_DifferentExperimentsMustNotDedup guards the correctness
+// boundary Claude flagged on PR #470: two UNRELATED experiments running
+// byte-identical attack config on the same pod (different
+// ExperimentExecutionId) must NOT be folded into a single primary/shadow
+// pair. If they were, the first to Stop would tear down tc state the
+// other experiment's attack is still supposed to be using.
+func TestClaim_DifferentExperimentsMustNotDedup(t *testing.T) {
+	const id = "test-netns-diff-experiments"
 	optsA := json.RawMessage(`{"Bandwidth":"1mbit","ExperimentKey":"GITHUB-99","ExperimentExecutionId":42,"TargetExecutionId":"a"}`)
 	optsB := json.RawMessage(`{"Bandwidth":"1mbit","ExperimentKey":"GITHUB-99","ExperimentExecutionId":43,"TargetExecutionId":"b"}`)
 	t.Cleanup(func() { fullyRelease(id) })
 
 	assert.Equal(t, ClaimPrimary, claimNetnsForAttack(id, optsA))
-	assert.Equal(t, ClaimShadow, claimNetnsForAttack(id, optsB), "differing per-execution nonces must not defeat the dedup")
+	assert.Equal(t, ClaimPassthrough, claimNetnsForAttack(id, optsB),
+		"different ExperimentExecutionId marks two unrelated experiments — dedup must not collapse them")
 }
 
-// TestNormalizeOptsForDedup_StripsExecutionNonces is a direct unit test for
-// the helper: two opts JSONs that differ ONLY in TargetExecutionId /
-// ExperimentExecutionId must produce equal normalized bytes.
-func TestNormalizeOptsForDedup_StripsExecutionNonces(t *testing.T) {
+// TestNormalizeOptsForDedup_StripsTargetExecutionId is a direct unit test
+// for the helper: two opts JSONs that differ ONLY in TargetExecutionId
+// (i.e. two sibling containers of one experiment) must produce equal
+// normalized bytes.
+func TestNormalizeOptsForDedup_StripsTargetExecutionId(t *testing.T) {
 	a := json.RawMessage(`{"Bandwidth":"1mbit","TargetExecutionId":"a","ExperimentExecutionId":1,"ExperimentKey":"E"}`)
-	b := json.RawMessage(`{"Bandwidth":"1mbit","TargetExecutionId":"b","ExperimentExecutionId":2,"ExperimentKey":"E"}`)
+	b := json.RawMessage(`{"Bandwidth":"1mbit","TargetExecutionId":"b","ExperimentExecutionId":1,"ExperimentKey":"E"}`)
 	assert.Equal(t, string(normalizeOptsForDedup(a)), string(normalizeOptsForDedup(b)))
+}
+
+// TestNormalizeOptsForDedup_KeepsExperimentExecutionId is the flip side:
+// if two opts differ ONLY in ExperimentExecutionId (unrelated experiment
+// runs), the normalized bytes must NOT match. Guards against a future
+// well-meaning refactor that adds `delete(m, "ExperimentExecutionId")`.
+func TestNormalizeOptsForDedup_KeepsExperimentExecutionId(t *testing.T) {
+	a := json.RawMessage(`{"Bandwidth":"1mbit","TargetExecutionId":"a","ExperimentExecutionId":1,"ExperimentKey":"E"}`)
+	b := json.RawMessage(`{"Bandwidth":"1mbit","TargetExecutionId":"a","ExperimentExecutionId":2,"ExperimentKey":"E"}`)
+	assert.NotEqual(t, string(normalizeOptsForDedup(a)), string(normalizeOptsForDedup(b)),
+		"ExperimentExecutionId must remain in the compared bytes so unrelated experiments don't dedup")
 }
 
 // TestNormalizeOptsForDedup_PreservesRealDifferences verifies that
