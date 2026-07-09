@@ -127,6 +127,14 @@ func Test_mapToNetworkFilter_excludeIp(t *testing.T) {
 			},
 			wantExcluded: []string{"10.1.0.0/16 # parameters"},
 		},
+		{
+			name: "excludeHostname entries are excluded together with excludeIp",
+			actionConfig: map[string]any{
+				"excludeIp":       []interface{}{"10.0.0.0/8"},
+				"excludeHostname": []interface{}{"192.168.1.1"},
+			},
+			wantExcluded: []string{"10.0.0.0/8 # parameters", "192.168.1.1/32 # parameters"},
+		},
 	}
 
 	for _, tt := range tests {
