@@ -95,7 +95,7 @@ var commonNetworkParameters = []action_kit_api.ActionParameter{
 	},
 	{
 		Name:         "hostname",
-		Label:        "Hostnames",
+		Label:        "Include Hostnames",
 		Description:  new("Restrict to/from which hosts the traffic is affected."),
 		Type:         action_kit_api.ActionParameterTypeStringArray,
 		DefaultValue: new(""),
@@ -104,7 +104,7 @@ var commonNetworkParameters = []action_kit_api.ActionParameter{
 	},
 	{
 		Name:         "ip",
-		Label:        "IPs/CIDRs",
+		Label:        "Include IPs/CIDRs",
 		Description:  new("Restrict to/from which IP addresses or blocks the traffic is affected."),
 		Type:         action_kit_api.ActionParameterTypeStringArray,
 		DefaultValue: new(""),
@@ -113,12 +113,30 @@ var commonNetworkParameters = []action_kit_api.ActionParameter{
 	},
 	{
 		Name:         "port",
-		Label:        "Ports",
+		Label:        "Include Ports",
 		Description:  new("Restrict to/from which ports the traffic is affected."),
 		Type:         action_kit_api.ActionParameterTypeStringArray,
 		DefaultValue: new(""),
 		Advanced:     new(true),
 		Order:        new(103),
+	},
+	{
+		Name:        "excludeHostname",
+		Label:       "Exclude Hostnames",
+		Description: new("Exclude traffic to/from these hosts from being affected. Excludes always take precedence over the include restrictions above (hostnames, IPs/CIDRs, ports)."),
+		Type:        action_kit_api.ActionParameterTypeStringArray,
+		Required:    new(false),
+		Advanced:    new(true),
+		Order:       new(104),
+	},
+	{
+		Name:        "excludeIp",
+		Label:       "Exclude IPs/CIDRs",
+		Description: new("Exclude traffic to/from these IP addresses or CIDR blocks from being affected. Excludes always take precedence over the include restrictions above (hostnames, IPs/CIDRs, ports), e.g. affect all traffic except 10.0.0.0/8."),
+		Type:        action_kit_api.ActionParameterTypeStringArray,
+		Required:    new(false),
+		Advanced:    new(true),
+		Order:       new(105),
 	},
 }
 
@@ -388,8 +406,8 @@ func mapToNetworkFilter(ctx context.Context, r ociruntime.OciRuntime, sidecar ne
 	}
 
 	includes := network.NewNetWithPortRanges(includeCidrs, portRanges...)
-	for _, i := range includes {
-		i.Comment = "parameters"
+	for i := range includes {
+		includes[i].Comment = "parameters"
 	}
 
 	slices.SortFunc(includes, network.NetWithPortRange.Compare)
@@ -398,6 +416,23 @@ func mapToNetworkFilter(ctx context.Context, r ociruntime.OciRuntime, sidecar ne
 	if err != nil {
 		return netfault.Filter{}, nil, err
 	}
+
+	excludeCidrs, unresolvedExcludes := network.ParseCIDRs(append(
+		extutil.ToStringArray(actionConfig["excludeIp"]),
+		extutil.ToStringArray(actionConfig["excludeHostname"])...,
+	))
+	resolvedExcludes, err := dnsresolve.NewDigRunc(r, sidecar.TargetProcess).Resolve(ctx, unresolvedExcludes...)
+	if err != nil {
+		return netfault.Filter{}, nil, err
+	}
+	excludeCidrs = append(excludeCidrs, network.IpsToNets(resolvedExcludes)...)
+
+	userExcludes := network.NewNetWithPortRanges(excludeCidrs, network.PortRangeAny)
+	for i := range userExcludes {
+		userExcludes[i].Comment = "parameters"
+	}
+	excludes = append(excludes, userExcludes...)
+
 	excludes = append(excludes, network.ComputeExcludesForOwnIpAndPorts(config.Config.Port, config.Config.HealthPort)...)
 
 	slices.SortFunc(excludes, network.NetWithPortRange.Compare)

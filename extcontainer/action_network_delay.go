@@ -71,7 +71,7 @@ func getNetworkDelayDescription() action_kit_api.ActionDescription {
 				Type:        action_kit_api.ActionParameterTypeStringArray,
 				Required:    new(false),
 				Advanced:    new(true),
-				Order:       new(104),
+				Order:       new(106),
 			},
 			action_kit_api.ActionParameter{
 				Name:         "tcpDataPacketsOnly",
@@ -81,7 +81,7 @@ func getNetworkDelayDescription() action_kit_api.ActionDescription {
 				DefaultValue: new("false"),
 				Required:     new(true),
 				Advanced:     new(true),
-				Order:        new(105),
+				Order:        new(107),
 			},
 		),
 	}
