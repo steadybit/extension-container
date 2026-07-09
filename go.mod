@@ -1,6 +1,6 @@
 module github.com/steadybit/extension-container
 
-go 1.26.4
+go 1.26.5
 
 //https://github.com/containerd/containerd/issues/12493
 replace github.com/opencontainers/runtime-spec => github.com/opencontainers/runtime-spec v1.2.1

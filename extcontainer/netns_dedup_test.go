@@ -197,10 +197,8 @@ func TestClaim_ConcurrentIdenticalOptsExactlyOnePrimary(t *testing.T) {
 		shadows   int
 	)
 	start := make(chan struct{})
-	for i := 0; i < workers; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+	for range workers {
+		wg.Go(func() {
 			<-start
 			switch claimNetnsForAttack(id, opts) {
 			case ClaimPrimary:
@@ -212,7 +210,7 @@ func TestClaim_ConcurrentIdenticalOptsExactlyOnePrimary(t *testing.T) {
 				shadows++
 				mu.Unlock()
 			}
-		}()
+		})
 	}
 	close(start)
 	wg.Wait()
