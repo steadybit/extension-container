@@ -177,7 +177,7 @@ func normalizeOptsForDedup(raw json.RawMessage) []byte {
 	if len(raw) == 0 {
 		return nil
 	}
-	var m map[string]interface{}
+	var m map[string]any
 	if err := json.Unmarshal(raw, &m); err != nil {
 		log.Warn().Err(err).Msg("dedup: failed to parse opts for normalization; falling back to raw byte compare")
 		return raw
