@@ -95,7 +95,7 @@ var commonNetworkParameters = []action_kit_api.ActionParameter{
 	},
 	{
 		Name:         "hostname",
-		Label:        "Hostnames",
+		Label:        "Include Hostnames",
 		Description:  new("Restrict to/from which hosts the traffic is affected."),
 		Type:         action_kit_api.ActionParameterTypeStringArray,
 		DefaultValue: new(""),
@@ -104,7 +104,7 @@ var commonNetworkParameters = []action_kit_api.ActionParameter{
 	},
 	{
 		Name:         "ip",
-		Label:        "IPs/CIDRs",
+		Label:        "Include IPs/CIDRs",
 		Description:  new("Restrict to/from which IP addresses or blocks the traffic is affected."),
 		Type:         action_kit_api.ActionParameterTypeStringArray,
 		DefaultValue: new(""),
@@ -113,12 +113,21 @@ var commonNetworkParameters = []action_kit_api.ActionParameter{
 	},
 	{
 		Name:         "port",
-		Label:        "Ports",
+		Label:        "Include Ports",
 		Description:  new("Restrict to/from which ports the traffic is affected."),
 		Type:         action_kit_api.ActionParameterTypeStringArray,
 		DefaultValue: new(""),
 		Advanced:     new(true),
 		Order:        new(103),
+	},
+	{
+		Name:        "excludeIp",
+		Label:       "Exclude IPs/CIDRs",
+		Description: new("Exclude traffic to/from these IP addresses or CIDR blocks from being affected. Excludes always take precedence over the include restrictions above (hostnames, IPs/CIDRs, ports), e.g. affect all traffic except 10.0.0.0/8."),
+		Type:        action_kit_api.ActionParameterTypeStringArray,
+		Required:    new(false),
+		Advanced:    new(true),
+		Order:       new(104),
 	},
 }
 
