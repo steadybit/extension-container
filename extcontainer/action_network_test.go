@@ -101,6 +101,55 @@ func Test_should_revert_event_when_namespace_is_missing(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func Test_mapToNetworkFilter_excludeIp(t *testing.T) {
+	tests := []struct {
+		name         string
+		actionConfig map[string]any
+		wantExcluded []string
+	}{
+		{
+			name:         "no excludeIp yields no parameter excludes",
+			actionConfig: map[string]any{},
+			wantExcluded: nil,
+		},
+		{
+			name: "excludeIp CIDRs and IPs are excluded on all ports",
+			actionConfig: map[string]any{
+				"excludeIp": []interface{}{"10.0.0.0/8", "192.168.1.1"},
+			},
+			wantExcluded: []string{"10.0.0.0/8 # parameters", "192.168.1.1/32 # parameters"},
+		},
+		{
+			name: "excludeIp composes with include restrictions",
+			actionConfig: map[string]any{
+				"ip":        []interface{}{"10.0.0.0/8"},
+				"excludeIp": []interface{}{"10.1.0.0/16"},
+			},
+			wantExcluded: []string{"10.1.0.0/16 # parameters"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			filter, _, err := mapToNetworkFilter(context.Background(), newMockedRunc(), netfault.SidecarOpts{}, tt.actionConfig, nil)
+			require.NoError(t, err)
+
+			var parameterExcludes []string
+			for _, e := range filter.Exclude {
+				if e.Comment == "parameters" {
+					require.Equal(t, network.PortRangeAny, e.PortRange)
+					parameterExcludes = append(parameterExcludes, e.String())
+				}
+			}
+			require.Equal(t, tt.wantExcluded, parameterExcludes)
+
+			for _, i := range filter.Include {
+				require.Equal(t, "parameters", i.Comment)
+			}
+		})
+	}
+}
+
 func extractState(t *testing.T, res *action_kit_api.ActionState, state *NetworkActionState) {
 	require.NoError(t, extconversion.Convert(res, state))
 }

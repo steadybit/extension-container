@@ -74,6 +74,15 @@ func getNetworkDelayDescription() action_kit_api.ActionDescription {
 				Order:       new(104),
 			},
 			action_kit_api.ActionParameter{
+				Name:        "excludeIp",
+				Label:       "Exclude IPs/CIDRs",
+				Description: new("Exclude traffic to/from these IP addresses or CIDR blocks from being delayed. Excludes always take precedence over the Hostnames, IPs/CIDRs and Ports restrictions, e.g. delay all traffic except 10.0.0.0/8."),
+				Type:        action_kit_api.ActionParameterTypeStringArray,
+				Required:    new(false),
+				Advanced:    new(true),
+				Order:       new(106),
+			},
+			action_kit_api.ActionParameter{
 				Name:         "tcpDataPacketsOnly",
 				Label:        "TCP Data Packets Only [beta]",
 				Description:  new("Delay only TCP data packets (PSH flag heuristic). UDP is not delayed. When you observe the actual delay being a multiple of the configured delay, you might choose this option to avoid delaying the TCP handshake."),

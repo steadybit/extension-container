@@ -228,6 +228,7 @@ func testNetworkDelay(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 		ip                  []string
 		hostname            []string
 		port                []string
+		excludeIp           []string
 		interfaces          []string
 		restrictedEndpoints []action_kit_api.RestrictedEndpoint
 		wantedDelay         bool
@@ -262,6 +263,12 @@ func testNetworkDelay(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			restrictedEndpoints: generateRestrictedEndpoints(1500),
 			wantedDelay:         true,
 		},
+		{
+			name:                "should not delay traffic for excluded cidr",
+			excludeIp:           []string{fmt.Sprintf("%s/32", netperf.ServerIp)},
+			restrictedEndpoints: generateRestrictedEndpoints(1500),
+			wantedDelay:         false,
+		},
 	}
 
 	unaffectedLatency, err := netperf.MeasureLatency()
@@ -276,6 +283,7 @@ func testNetworkDelay(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			"ip":                 tt.ip,
 			"hostname":           tt.hostname,
 			"port":               tt.port,
+			"excludeIp":          tt.excludeIp,
 			"networkInterface":   tt.interfaces,
 		}
 

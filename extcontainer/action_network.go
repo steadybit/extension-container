@@ -388,8 +388,8 @@ func mapToNetworkFilter(ctx context.Context, r ociruntime.OciRuntime, sidecar ne
 	}
 
 	includes := network.NewNetWithPortRanges(includeCidrs, portRanges...)
-	for _, i := range includes {
-		i.Comment = "parameters"
+	for i := range includes {
+		includes[i].Comment = "parameters"
 	}
 
 	slices.SortFunc(includes, network.NetWithPortRange.Compare)
@@ -398,6 +398,20 @@ func mapToNetworkFilter(ctx context.Context, r ociruntime.OciRuntime, sidecar ne
 	if err != nil {
 		return netfault.Filter{}, nil, err
 	}
+
+	excludeCidrs, unresolvedExcludes := network.ParseCIDRs(extutil.ToStringArray(actionConfig["excludeIp"]))
+	resolvedExcludes, err := dnsresolve.NewDigRunc(r, sidecar.TargetProcess).Resolve(ctx, unresolvedExcludes...)
+	if err != nil {
+		return netfault.Filter{}, nil, err
+	}
+	excludeCidrs = append(excludeCidrs, network.IpsToNets(resolvedExcludes)...)
+
+	userExcludes := network.NewNetWithPortRanges(excludeCidrs, network.PortRangeAny)
+	for i := range userExcludes {
+		userExcludes[i].Comment = "parameters"
+	}
+	excludes = append(excludes, userExcludes...)
+
 	excludes = append(excludes, network.ComputeExcludesForOwnIpAndPorts(config.Config.Port, config.Config.HealthPort)...)
 
 	slices.SortFunc(excludes, network.NetWithPortRange.Compare)
