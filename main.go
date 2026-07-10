@@ -5,7 +5,6 @@ package main
 
 import (
 	"context"
-	"time"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -29,8 +28,6 @@ import (
 	// You can find more details of its behavior from the doc comment of memlimit.SetGoMemLimitWithEnv.
 	_ "github.com/KimMachineGun/automemlimit" // By default, it sets `GOMEMLIMIT` to 90% of cgroup's memory limit.
 )
-
-var startedAt = time.Now().Format(time.RFC3339)
 
 func main() {
 	extlogging.InitZeroLog()
@@ -96,7 +93,7 @@ func main() {
 	action_kit_sdk.RegisterAction(extcontainer.NewFillDiskContainerAction(r, client))
 	action_kit_sdk.RegisterAction(extcontainer.NewFillMemoryContainerAction(r, client))
 
-	exthttp.RegisterHttpHandler("/", exthttp.IfNoneMatchHandler(func() string { return startedAt }, exthttp.GetterAsHandler(getExtensionList)))
+	exthttp.RegisterRevisionedHandler("/", getExtensionList)
 
 	extsignals.ActivateSignalHandlers()
 
