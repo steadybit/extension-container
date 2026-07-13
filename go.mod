@@ -30,7 +30,7 @@ require (
 	github.com/steadybit/discovery-kit/go/discovery_kit_test v1.2.1
 	github.com/steadybit/extension-kit v1.11.0
 	github.com/stretchr/testify v1.11.1
-	golang.org/x/sync v0.21.0
+	golang.org/x/sync v0.22.0
 	google.golang.org/grpc v1.82.0
 	k8s.io/api v0.36.2
 	k8s.io/apimachinery v0.36.2
