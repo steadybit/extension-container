@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.7.1
+
+- build(deps): bump golang.org/x/sync from 0.21.0 to 0.22.0
+- chore: update dns-inject to v0.2.3 (#475)
+- refactor: register extension index via exthttp.RegisterRevisionedHandler (#474)
+
 ## v1.7.0
 
 - feat: new `Exclude Hostnames` (`excludeHostname`) and `Exclude IPs/CIDRs` (`excludeIp`) parameters on all network attacks sharing the hostname/IP/port filters (delay, loss, corruption, bandwidth, blackhole, TCP reset) — affect all traffic except the given hosts or IPs/CIDRs. Excludes always take precedence over the include restrictions. The existing filter parameters are relabeled to `Include Hostnames`, `Include IPs/CIDRs` and `Include Ports` to make the distinction explicit.
