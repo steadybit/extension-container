@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.7.2
+
+- build(deps): bump github.com/containerd/containerd from 1.7.33 to 1.7.34
+- chore: run e2e tests on free ubuntu-latest runner (#479)
+- ci: skip build on .trivyignore.yml-only changes [skip ci]
+
 ## v1.7.1
 
 - build(deps): bump golang.org/x/sync from 0.21.0 to 0.22.0
