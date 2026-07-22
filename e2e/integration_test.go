@@ -657,6 +657,8 @@ func testNetworkBlackhole(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	target, err := nginx.Target()
 	require.NoError(t, err)
 
+	gateway := nginxDefaultGateway(t, &nginx)
+
 	tests := []struct {
 		name             string
 		ip               []string
@@ -664,35 +666,41 @@ func testNetworkBlackhole(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 		port             []string
 		wantedReachable  bool
 		wantedReachesUrl bool
+		wantedCanPing    bool
 	}{
 		{
 			name:             "should blackhole all traffic",
 			wantedReachable:  false,
 			wantedReachesUrl: false,
+			wantedCanPing:    false,
 		},
 		{
 			name:             "should blackhole only port 8080 traffic",
 			port:             []string{"8080"},
 			wantedReachable:  true,
 			wantedReachesUrl: true,
+			wantedCanPing:    true,
 		},
 		{
 			name:             "should blackhole only port 80, 443 traffic",
 			port:             []string{"80", "443"},
 			wantedReachable:  false,
 			wantedReachesUrl: false,
+			wantedCanPing:    true,
 		},
 		{
 			name:             "should blackhole only traffic for steadybit.com",
 			hostname:         []string{"steadybit.com"},
 			wantedReachable:  true,
 			wantedReachesUrl: false,
+			wantedCanPing:    true,
 		},
 		{
 			name:             "should blackhole only traffic for steadybit.com using CIDRs",
 			ip:               steadybitCIDRs,
 			wantedReachable:  true,
 			wantedReachesUrl: false,
+			wantedCanPing:    true,
 		},
 	}
 
@@ -710,6 +718,7 @@ func testNetworkBlackhole(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 		t.Run(tt.name, func(t *testing.T) {
 			nginx.AssertIsReachable(t, true)
 			nginx.AssertCanReach(t, "https://steadybit.com", true)
+			assertNginxCanPing(t, &nginx, gateway, true)
 
 			action, err := e.RunAction(fmt.Sprintf("%s.network_blackhole", extcontainer.BaseActionID), target, config, &action_kit_api.ExecutionContext{})
 			defer func() { _ = action.Cancel() }()
@@ -717,10 +726,12 @@ func testNetworkBlackhole(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 
 			nginx.AssertIsReachable(t, tt.wantedReachable)
 			nginx.AssertCanReach(t, "https://steadybit.com", tt.wantedReachesUrl)
+			assertNginxCanPing(t, &nginx, gateway, tt.wantedCanPing)
 
 			require.NoError(t, action.Cancel())
 			nginx.AssertIsReachable(t, true)
 			nginx.AssertCanReach(t, "https://steadybit.com", true)
+			assertNginxCanPing(t, &nginx, gateway, true)
 		})
 
 		hostnameAfter, err := m.PodExec(nginx.Pod, "nginx", "hostname")
@@ -729,6 +740,41 @@ func testNetworkBlackhole(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 		require.Equal(t, hostnameBefore, hostnameAfter, "must not alter the hostname")
 	}
 	requireAllSidecarsCleanedUp(t, m, e)
+}
+
+// nginxDefaultGateway returns the nginx pod's default-route gateway, used as an
+// in-cluster ICMP target. It reliably answers ping when reachable and is still
+// covered by a blackhole spanning 0.0.0.0/0, unlike a public host whose ICMP
+// egress is unreliable on CI networks.
+func nginxDefaultGateway(t *testing.T, nginx *e2e.Nginx) string {
+	t.Helper()
+	out, err := nginx.Minikube.PodExec(nginx.Pod, "nginx", "ip", "-4", "route", "show", "default")
+	require.NoError(t, err)
+	fields := strings.Fields(out)
+	for i, f := range fields {
+		if f == "via" && i+1 < len(fields) {
+			return fields[i+1]
+		}
+	}
+	require.Failf(t, "default gateway not found", "could not parse default gateway from %q", out)
+	return ""
+}
+
+// assertNginxCanPing runs a single ICMP echo from the nginx container to host
+// and asserts whether it succeeds. It exercises a protocol without ports, which
+// a port-scoped blackhole must leave untouched while a portless one must block.
+func assertNginxCanPing(t *testing.T, nginx *e2e.Nginx, host string, expected bool) {
+	t.Helper()
+	e2e.Retry(t, 8, 500*time.Millisecond, func(r *e2e.R) {
+		out, err := nginx.Minikube.PodExec(nginx.Pod, "nginx", "ping", "-c", "1", "-W", "2", host)
+		if expected && err != nil {
+			r.Failed = true
+			_, _ = fmt.Fprintf(r.Log, "expected %s to be pingable from nginx, but was not: %s: %s", host, err, out)
+		} else if !expected && err == nil {
+			r.Failed = true
+			_, _ = fmt.Fprintf(r.Log, "expected %s not to be pingable from nginx, but was", host)
+		}
+	})
 }
 
 func testNetworkBlackhole3Containers(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
