@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.7.4
+
+- chore(deps): update dependencies
+
 ## v1.7.3
 
 - fix: network attacks now also affect protocols without ports (e.g. ICMP) when no port is specified. Previously an unset port implied the port range 1-65534, so only port-bearing protocols (TCP/UDP/SCTP) were blocked and ICMP traffic slipped through the blackhole attack.
