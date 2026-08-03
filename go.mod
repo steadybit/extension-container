@@ -31,7 +31,7 @@ require (
 	github.com/steadybit/extension-kit v1.11.1
 	github.com/stretchr/testify v1.11.1
 	golang.org/x/sync v0.22.0
-	google.golang.org/grpc v1.82.1
+	google.golang.org/grpc v1.83.0
 	k8s.io/api v0.36.3
 	k8s.io/apimachinery v0.36.3
 	k8s.io/client-go v0.36.3
