@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.7.5
+
+- build(deps): bump github.com/moby/moby/client from 0.5.0 to 0.5.1
+- build(deps): bump google.golang.org/grpc from 1.82.1 to 1.83.0
+- build(deps): bump k8s.io/client-go from 0.36.2 to 0.36.3
+- chore(deps): update dns-inject
+- feat: support filtering targets out of discovery
+- fix: use gcp.zone instead of google.zone as availability zone fallback attribute (#489)
+
 ## v1.7.4
 
 - chore(deps): update dependencies
