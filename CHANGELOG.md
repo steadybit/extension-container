@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.7.6
+
+- fix: show repeated tc batch errors only once in the action error details (action_kit_commons v1.10.5)
+
 ## v1.7.5
 
 - build(deps): bump github.com/moby/moby/client from 0.5.0 to 0.5.1
