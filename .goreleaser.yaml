@@ -15,7 +15,7 @@ builds:
   - binary: extension-container
     env:
       - CGO_ENABLED=0
-      - MEMFILL_VERSION=v1.3.1
+      - MEMFILL_VERSION=v1.5.0
       - NSMOUNT_VERSION=v1.1.1
       - DNS_INJECT_VERSION=v0.2.5
     goos:
@@ -70,7 +70,6 @@ nfpms:
       - bind9-dnsutils
       - runc
       - libcap2-bin
-      - cgroup-tools
     bindir: /opt/steadybit/extension-container
     contents:
       - src: ./linuxpkg/systemd
@@ -112,6 +111,5 @@ nfpms:
           - /usr/bin/dig
           - runc
           - libcap
-          - /usr/bin/cgexec
         recommends:
           - kernel-modules-extra
