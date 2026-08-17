@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.7.7
+
+- chore: the fill memory attack no longer needs `cgexec`. memfill (>= v1.5.0) now joins the target's memory cgroup and PID namespace itself, so `cgroup-tools` / `libcgroup-tools` is dropped from the package dependencies and the container image. That package has no Enterprise Linux 9 build and never supported cgroup v2, so this also unblocks installing on RHEL 9 / Rocky 9 / Alma 9.
+
 ## v1.7.6
 
 - chore(deps): update dns-inject to 0.2.5
