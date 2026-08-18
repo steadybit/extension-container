@@ -63,12 +63,18 @@ nfpms:
     builds:
       - steadybit-extension-container
     dependencies:
+      # procps provides /usr/bin/kill on debian/ubuntu, which the process
+      # runners use to signal stress-ng / memfill / diskfill / dns-inject.
       - procps
       - stress-ng
+      # iptables-restore / ip6tables-restore: network delay + tcp reset
       - iptables
+      # ip + tc
       - iproute2
+      # dig: resolving the network attack's target hostnames
       - bind9-dnsutils
       - runc
+      # capsh, used by the sysv init.d script
       - libcap2-bin
     bindir: /opt/steadybit/extension-container
     contents:
@@ -104,10 +110,11 @@ nfpms:
     overrides:
       rpm:
         dependencies:
-          - /usr/bin/ps
           - /usr/bin/stress-ng
           - iproute-tc
           - /usr/sbin/ip
+          - /usr/sbin/iptables-restore
+          - /usr/bin/fallocate
           - /usr/bin/dig
           - runc
           - libcap
