@@ -132,3 +132,8 @@ vulnerabilities:
       - usr/sbin/runc
     statement: waiting for runc release
     expired_at: 2027-02-01
+  - id: CVE-2026-39822
+    paths:
+      - usr/sbin/runc
+    statement: waiting for runc release
+    expired_at: 2027-02-01
