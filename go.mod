@@ -32,8 +32,8 @@ require (
 	github.com/stretchr/testify v1.12.0
 	golang.org/x/sync v0.22.0
 	google.golang.org/grpc v1.83.0
-	k8s.io/api v0.36.3
-	k8s.io/apimachinery v0.36.3
+	k8s.io/api v0.36.4
+	k8s.io/apimachinery v0.36.4
 	k8s.io/client-go v0.36.3
 	k8s.io/cri-api v0.36.3
 )
@@ -148,7 +148,7 @@ require (
 	howett.net/plist v1.0.1 // indirect
 	k8s.io/klog/v2 v2.140.0 // indirect
 	k8s.io/kube-openapi v0.0.0-20260317180543-43fb72c5454a // indirect
-	k8s.io/streaming v0.36.3 // indirect
+	k8s.io/streaming v0.36.4 // indirect
 	k8s.io/utils v0.0.0-20260210185600-b8788abfbbc2 // indirect
 	sigs.k8s.io/json v0.0.0-20250730193827-2d320260d730 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
