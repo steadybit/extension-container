@@ -112,6 +112,14 @@ func (a *dependencyFaultAction) Prepare(ctx context.Context, state *DependencyFa
 		}
 	}
 
+	// Idempotent: a repeated Prepare for the same execution reuses the existing
+	// proxy rather than creating (and leaking) a second runc sidecar bundle.
+	if _, exists := getDependencyFaultHandle(request.ExecutionId.String()); exists {
+		state.ExecutionId = request.ExecutionId.String()
+		state.ContainerID = containerId
+		return &action_kit_api.PrepareResult{}, nil
+	}
+
 	opts, err := a.parseOpts(request)
 	if err != nil {
 		return nil, err
@@ -149,14 +157,16 @@ func (a *dependencyFaultAction) Status(_ context.Context, state *DependencyFault
 		return &action_kit_api.StatusResult{Completed: true}, nil
 	}
 	if exited, err := handle.proxy.Exited(); exited {
-		errMsg := "transparent-proxy exited unexpectedly"
+		removeDependencyFaultHandle(state.ExecutionId)
 		if err != nil {
-			errMsg = fmt.Sprintf("transparent-proxy failed: %v", err)
+			return &action_kit_api.StatusResult{
+				Completed: true,
+				Error:     &action_kit_api.ActionKitError{Title: fmt.Sprintf("transparent-proxy failed: %v", err), Status: extutil.Ptr(action_kit_api.Errored)},
+			}, nil
 		}
-		return &action_kit_api.StatusResult{
-			Completed: true,
-			Error:     &action_kit_api.ActionKitError{Title: errMsg, Status: extutil.Ptr(action_kit_api.Errored)},
-		}, nil
+		// Clean exit (e.g. the --max-duration deadman firing) is a normal
+		// completion, not an error.
+		return &action_kit_api.StatusResult{Completed: true}, nil
 	}
 	return &action_kit_api.StatusResult{Completed: false}, nil
 }
@@ -217,7 +227,7 @@ func dependencyFaultParameters() []action_kit_api.ActionParameter {
 			Type: action_kit_api.ActionParameterTypeStringArray, Required: extutil.Ptr(false), Order: extutil.Ptr(4),
 		},
 		{
-			Name: "ip", Label: "Dependency CIDRs", Description: extutil.Ptr("Intercept traffic destined for these IP CIDRs. Defaults to all destinations (0.0.0.0/0)."),
+			Name: "ip", Label: "Dependency CIDRs", Description: extutil.Ptr("Intercept traffic destined for these IP CIDRs. Defaults to all destinations. Note: interception is currently IPv4 only."),
 			Type: action_kit_api.ActionParameterTypeStringArray, Required: extutil.Ptr(false), Order: extutil.Ptr(5), Advanced: extutil.Ptr(true),
 		},
 		{
@@ -248,8 +258,7 @@ func (a *dependencyFaultAction) parseOpts(request action_kit_api.PrepareActionRe
 		return proxyfault.Opts{}, fmt.Errorf("invalid dependency CIDR: %w", err)
 	}
 	if len(includeCIDRs) == 0 {
-		_, all, _ := net.ParseCIDR("0.0.0.0/0")
-		includeCIDRs = []net.IPNet{*all}
+		includeCIDRs = network.NetAny // 0.0.0.0/0 + ::/0 (proxy currently intercepts IPv4)
 	}
 
 	excludeCIDRs, err := a.buildExcludes(request)
