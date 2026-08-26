@@ -1,0 +1,30 @@
+[info] extension image: extension-host:after
+target: docker-desktop | attrs: {"host.domainname": ["docker-desktop"], "host.hostname": ["docker-desktop"], "host.ipv4": ["192.168.65.3", "192.168.65.6", "192.168.49.1", "172.17.0.1", "172.19.0.1", "10.99.0.1"], "host.ipv6": ["fdc4
+
+=== PREPARE http 200
+
+=== START http 200
+ERROR TITLE : Failed to start action.
+ERROR DETAIL:
+Failed to apply network settings.: Command failed tc -force -batch -
+Error: Invalid qdisc name.
+Command failed -:1
+Error: Parent qdisc is not classful.
+Command failed -:2
+Error: Qdisc not classful.
+We have an error talking to the kernel
+Command failed -:3 (and 83 more)
+
+[info] delaying traffic by 500ms (jitter: 0s, interfaces: dummy0, tcpPshOnly: false)
+to/from:
+ ::/0 8080 # parameters
+ ::/0 8081 # parameters
+ ::/0 8082 # parameters
+ ::/0 8083 # parameters
+ ::/0 8084 # parameters
+ ::/0 8085 # parameters
+ 0.0.0.0/0 8080 # parameters
+ 0.0.0.0/0 8081 # parameters
+ 0.0.0.0/0 
+
+=== STOP http 500

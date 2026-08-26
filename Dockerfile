@@ -60,6 +60,7 @@ ARG TARGETARCH
 ENV STEADYBIT_EXTENSION_NSMOUNT_PATH="/nsmount"
 ENV STEADYBIT_EXTENSION_MEMFILL_PATH="/memfill"
 ENV STEADYBIT_EXTENSION_DNS_INJECT_PATH="/dns-inject"
+ENV STEADYBIT_EXTENSION_TRANSPARENT_PROXY_PATH="/transparent-proxy"
 
 RUN groupadd --gid $USER_GID $USERNAME \
     && useradd --uid $USER_UID --gid $USER_GID -m $USERNAME
@@ -81,6 +82,7 @@ WORKDIR /
 COPY --from=build /app/dist/nsmount.${TARGETARCH} /nsmount
 COPY --from=build /app/dist/memfill.${TARGETARCH} /memfill
 COPY --from=build /app/dist/dns-inject.${TARGETARCH} /dns-inject
+COPY --from=build /app/dist/transparent-proxy.${TARGETARCH} /transparent-proxy
 COPY --from=build /app/extension /extension
 COPY --from=build /app/licenses /licenses
 

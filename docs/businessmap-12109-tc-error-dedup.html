@@ -1,0 +1,200 @@
+<title>Ticket 12109 — Repeated tc error messages</title>
+<style>
+  @page { size: A4; margin: 16mm 14mm; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, "Helvetica Neue", Arial, sans-serif;
+    font-size: 10.2pt; line-height: 1.5; color: #16181d; margin: 0;
+  }
+  h1 { font-size: 19pt; margin: 0 0 2mm; letter-spacing: -0.2px; }
+  h2 {
+    font-size: 12.4pt; margin: 8mm 0 2.5mm; padding-bottom: 1.2mm;
+    border-bottom: 1.4px solid #d7dae0; break-after: avoid;
+  }
+  h3 { font-size: 10.6pt; margin: 5mm 0 1.5mm; break-after: avoid; }
+  p { margin: 0 0 2.6mm; }
+  ul { margin: 0 0 2.6mm; padding-left: 5.5mm; }
+  li { margin-bottom: 1.2mm; }
+  code { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 9pt; background: #f1f3f6; padding: 0.4mm 1mm; border-radius: 2px; }
+  pre {
+    font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 8.1pt; line-height: 1.35;
+    background: #f7f8fa; border: 1px solid #dde1e7; border-left: 3px solid #98a2b3;
+    padding: 2.6mm 3mm; margin: 0 0 3mm; white-space: pre-wrap; word-break: break-word;
+    break-inside: avoid;
+  }
+  pre.bad { border-left-color: #c0392b; }
+  pre.good { border-left-color: #1e8e5a; }
+  .meta { color: #5b6472; font-size: 9pt; margin-bottom: 6mm; }
+  .lede { font-size: 10.6pt; background: #eef4fb; border: 1px solid #cddff2; padding: 3mm 3.5mm; margin-bottom: 6mm; }
+  table { border-collapse: collapse; width: 100%; margin: 0 0 3mm; font-size: 9.4pt; }
+  th, td { border: 1px solid #d7dae0; padding: 1.6mm 2.2mm; text-align: left; vertical-align: top; }
+  th { background: #f1f3f6; font-weight: 600; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .tag { font-size: 8.4pt; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; padding: 0.6mm 1.6mm; border-radius: 2px; }
+  .tag.before { background: #fbeae8; color: #a5281b; border: 1px solid #eec4bf; }
+  .tag.after { background: #e7f5ee; color: #14724a; border: 1px solid #bfe3d0; }
+  .note { border-left: 3px solid #d9a441; background: #fdf7ec; padding: 2.6mm 3mm; margin: 0 0 3mm; font-size: 9.6pt; }
+  .caption { font-size: 8.8pt; color: #5b6472; margin: -2mm 0 3.5mm; }
+  .footer { margin-top: 8mm; padding-top: 2mm; border-top: 1px solid #d7dae0; font-size: 8.6pt; color: #5b6472; }
+  .avoid { break-inside: avoid; }
+</style>
+
+<h1>Repeated <code>tc</code> error messages in network attacks</h1>
+<div class="meta">
+  BusinessMap ticket <strong>12109</strong> &middot; Fix report &middot; 7 August 2026 &middot;
+  Antoine Choimet &middot; steadybit/action-kit PR
+  <a href="https://github.com/steadybit/action-kit/pull/476">#476</a>
+</div>
+
+<div class="lede">
+  <strong>Outcome.</strong> When a network attack's <code>tc</code> batch failed, the same error line was
+  shown once per failed rule &mdash; producing a wall of identical text in the action's error details.
+  Identical messages are now collapsed to a single occurrence with an <code>(and N more)</code> counter.
+  Verified end to end with the real extension: the error details for a 6-port delay attack shrank from
+  <strong>257 lines to 8</strong>, with no information lost. Shipped in
+  <code>action_kit_commons v1.10.5</code>.
+</div>
+
+<h2>What the customer saw</h2>
+<p>
+  Running a network delay attack on a custom Ubuntu image (Zalando), the action failed and the error
+  details repeated the same two-line kernel error dozens of times, once per <code>tc</code> rule the
+  attack tried to install.
+</p>
+
+<h2>Root cause</h2>
+<p>
+  <code>tc</code> is invoked in batch mode (<code>tc -force -batch -</code>), and it reports one error
+  per failed batch line. A network attack installs one rule per interface, address family, direction and
+  port &mdash; so a single delay attack easily submits dozens of lines. When an early line fails (typically
+  the root qdisc), every subsequent line fails with the <em>same</em> message.
+</p>
+<p>
+  The renderer for these batch errors printed every entry verbatim, so the user-facing message grew
+  linearly with the number of rules, even though it only ever contained two or three distinct errors.
+</p>
+
+<h2>The fix</h2>
+<p>
+  In <code>go/action_kit_commons/network/netfault/batch_error.go</code>, the rendering of
+  <code>batchErrors</code> now deduplicates identical messages: the first occurrence is kept &mdash;
+  with its <code>Command failed -:&lt;line&gt;</code> reference &mdash; and repeats collapse into an
+  <code>(and N more)</code> suffix.
+</p>
+<ul>
+  <li>Only the <em>rendering</em> changed. The parsed error list is untouched, so the ignore-filtering
+      of benign cleanup errors and the kernel-configuration hints behave exactly as before.</li>
+  <li>No caller parses the rendered string, so nothing downstream is affected.</li>
+  <li>Reviewed and merged as PR #476; an automated review found no correctness, security or
+      performance issues.</li>
+</ul>
+
+<h2>Proof: end-to-end run with the real extension</h2>
+<p>
+  Both runs below used the <strong>actual extension-host binary</strong> in a privileged container on a
+  Linux kernel (6.12.76), driven through its HTTP action API exactly as the platform drives it
+  (<code>POST /prepare</code> then <code>POST /start</code>). Nothing was simulated: real
+  <code>tc</code>, real kernel errors, real action response.
+</p>
+
+<h3>Setup, identical for both runs</h3>
+<ul>
+  <li><strong>Attack:</strong> network delay, 500&nbsp;ms, on 6 ports &mdash; which expands to
+      <strong>86 <code>tc</code> batch lines</strong>, comparable to the customer's multi-rule attack.</li>
+  <li><strong>Failure trigger:</strong> the target interface was given a pre-existing root qdisc
+      occupying handle <code>1:</code> (<code>pfifo_fast 1:</code>). The attack's first batch line,
+      <code>qdisc replace dev &hellip; root handle 1: prio</code>, then fails, and every following filter
+      line fails identically &mdash; the same cause-and-effect as the ticket.</li>
+  <li><strong>Isolation:</strong> the attack targeted a dedicated dummy interface, so no real network
+      traffic was affected.</li>
+  <li><strong>Only variable:</strong> the library version &mdash; two locally built images differing
+      solely in <code>action_kit_commons</code>.</li>
+</ul>
+
+<h3 class="avoid"><span class="tag before">Before</span> &nbsp;action_kit_commons v1.10.4</h3>
+<pre class="bad">ERROR TITLE : Failed to start action.
+ERROR DETAIL:
+Failed to apply network settings.: Command failed tc -force -batch -
+Error: Invalid qdisc name.
+Command failed -:1
+Error: Parent qdisc is not classful.
+Command failed -:2
+Error: Qdisc not classful.
+We have an error talking to the kernel
+Command failed -:3
+Error: Qdisc not classful.
+We have an error talking to the kernel
+Command failed -:4
+Error: Qdisc not classful.
+We have an error talking to the kernel
+Command failed -:5
+                    ⋮
+    the same two lines repeat for every rule,
+    all the way through  Command failed -:86
+                    ⋮
+Error: Qdisc not classful.
+We have an error talking to the kernel
+Command failed -:86</pre>
+<div class="caption">257 lines in total. Abridged here for the page; the untruncated transcript is on file.</div>
+
+<h3 class="avoid"><span class="tag after">After</span> &nbsp;action_kit_commons v1.10.5</h3>
+<pre class="good">ERROR TITLE : Failed to start action.
+ERROR DETAIL:
+Failed to apply network settings.: Command failed tc -force -batch -
+Error: Invalid qdisc name.
+Command failed -:1
+Error: Parent qdisc is not classful.
+Command failed -:2
+Error: Qdisc not classful.
+We have an error talking to the kernel
+Command failed -:3 (and 83 more)</pre>
+<div class="caption">Complete, unabridged output &mdash; this is the entire message.</div>
+
+<h3>Measured</h3>
+<table>
+  <tr><th>Metric</th><th class="num">Before (v1.10.4)</th><th class="num">After (v1.10.5)</th></tr>
+  <tr><td>Lines in the error details</td><td class="num">257</td><td class="num">8</td></tr>
+  <tr><td>Occurrences of <code>Qdisc not classful</code></td><td class="num">84</td><td class="num">1</td></tr>
+  <tr><td>Distinct errors reported</td><td class="num">3</td><td class="num">3</td></tr>
+  <tr><td>Failed <code>tc</code> lines the operator can still count</td><td class="num">86</td><td class="num">86</td></tr>
+</table>
+<p>
+  The last two rows are the important ones: nothing was hidden. All three distinct errors are still
+  reported, the first failing line number is still shown, and the repeat count still tells the operator
+  how many rules were affected.
+</p>
+
+<h2>Regression coverage</h2>
+<ul>
+  <li>A test replaying the ticket's exact <code>tc</code> stderr &mdash; including the customer's
+      <code>NLM_F_REPLACE needed to override</code> line &mdash; asserts the collapsed output.
+      It fails if the deduplication is ever removed.</li>
+  <li>It runs in CI on every commit as part of the <code>netfault</code> package suite
+      (<code>go-action-kit-commons</code> job), on Linux and Windows.</li>
+</ul>
+
+<div class="note">
+  <strong>One caveat, for accuracy.</strong> The customer's exact wording was
+  <code>Error: Parent Qdisc doesn't exists.</code>, which comes from the older
+  <code>tc qdisc add</code> behaviour in the <code>action_kit_commons v1.2.17</code> their extension was
+  running. Current versions use <code>tc qdisc replace</code>, so the specific kernel message differs.
+  The failure <em>shape</em> &mdash; one failing root-qdisc line followed by N identical repeats &mdash;
+  and the fix are the same, which is what the run above demonstrates.
+</div>
+
+<h2>Rollout</h2>
+<table>
+  <tr><th>Component</th><th>Version</th><th>State</th></tr>
+  <tr><td>action_kit_commons</td><td>v1.10.5</td><td>Merged and released (PR #476)</td></tr>
+  <tr><td>extension-container</td><td>v1.7.6</td><td>Dependency bumped, pending release</td></tr>
+  <tr><td>extension-host</td><td>v1.7.4</td><td>Dependency bumped, pending release</td></tr>
+</table>
+<p>
+  Customers get the improved message by upgrading either extension to the versions above; no
+  configuration change is required.
+</p>
+
+<div class="footer">
+  Ticket 12109 &middot; action_kit_commons v1.10.5 &middot;
+  github.com/steadybit/action-kit/pull/476 &middot; Report generated 7 August 2026
+</div>
