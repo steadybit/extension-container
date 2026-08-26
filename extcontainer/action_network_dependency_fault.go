@@ -27,13 +27,65 @@ import (
 	"github.com/steadybit/extension-kit/extutil"
 )
 
+// dependencyFaultSpec describes one proxy-based dependency-fault action. The
+// three actions (delay / HTTP abort / connection reset) share all interception
+// and lifecycle logic and differ only by this spec — mirroring the per-fault
+// action split of the istio extension.
+type dependencyFaultSpec struct {
+	id          string
+	label       string
+	description string
+	extraParams []action_kit_api.ActionParameter
+	buildFault  func(cfg map[string]any) (proxyfault.Fault, error)
+}
+
+var latencyFaultSpec = dependencyFaultSpec{
+	id:          "network_dependency_latency",
+	label:       "Delay Dependency Traffic",
+	description: "Transparently proxy the container's outgoing traffic to a dependency and add latency, selected by hostname/SNI.",
+	extraParams: []action_kit_api.ActionParameter{{
+		Name: "delay", Label: "Latency", Description: extutil.Ptr("Latency to add before forwarding to the dependency."),
+		Type: action_kit_api.ActionParameterTypeDuration, DefaultValue: extutil.Ptr("500ms"), Required: extutil.Ptr(true), Order: extutil.Ptr(2),
+	}},
+	buildFault: func(cfg map[string]any) (proxyfault.Fault, error) {
+		d := time.Duration(extutil.ToInt64(cfg["delay"])) * time.Millisecond
+		if d <= 0 {
+			return proxyfault.Fault{}, fmt.Errorf("delay must be greater than 0")
+		}
+		return proxyfault.Fault{Latency: d}, nil
+	},
+}
+
+var httpAbortFaultSpec = dependencyFaultSpec{
+	id:          "network_dependency_http_abort",
+	label:       "HTTP Abort Dependency Traffic",
+	description: "Transparently proxy the container's outgoing cleartext HTTP traffic to a dependency and return an HTTP error status, selected by Host header.",
+	extraParams: []action_kit_api.ActionParameter{{
+		Name: "httpStatus", Label: "HTTP Status", Description: extutil.Ptr("HTTP status code to return (cleartext HTTP only)."),
+		Type: action_kit_api.ActionParameterTypeInteger, DefaultValue: extutil.Ptr("503"), Required: extutil.Ptr(true), Order: extutil.Ptr(2),
+	}},
+	buildFault: func(cfg map[string]any) (proxyfault.Fault, error) {
+		status := int(extutil.ToInt64(cfg["httpStatus"]))
+		if status < 100 || status > 599 {
+			return proxyfault.Fault{}, fmt.Errorf("httpStatus must be within [100,599], got %d", status)
+		}
+		return proxyfault.Fault{HTTPStatus: status}, nil
+	},
+}
+
+var resetFaultSpec = dependencyFaultSpec{
+	id:          "network_dependency_reset",
+	label:       "Reset Dependency Connections",
+	description: "Transparently proxy the container's outgoing traffic to a dependency and reset (RST) matching connections, selected by hostname/SNI.",
+	buildFault: func(map[string]any) (proxyfault.Fault, error) {
+		return proxyfault.Fault{Reset: true}, nil
+	},
+}
+
 var _ action_kit_sdk.Action[DependencyFaultState] = (*dependencyFaultAction)(nil)
 var _ action_kit_sdk.ActionWithStatus[DependencyFaultState] = (*dependencyFaultAction)(nil)
 var _ action_kit_sdk.ActionWithStop[DependencyFaultState] = (*dependencyFaultAction)(nil)
 
-// proxyHandle keeps the running proxy plus what's needed for an out-of-band
-// revert (the same Opts reproduce the chain names; the sidecar reaches the
-// target container's netns). Kept in memory only, like dns-inject.
 type proxyHandle struct {
 	proxy   proxyfault.Proxy
 	opts    proxyfault.Opts
@@ -54,10 +106,19 @@ type DependencyFaultState struct {
 type dependencyFaultAction struct {
 	ociRuntime ociruntime.OciRuntime
 	client     types.Client
+	spec       dependencyFaultSpec
 }
 
-func NewNetworkDependencyFaultAction(r ociruntime.OciRuntime, client types.Client) action_kit_sdk.Action[DependencyFaultState] {
-	return &dependencyFaultAction{ociRuntime: r, client: client}
+func NewNetworkDelayDependencyAction(r ociruntime.OciRuntime, client types.Client) action_kit_sdk.Action[DependencyFaultState] {
+	return &dependencyFaultAction{ociRuntime: r, client: client, spec: latencyFaultSpec}
+}
+
+func NewNetworkHttpAbortDependencyAction(r ociruntime.OciRuntime, client types.Client) action_kit_sdk.Action[DependencyFaultState] {
+	return &dependencyFaultAction{ociRuntime: r, client: client, spec: httpAbortFaultSpec}
+}
+
+func NewNetworkResetDependencyAction(r ociruntime.OciRuntime, client types.Client) action_kit_sdk.Action[DependencyFaultState] {
+	return &dependencyFaultAction{ociRuntime: r, client: client, spec: resetFaultSpec}
 }
 
 func (a *dependencyFaultAction) NewEmptyState() DependencyFaultState {
@@ -66,9 +127,9 @@ func (a *dependencyFaultAction) NewEmptyState() DependencyFaultState {
 
 func (a *dependencyFaultAction) Describe() action_kit_api.ActionDescription {
 	return action_kit_api.ActionDescription{
-		Id:          fmt.Sprintf("%s.network_dependency_fault", BaseActionID),
-		Label:       "Fault Dependency Traffic",
-		Description: "Transparently proxy the container's outgoing traffic to a dependency and inject a fault (latency, connection reset, or an HTTP error status) selected by hostname/SNI.",
+		Id:          fmt.Sprintf("%s.%s", BaseActionID, a.spec.id),
+		Label:       a.spec.label,
+		Description: a.spec.description,
 		Version:     extbuild.GetSemverVersionStringOrUnknown(),
 		TargetSelection: &action_kit_api.TargetSelection{
 			TargetType:         targetID,
@@ -81,7 +142,7 @@ func (a *dependencyFaultAction) Describe() action_kit_api.ActionDescription {
 		Status: extutil.Ptr(action_kit_api.MutatingEndpointReferenceWithCallInterval{
 			CallInterval: extutil.Ptr("2s"),
 		}),
-		Parameters: dependencyFaultParameters(),
+		Parameters: append(commonDependencyParameters(), a.spec.extraParams...),
 	}
 }
 
@@ -178,13 +239,10 @@ func (a *dependencyFaultAction) Stop(ctx context.Context, state *DependencyFault
 	}
 	removeDependencyFaultHandle(state.ExecutionId)
 
-	// Terminate the proxy: its in-process Guard tears down the interception.
 	if err := handle.proxy.Stop(); err != nil {
 		log.Warn().Err(err).Str("execution_id", state.ExecutionId).Msg("failed to stop transparent-proxy")
 	}
 
-	// Belt-and-suspenders: an idempotent out-of-band revert removes the rules
-	// even if the proxy was killed before its Guard could run.
 	runner := nsrunner.NewRuncRunner(a.ociRuntime, nsrunner.SidecarOpts{
 		TargetProcess: handle.sidecar,
 		Id:            handle.id,
@@ -199,48 +257,35 @@ func (a *dependencyFaultAction) Stop(ctx context.Context, state *DependencyFault
 
 // --- parameters & parsing ---
 
-func dependencyFaultParameters() []action_kit_api.ActionParameter {
+func commonDependencyParameters() []action_kit_api.ActionParameter {
 	return []action_kit_api.ActionParameter{
 		{
 			Name: "duration", Label: "Duration", Description: extutil.Ptr("How long to inject the fault."),
 			Type: action_kit_api.ActionParameterTypeDuration, DefaultValue: extutil.Ptr("30s"), Required: extutil.Ptr(true), Order: extutil.Ptr(0),
 		},
 		{
-			Name: "faultType", Label: "Fault Type", Description: extutil.Ptr("Which fault to inject on matching connections."),
-			Type: action_kit_api.ActionParameterTypeString, DefaultValue: extutil.Ptr("latency"), Required: extutil.Ptr(true), Order: extutil.Ptr(1),
-			Options: extutil.Ptr([]action_kit_api.ParameterOption{
-				action_kit_api.ExplicitParameterOption{Label: "Latency", Value: "latency"},
-				action_kit_api.ExplicitParameterOption{Label: "Connection Reset", Value: "reset"},
-				action_kit_api.ExplicitParameterOption{Label: "HTTP Error Status", Value: "http_status"},
-			}),
-		},
-		{
-			Name: "networkLatency", Label: "Latency", Description: extutil.Ptr("Latency to add (for the Latency fault type)."),
-			Type: action_kit_api.ActionParameterTypeDuration, DefaultValue: extutil.Ptr("500ms"), Required: extutil.Ptr(false), Order: extutil.Ptr(2),
-		},
-		{
-			Name: "httpStatus", Label: "HTTP Status", Description: extutil.Ptr("HTTP status code to return (for the HTTP Error Status fault type, cleartext HTTP only)."),
-			Type: action_kit_api.ActionParameterTypeInteger, DefaultValue: extutil.Ptr("503"), Required: extutil.Ptr(false), Order: extutil.Ptr(3),
+			Name: "percentage", Label: "Percentage", Description: extutil.Ptr("Percentage of matching connections the fault is applied to."),
+			Type: action_kit_api.ActionParameterTypePercentage, DefaultValue: extutil.Ptr("50"), Required: extutil.Ptr(true), Order: extutil.Ptr(1),
 		},
 		{
 			Name: "hostname", Label: "Dependency Hostnames", Description: extutil.Ptr("Apply the fault only to connections to these hosts (TLS SNI or HTTP Host, subdomain match). If empty, all intercepted connections are faulted."),
-			Type: action_kit_api.ActionParameterTypeStringArray, Required: extutil.Ptr(false), Order: extutil.Ptr(4),
+			Type: action_kit_api.ActionParameterTypeStringArray, Required: extutil.Ptr(false), Order: extutil.Ptr(10),
 		},
 		{
 			Name: "ip", Label: "Dependency CIDRs", Description: extutil.Ptr("Intercept traffic destined for these IP CIDRs. Defaults to all destinations. Note: interception is currently IPv4 only."),
-			Type: action_kit_api.ActionParameterTypeStringArray, Required: extutil.Ptr(false), Order: extutil.Ptr(5), Advanced: extutil.Ptr(true),
+			Type: action_kit_api.ActionParameterTypeStringArray, Required: extutil.Ptr(false), Order: extutil.Ptr(11), Advanced: extutil.Ptr(true),
 		},
 		{
 			Name: "port", Label: "Dependency Ports", Description: extutil.Ptr("Comma-separated destination ports to intercept."),
-			Type: action_kit_api.ActionParameterTypeString, DefaultValue: extutil.Ptr("80,443"), Required: extutil.Ptr(false), Order: extutil.Ptr(6), Advanced: extutil.Ptr(true),
+			Type: action_kit_api.ActionParameterTypeString, DefaultValue: extutil.Ptr("80,443"), Required: extutil.Ptr(false), Order: extutil.Ptr(12), Advanced: extutil.Ptr(true),
 		},
 		{
 			Name: "excludeIp", Label: "Exclude CIDRs", Description: extutil.Ptr("Never intercept traffic to these CIDRs (in addition to the automatically protected agent/extension endpoints)."),
-			Type: action_kit_api.ActionParameterTypeStringArray, Required: extutil.Ptr(false), Order: extutil.Ptr(7), Advanced: extutil.Ptr(true),
+			Type: action_kit_api.ActionParameterTypeStringArray, Required: extutil.Ptr(false), Order: extutil.Ptr(13), Advanced: extutil.Ptr(true),
 		},
 		{
 			Name: "failOnHostNetwork", Label: "Fail on Host Network", Description: extutil.Ptr("Fail if the target container uses the host network."),
-			Type: action_kit_api.ActionParameterTypeBoolean, DefaultValue: extutil.Ptr("true"), Required: extutil.Ptr(false), Order: extutil.Ptr(8), Advanced: extutil.Ptr(true),
+			Type: action_kit_api.ActionParameterTypeBoolean, DefaultValue: extutil.Ptr("true"), Required: extutil.Ptr(false), Order: extutil.Ptr(14), Advanced: extutil.Ptr(true),
 		},
 	}
 }
@@ -266,10 +311,12 @@ func (a *dependencyFaultAction) parseOpts(request action_kit_api.PrepareActionRe
 		return proxyfault.Opts{}, err
 	}
 
-	fault, err := parseFault(cfg)
+	fault, err := a.spec.buildFault(cfg)
 	if err != nil {
 		return proxyfault.Opts{}, err
 	}
+	fault.Hosts = extutil.ToStringArray(cfg["hostname"])
+	fault.Probability = percentageToProbability(cfg["percentage"])
 
 	duration := time.Duration(extutil.ToInt64(cfg["duration"])) * time.Millisecond
 
@@ -286,26 +333,27 @@ func (a *dependencyFaultAction) parseOpts(request action_kit_api.PrepareActionRe
 	}, nil
 }
 
-func parseFault(cfg map[string]any) (proxyfault.Fault, error) {
-	hosts := extutil.ToStringArray(cfg["hostname"])
-	switch extutil.ToString(cfg["faultType"]) {
-	case "latency":
-		latency := time.Duration(extutil.ToInt64(cfg["networkLatency"])) * time.Millisecond
-		if latency <= 0 {
-			return proxyfault.Fault{}, fmt.Errorf("networkLatency must be greater than 0 for the Latency fault type")
-		}
-		return proxyfault.Fault{Hosts: hosts, Latency: latency}, nil
-	case "reset":
-		return proxyfault.Fault{Hosts: hosts, AbortProbability: 1.0}, nil
-	case "http_status":
-		status := int(extutil.ToInt64(cfg["httpStatus"]))
-		if status < 100 || status > 599 {
-			return proxyfault.Fault{}, fmt.Errorf("httpStatus must be within [100,599], got %d", status)
-		}
-		return proxyfault.Fault{Hosts: hosts, HTTPStatus: status}, nil
+// percentageToProbability maps a 0..100 percentage to a 0..1 probability,
+// clamped. 100 (or missing/invalid) maps to 1.0 (always).
+func percentageToProbability(v any) float64 {
+	var pct float64
+	switch n := v.(type) {
+	case float64:
+		pct = n
+	case float32:
+		pct = float64(n)
+	case int:
+		pct = float64(n)
+	case int64:
+		pct = float64(n)
 	default:
-		return proxyfault.Fault{}, fmt.Errorf("unknown faultType %q", extutil.ToString(cfg["faultType"]))
+		return 1.0
 	}
+	p := pct / 100.0
+	if p <= 0 || p >= 1 {
+		return 1.0
+	}
+	return p
 }
 
 func (a *dependencyFaultAction) buildExcludes(request action_kit_api.PrepareActionRequestBody) ([]net.IPNet, error) {
