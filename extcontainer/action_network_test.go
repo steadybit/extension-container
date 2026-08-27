@@ -359,6 +359,21 @@ func Test_dependency_defaultPorts(t *testing.T) {
 	require.Equal(t, "80,443", portDefault(&dependencyFaultAction{spec: latencyFaultSpec}))
 }
 
+func Test_dependency_hostname_required_and_first(t *testing.T) {
+	for _, spec := range []dependencyFaultSpec{latencyFaultSpec, httpAbortFaultSpec, resetFaultSpec} {
+		var hostname *action_kit_api.ActionParameter
+		for i := range (&dependencyFaultAction{spec: spec}).Describe().Parameters {
+			p := (&dependencyFaultAction{spec: spec}).Describe().Parameters[i]
+			if p.Name == "hostname" {
+				hostname = &p
+			}
+		}
+		require.NotNil(t, hostname, "spec %s missing hostname param", spec.id)
+		require.True(t, *hostname.Required, "hostname must be required for %s", spec.id)
+		require.Equal(t, 0, *hostname.Order, "hostname must be first (order 0) for %s", spec.id)
+	}
+}
+
 func Test_httpAbort_Prepare_rejects_https_port(t *testing.T) {
 	a := &dependencyFaultAction{spec: httpAbortFaultSpec}
 

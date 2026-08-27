@@ -51,7 +51,7 @@ var latencyFaultSpec = dependencyFaultSpec{
 	description: "Transparently proxy the container's outgoing traffic to a dependency and add latency, selected by hostname/SNI.",
 	extraParams: []action_kit_api.ActionParameter{{
 		Name: "delay", Label: "Latency", Description: extutil.Ptr("Latency to add before forwarding to the dependency."),
-		Type: action_kit_api.ActionParameterTypeDuration, DefaultValue: extutil.Ptr("500ms"), Required: extutil.Ptr(true), Order: extutil.Ptr(2),
+		Type: action_kit_api.ActionParameterTypeDuration, DefaultValue: extutil.Ptr("500ms"), Required: extutil.Ptr(true), Order: extutil.Ptr(3),
 	}},
 	buildFault: func(cfg map[string]any) (proxyfault.Fault, error) {
 		d := time.Duration(extutil.ToInt64(cfg["delay"])) * time.Millisecond
@@ -68,7 +68,7 @@ var httpAbortFaultSpec = dependencyFaultSpec{
 	description: "Transparently proxy the container's outgoing cleartext HTTP traffic to a dependency and return an HTTP error status, selected by Host header.",
 	extraParams: []action_kit_api.ActionParameter{{
 		Name: "httpStatus", Label: "HTTP Status", Description: extutil.Ptr("HTTP status code to return (cleartext HTTP only)."),
-		Type: action_kit_api.ActionParameterTypeInteger, DefaultValue: extutil.Ptr("503"), Required: extutil.Ptr(true), Order: extutil.Ptr(2),
+		Type: action_kit_api.ActionParameterTypeInteger, DefaultValue: extutil.Ptr("503"), Required: extutil.Ptr(true), Order: extutil.Ptr(3),
 	}},
 	buildFault: func(cfg map[string]any) (proxyfault.Fault, error) {
 		status := int(extutil.ToInt64(cfg["httpStatus"]))
@@ -292,16 +292,16 @@ func (a *dependencyFaultAction) Stop(ctx context.Context, state *DependencyFault
 func commonDependencyParameters(portsDefault string) []action_kit_api.ActionParameter {
 	return []action_kit_api.ActionParameter{
 		{
+			Name: "hostname", Label: "Dependency Hostnames", Description: extutil.Ptr("Apply the fault to connections to these hosts (TLS SNI or HTTP Host, subdomain match)."),
+			Type: action_kit_api.ActionParameterTypeStringArray, Required: extutil.Ptr(true), Order: extutil.Ptr(0),
+		},
+		{
 			Name: "duration", Label: "Duration", Description: extutil.Ptr("How long to inject the fault."),
-			Type: action_kit_api.ActionParameterTypeDuration, DefaultValue: extutil.Ptr("30s"), Required: extutil.Ptr(true), Order: extutil.Ptr(0),
+			Type: action_kit_api.ActionParameterTypeDuration, DefaultValue: extutil.Ptr("30s"), Required: extutil.Ptr(true), Order: extutil.Ptr(1),
 		},
 		{
 			Name: "percentage", Label: "Percentage", Description: extutil.Ptr("Percentage of matching connections the fault is applied to."),
-			Type: action_kit_api.ActionParameterTypePercentage, DefaultValue: extutil.Ptr("50"), Required: extutil.Ptr(true), Order: extutil.Ptr(1),
-		},
-		{
-			Name: "hostname", Label: "Dependency Hostnames", Description: extutil.Ptr("Apply the fault only to connections to these hosts (TLS SNI or HTTP Host, subdomain match). If empty, all intercepted connections are faulted."),
-			Type: action_kit_api.ActionParameterTypeStringArray, Required: extutil.Ptr(false), Order: extutil.Ptr(10),
+			Type: action_kit_api.ActionParameterTypePercentage, DefaultValue: extutil.Ptr("50"), Required: extutil.Ptr(true), Order: extutil.Ptr(2),
 		},
 		{
 			Name: "ip", Label: "Dependency CIDRs", Description: extutil.Ptr("Intercept traffic destined for these IP CIDRs. Defaults to all destinations. Note: interception is currently IPv4 only."),
