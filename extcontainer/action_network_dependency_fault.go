@@ -243,13 +243,17 @@ func (a *dependencyFaultAction) Start(_ context.Context, state *DependencyFaultS
 	return &action_kit_api.StartResult{}, nil
 }
 
-func (a *dependencyFaultAction) Status(_ context.Context, state *DependencyFaultState) (*action_kit_api.StatusResult, error) {
+func (a *dependencyFaultAction) Status(ctx context.Context, state *DependencyFaultState) (*action_kit_api.StatusResult, error) {
 	handle, ok := getDependencyFaultHandle(state.ExecutionId)
 	if !ok {
 		return &action_kit_api.StatusResult{Completed: true}, nil
 	}
 	if exited, err := handle.proxy.Exited(); exited {
-		removeDependencyFaultHandle(state.ExecutionId)
+		// The proxy is gone; still run the out-of-band revert so a proxy that
+		// died before its Guard could clean up doesn't leak interception rules.
+		// Without this, a Stop after a Completed status finds no handle and skips
+		// the safety revert entirely.
+		a.teardown(ctx, state.ExecutionId, handle)
 		if err != nil {
 			return &action_kit_api.StatusResult{
 				Completed: true,
@@ -268,22 +272,32 @@ func (a *dependencyFaultAction) Stop(ctx context.Context, state *DependencyFault
 	if !ok {
 		return nil, nil
 	}
-	removeDependencyFaultHandle(state.ExecutionId)
+	a.teardown(ctx, state.ExecutionId, handle)
+	return nil, nil
+}
 
+// teardown stops the proxy and runs the idempotent out-of-band revert, then
+// drops the handle. It is safe to call more than once and from either Status
+// (proxy exited) or Stop — removeDependencyFaultHandle makes the second call a
+// no-op, and proxy.Stop / Revert are both idempotent.
+func (a *dependencyFaultAction) teardown(ctx context.Context, executionId string, handle *proxyHandle) {
+	// Terminate the proxy: its in-process Guard tears down the interception.
 	if err := handle.proxy.Stop(); err != nil {
-		log.Warn().Err(err).Str("execution_id", state.ExecutionId).Msg("failed to stop transparent-proxy")
+		log.Warn().Err(err).Str("execution_id", executionId).Msg("failed to stop transparent-proxy")
 	}
 
+	// Belt-and-suspenders: an idempotent out-of-band revert removes the rules
+	// even if the proxy was killed before its Guard could run.
 	runner := nsrunner.NewRuncRunner(a.ociRuntime, nsrunner.SidecarOpts{
 		TargetProcess: handle.sidecar,
 		Id:            handle.id,
 		Env:           []string{"XTABLES_LOCKFILE=/tmp/xtables.lock"},
 	})
 	if err := proxyfault.Revert(ctx, runner, handle.opts); err != nil {
-		log.Warn().Err(err).Str("execution_id", state.ExecutionId).Msg("out-of-band interception revert failed")
+		log.Warn().Err(err).Str("execution_id", executionId).Msg("out-of-band interception revert failed")
 	}
 
-	return nil, nil
+	removeDependencyFaultHandle(executionId)
 }
 
 // --- parameters & parsing ---
