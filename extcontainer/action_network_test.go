@@ -6,10 +6,13 @@ package extcontainer
 import (
 	"context"
 	"fmt"
+	"net"
+
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
 	"github.com/steadybit/action-kit/go/action_kit_commons/network"
 	"github.com/steadybit/action-kit/go/action_kit_commons/network/netfault"
+	"github.com/steadybit/action-kit/go/action_kit_commons/network/proxyfault"
 	"github.com/steadybit/action-kit/go/action_kit_commons/ociruntime"
 	"github.com/steadybit/extension-container/extcontainer/container/types"
 	"github.com/steadybit/extension-kit/extconversion"
@@ -357,6 +360,69 @@ func Test_dependency_defaultPorts(t *testing.T) {
 	}
 	require.Equal(t, "80", portDefault(&dependencyFaultAction{spec: httpAbortFaultSpec}))
 	require.Equal(t, "80,443", portDefault(&dependencyFaultAction{spec: latencyFaultSpec}))
+}
+
+func mustCIDR(t *testing.T, s string) net.IPNet {
+	_, n, err := net.ParseCIDR(s)
+	require.NoError(t, err)
+	return *n
+}
+
+func Test_scopesOverlap(t *testing.T) {
+	all := []net.IPNet{mustCIDR(t, "0.0.0.0/0")}
+	ten := []net.IPNet{mustCIDR(t, "10.0.0.0/8")}
+	priv := []net.IPNet{mustCIDR(t, "192.168.0.0/16")}
+
+	require.True(t, portsOverlap([]uint16{80, 443}, []uint16{443}))
+	require.False(t, portsOverlap([]uint16{80}, []uint16{443}))
+	require.True(t, cidrsOverlap(all, ten))
+	require.True(t, cidrsOverlap(ten, all))
+	require.False(t, cidrsOverlap(ten, priv))
+
+	// Overlap requires BOTH ports and CIDRs to intersect.
+	require.True(t, scopesOverlap(proxyfault.Opts{IncludeCIDRs: all, Ports: []uint16{80, 443}}, all, []uint16{443}))
+	require.False(t, scopesOverlap(proxyfault.Opts{IncludeCIDRs: all, Ports: []uint16{80}}, all, []uint16{443}))  // ports disjoint
+	require.False(t, scopesOverlap(proxyfault.Opts{IncludeCIDRs: ten, Ports: []uint16{443}}, priv, []uint16{443})) // cidrs disjoint
+}
+
+func Test_reserveDependencyFaultHandle_conflict(t *testing.T) {
+	dependencyFaultHandlesLock.Lock()
+	dependencyFaultHandles = map[string]*proxyHandle{}
+	dependencyFaultHandlesLock.Unlock()
+	t.Cleanup(func() {
+		dependencyFaultHandlesLock.Lock()
+		dependencyFaultHandles = map[string]*proxyHandle{}
+		dependencyFaultHandlesLock.Unlock()
+	})
+
+	all := []net.IPNet{mustCIDR(t, "0.0.0.0/0")}
+	ns := func(inode uint64) ociruntime.LinuxProcessInfo {
+		return ociruntime.LinuxProcessInfo{Namespaces: []ociruntime.LinuxNamespace{{Type: specs.NetworkNamespace, Inode: inode}}}
+	}
+	// Active fault: netns 100, ports 80+443.
+	storeDependencyFaultHandle("exec-A", &proxyHandle{opts: proxyfault.Opts{IncludeCIDRs: all, Ports: []uint16{80, 443}}, sidecar: ns(100)})
+
+	// Same netns + overlapping ports => conflict with exec-A.
+	reserved, conflict := reserveDependencyFaultHandle("exec-B", 100, all, []uint16{443})
+	require.False(t, reserved)
+	require.Equal(t, "exec-A", conflict)
+
+	// Same netns, disjoint ports => reserved, no conflict.
+	reserved, conflict = reserveDependencyFaultHandle("exec-C", 100, all, []uint16{8080})
+	require.True(t, reserved)
+	require.Empty(t, conflict)
+	removeDependencyFaultHandle("exec-C")
+
+	// Different netns => reserved, no conflict.
+	reserved, conflict = reserveDependencyFaultHandle("exec-D", 200, all, []uint16{443})
+	require.True(t, reserved)
+	require.Empty(t, conflict)
+	removeDependencyFaultHandle("exec-D")
+
+	// Same execution id => idempotent: not reserved, not a conflict.
+	reserved, conflict = reserveDependencyFaultHandle("exec-A", 100, all, []uint16{443})
+	require.False(t, reserved)
+	require.Empty(t, conflict)
 }
 
 func Test_percentageToProbability(t *testing.T) {

@@ -205,19 +205,28 @@ func (a *dependencyFaultAction) Prepare(ctx context.Context, state *DependencyFa
 		}
 	}
 
-	// Idempotent + race-safe: atomically claim the execution slot. A repeated or
-	// concurrent Prepare for the same execution finds the reservation and no-ops
-	// instead of creating (and leaking) a second runc sidecar bundle.
-	state.ExecutionId = request.ExecutionId.String()
-	state.ContainerID = containerId
-	if !reserveDependencyFaultHandle(state.ExecutionId) {
-		return &action_kit_api.PrepareResult{}, nil
-	}
-
 	opts, err := a.parseOpts(request)
 	if err != nil {
-		removeDependencyFaultHandle(state.ExecutionId)
 		return nil, err
+	}
+
+	// Idempotent + race-safe: atomically claim the execution slot, unless another
+	// active dependency fault already overlaps this target's network namespace
+	// (containers in the same pod share it). Two overlapping faults in one netns
+	// don't stack — the first-installed proxy captures the traffic — so fail with
+	// a clear message instead of silently doing nothing.
+	state.ExecutionId = request.ExecutionId.String()
+	state.ContainerID = containerId
+	reserved, conflictWith := reserveDependencyFaultHandle(state.ExecutionId, networkNamespaceInode(processInfo), opts.IncludeCIDRs, opts.Ports)
+	if conflictWith != "" {
+		return &action_kit_api.PrepareResult{Error: &action_kit_api.ActionKitError{
+			Title:  "Another dependency fault is already active on this target's network namespace with an overlapping port/CIDR scope. Two overlapping dependency faults on the same target don't stack — the first one wins. Stop it first, or scope this fault to different ports or CIDRs.",
+			Status: extutil.Ptr(action_kit_api.Failed),
+		}}, nil
+	}
+	if !reserved {
+		// A reservation/handle for this execution already exists — idempotent.
+		return &action_kit_api.PrepareResult{}, nil
 	}
 
 	sidecarId := fmt.Sprintf("%s-%s", request.ExecutionId.String()[24:], containerId[:min(8, len(containerId))])
@@ -490,19 +499,73 @@ func getDependencyFaultHandle(executionId string) (*proxyHandle, bool) {
 	return h, ok
 }
 
-// reserveDependencyFaultHandle atomically claims the execution's slot. It
-// returns true when the caller now owns a fresh reservation (which it must fill
-// with storeDependencyFaultHandle or release with removeDependencyFaultHandle),
-// or false when a handle/reservation already exists — the check and the claim
-// happen under a single lock, so concurrent retries can't both spawn a sidecar.
-func reserveDependencyFaultHandle(executionId string) bool {
+// reserveDependencyFaultHandle atomically claims the execution's slot, unless an
+// already-active dependency fault overlaps the same network namespace and scope.
+// Returns:
+//   - reserved=true: the caller now owns a fresh reservation (fill it with
+//     storeDependencyFaultHandle or release with removeDependencyFaultHandle).
+//   - conflictWith set: another execution already intercepts overlapping traffic
+//     in the same netns; the caller should fail (two overlapping faults in one
+//     netns don't stack — the first-installed proxy captures the traffic).
+//   - both zero: a reservation/handle for this execution already exists
+//     (idempotent retry).
+//
+// The check and the claim happen under one lock, so concurrent Prepares can't
+// both spawn a sidecar for the same execution or miss each other's scope.
+func reserveDependencyFaultHandle(executionId string, netnsInode uint64, cidrs []net.IPNet, ports []uint16) (reserved bool, conflictWith string) {
 	dependencyFaultHandlesLock.Lock()
 	defer dependencyFaultHandlesLock.Unlock()
 	if _, exists := dependencyFaultHandles[executionId]; exists {
-		return false
+		return false, ""
+	}
+	for id, h := range dependencyFaultHandles {
+		if h == nil {
+			continue // an in-flight reservation with no scope/netns recorded yet
+		}
+		if netnsInode != 0 && netnsInode == networkNamespaceInode(h.sidecar) && scopesOverlap(h.opts, cidrs, ports) {
+			return false, id
+		}
 	}
 	dependencyFaultHandles[executionId] = nil
-	return true
+	return true, ""
+}
+
+// networkNamespaceInode returns the inode of the process's network namespace, or
+// 0 if unknown. Processes in the same netns (containers in one pod, or all host
+// processes) share this inode, so it identifies "the same netns" across targets.
+func networkNamespaceInode(info ociruntime.LinuxProcessInfo) uint64 {
+	for _, ns := range info.Namespaces {
+		if ns.Type == specs.NetworkNamespace {
+			return ns.Inode
+		}
+	}
+	return 0
+}
+
+// scopesOverlap reports whether two interception scopes can catch the same
+// traffic: their port sets and CIDR sets both intersect.
+func scopesOverlap(existing proxyfault.Opts, cidrs []net.IPNet, ports []uint16) bool {
+	return portsOverlap(existing.Ports, ports) && cidrsOverlap(existing.IncludeCIDRs, cidrs)
+}
+
+func portsOverlap(a, b []uint16) bool {
+	for _, x := range a {
+		if slices.Contains(b, x) {
+			return true
+		}
+	}
+	return false
+}
+
+func cidrsOverlap(a, b []net.IPNet) bool {
+	for i := range a {
+		for j := range b {
+			if a[i].Contains(b[j].IP) || b[j].Contains(a[i].IP) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func storeDependencyFaultHandle(executionId string, h *proxyHandle) {
