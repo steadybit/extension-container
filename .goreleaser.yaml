@@ -15,9 +15,9 @@ builds:
   - binary: extension-container
     env:
       - CGO_ENABLED=0
-      - MEMFILL_VERSION=v1.3.1
+      - MEMFILL_VERSION=v1.5.0
       - NSMOUNT_VERSION=v1.1.1
-      - DNS_INJECT_VERSION=v0.2.5
+      - DNS_INJECT_VERSION=v0.2.6
       - TRANSPARENT_PROXY_VERSION=v0.0.4
     goos:
       - linux
@@ -33,7 +33,7 @@ builds:
       - -X github.com/steadybit/extension-kit/extbuild.Version={{.Version}}
       - -X github.com/steadybit/extension-kit/extbuild.Revision={{.Commit}}
     hooks:
-      post: sh -c "curl -sfL \"https://github.com/steadybit/nsmount/releases/download/${NSMOUNT_VERSION}/nsmount.{{ .Arch }}\" -o \"./dist/nsmount.{{ .Arch }}\" && chmod a+x \"./dist/nsmount.{{ .Arch }}\" && curl -sfL \"https://github.com/steadybit/memfill/releases/download/${MEMFILL_VERSION}/memfill.{{ .Arch }}\" -o \"./dist/memfill.{{ .Arch }}\" && chmod a+x \"./dist/memfill.{{ .Arch }}\" && curl -sfL \"https://github.com/steadybit/dns-inject/releases/download/${DNS_INJECT_VERSION}/dns-inject_${DNS_INJECT_VERSION#v}_{{ .Arch }}.tar.gz\" | tar -xzf - -C ./dist dns-inject && mv ./dist/dns-inject \"./dist/dns-inject.{{ .Arch }}\" && chmod a+x \"./dist/dns-inject.{{ .Arch }}\" && curl -sfL \"https://github.com/steadybit/transparent-proxy/releases/download/${TRANSPARENT_PROXY_VERSION}/transparent-proxy.{{ .Arch }}\" -o \"./dist/transparent-proxy.{{ .Arch }}\" && chmod a+x \"./dist/transparent-proxy.{{ .Arch }}\""
+      post: sh -c "curl -sfL \"https://github.com/steadybit/nsmount/releases/download/${NSMOUNT_VERSION}/nsmount.{{ .Arch }}\" -o \"./dist/nsmount.{{ .Arch }}\" && chmod a+x \"./dist/nsmount.{{ .Arch }}\" && curl -sfL \"https://github.com/steadybit/memfill/releases/download/${MEMFILL_VERSION}/memfill.{{ .Arch }}\" -o \"./dist/memfill.{{ .Arch }}\" && chmod a+x \"./dist/memfill.{{ .Arch }}\" && curl -sfL \"https://github.com/steadybit/dns-inject/releases/download/${DNS_INJECT_VERSION}/dns-inject_${DNS_INJECT_VERSION#v}_{{ .Arch }}.tar.gz\" | tar -xzOf - dns-inject > \"./dist/dns-inject.{{ .Arch }}\" && chmod a+x \"./dist/dns-inject.{{ .Arch }}\" && curl -sfL \"https://github.com/steadybit/transparent-proxy/releases/download/${TRANSPARENT_PROXY_VERSION}/transparent-proxy.{{ .Arch }}\" -o \"./dist/transparent-proxy.{{ .Arch }}\" && chmod a+x \"./dist/transparent-proxy.{{ .Arch }}\""
 
 archives:
   - name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
@@ -64,14 +64,19 @@ nfpms:
     builds:
       - steadybit-extension-container
     dependencies:
+      # procps provides /usr/bin/kill on debian/ubuntu, which the process
+      # runners use to signal stress-ng / memfill / diskfill / dns-inject.
       - procps
       - stress-ng
+      # iptables-restore / ip6tables-restore: network delay + tcp reset
       - iptables
+      # ip + tc
       - iproute2
+      # dig: resolving the network attack's target hostnames
       - bind9-dnsutils
       - runc
+      # capsh, used by the sysv init.d script
       - libcap2-bin
-      - cgroup-tools
     bindir: /opt/steadybit/extension-container
     contents:
       - src: ./linuxpkg/systemd
@@ -108,13 +113,13 @@ nfpms:
     overrides:
       rpm:
         dependencies:
-          - /usr/bin/ps
           - /usr/bin/stress-ng
           - iproute-tc
           - /usr/sbin/ip
+          - /usr/sbin/iptables-restore
+          - /usr/bin/fallocate
           - /usr/bin/dig
           - runc
           - libcap
-          - /usr/bin/cgexec
         recommends:
           - kernel-modules-extra

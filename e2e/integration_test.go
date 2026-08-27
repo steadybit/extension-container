@@ -44,7 +44,7 @@ func TestWithMinikube(t *testing.T) {
 		ExtraArgs: func(m *e2e.Minikube) []string {
 			args := []string{
 				"--set", fmt.Sprintf("container.engine=%s", m.Runtime),
-				"--set", "logging.level=TRACE",
+				"--set", "logging.level=debug",
 				"--set", "discovery.attributes.excludes={container.label.*}",
 			}
 			//on cri-o runtimes, we need to set the ociRuntime to crun for minikube > 1.38

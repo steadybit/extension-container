@@ -3,7 +3,7 @@
 ##
 ## Build
 ##
-FROM --platform=$BUILDPLATFORM golang:1.26-trixie AS build
+FROM --platform=$BUILDPLATFORM golang:1.27-trixie AS build
 
 ARG TARGETOS
 ARG TARGETARCH
@@ -12,8 +12,8 @@ ARG BUILD_SNAPSHOT=true
 ARG SKIP_LICENSES_REPORT=false
 ARG VERSION=unknown
 ARG REVISION=unknown
-ARG RUNC_VERSION=v1.4.3
-ARG CRUN_VERSION=1.28
+ARG RUNC_VERSION=v1.5.1
+ARG CRUN_VERSION=1.29.1
 
 WORKDIR /app
 
@@ -67,7 +67,7 @@ RUN groupadd --gid $USER_GID $USERNAME \
 
 RUN apt-get -qq update \
     && apt-get -qq -y upgrade \
-    && apt-get -qq install -y --no-install-recommends procps stress-ng iptables iproute2 dnsutils libcap2-bin util-linux cgroup-tools \
+    && apt-get -qq install -y --no-install-recommends procps stress-ng iptables iproute2 bind9-dnsutils libcap2-bin util-linux \
     && apt-get -y autoremove \
     && rm -rf /var/lib/apt/lists/* \
     && mkdir -p /run/systemd/system /sidecar
