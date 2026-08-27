@@ -18,7 +18,7 @@ builds:
       - MEMFILL_VERSION=v1.3.1
       - NSMOUNT_VERSION=v1.1.1
       - DNS_INJECT_VERSION=v0.2.5
-      - TRANSPARENT_PROXY_VERSION=v0.0.3
+      - TRANSPARENT_PROXY_VERSION=v0.0.4
     goos:
       - linux
     goarch:
