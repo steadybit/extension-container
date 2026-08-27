@@ -47,7 +47,7 @@ type dependencyFaultSpec struct {
 
 var latencyFaultSpec = dependencyFaultSpec{
 	id:          "network_dependency_latency",
-	label:       "Delay Dependency Traffic",
+	label:       "Intercept and Delay",
 	description: "Add latency to calls to a specific dependency, matched by hostname (TLS SNI / HTTP Host). Works over HTTPS and for CDN/cloud endpoints with shared or rotating IPs — use this to slow one named dependency, rather than Network Delay which slows all traffic to an IP.",
 	extraParams: []action_kit_api.ActionParameter{{
 		Name: "delay", Label: "Latency", Description: extutil.Ptr("Latency to add before forwarding to the dependency."),
@@ -64,8 +64,8 @@ var latencyFaultSpec = dependencyFaultSpec{
 
 var httpAbortFaultSpec = dependencyFaultSpec{
 	id:          "network_dependency_http_abort",
-	label:       "HTTP Abort Dependency Traffic",
-	description: "Return an HTTP error status for calls to a specific dependency, matched by Host header. Cleartext HTTP only — for HTTPS dependencies use Reset Dependency Connections instead.",
+	label:       "Intercept and Abort",
+	description: "Return an HTTP error status for calls to a specific dependency, matched by Host header. Cleartext HTTP only — for HTTPS dependencies use 'Intercept and Reset' instead.",
 	extraParams: []action_kit_api.ActionParameter{{
 		Name: "httpStatus", Label: "HTTP Status", Description: extutil.Ptr("HTTP status code to return (cleartext HTTP only)."),
 		Type: action_kit_api.ActionParameterTypeInteger, DefaultValue: extutil.Ptr("503"), Required: extutil.Ptr(true), Order: extutil.Ptr(3),
@@ -82,7 +82,7 @@ var httpAbortFaultSpec = dependencyFaultSpec{
 
 var resetFaultSpec = dependencyFaultSpec{
 	id:          "network_dependency_reset",
-	label:       "Reset Dependency Connections",
+	label:       "Intercept and Reset",
 	description: "Reset (RST) connections to a specific dependency, matched by hostname (TLS SNI / HTTP Host). Works over HTTPS and for shared or rotating IPs — a hostname-targeted alternative to the packet-level Network attacks.",
 	buildFault: func(map[string]any) (proxyfault.Fault, error) {
 		return proxyfault.Fault{Reset: true}, nil
@@ -142,7 +142,7 @@ func (a *dependencyFaultAction) Describe() action_kit_api.ActionDescription {
 			SelectionTemplates: &targetSelectionTemplates,
 		},
 		Technology:  extutil.Ptr("Container"),
-		Category:    extutil.Ptr("Dependency"),
+		Category:    extutil.Ptr("Network"),
 		Kind:        action_kit_api.Attack,
 		TimeControl: action_kit_api.TimeControlExternal,
 		Status: extutil.Ptr(action_kit_api.MutatingEndpointReferenceWithCallInterval{
@@ -172,7 +172,7 @@ func (a *dependencyFaultAction) Prepare(ctx context.Context, state *DependencyFa
 	// early with a clear message rather than silently passing 443 traffic through.
 	if a.spec.cleartextHTTPOnly && slices.Contains(opts.Ports, uint16(443)) {
 		return &action_kit_api.PrepareResult{Error: &action_kit_api.ActionKitError{
-			Title:  "HTTP Abort works on cleartext HTTP only — port 443 (HTTPS/TLS) cannot be aborted without terminating TLS. Remove 443 from the ports, or use 'Reset Dependency Connections' or 'Delay Dependency Traffic' for HTTPS dependencies.",
+			Title:  "HTTP Abort works on cleartext HTTP only — port 443 (HTTPS/TLS) cannot be aborted without terminating TLS. Remove 443 from the ports, or use 'Intercept and Reset' or 'Intercept and Delay' for HTTPS dependencies.",
 			Status: extutil.Ptr(action_kit_api.Failed),
 		}}, nil
 	}
@@ -233,12 +233,18 @@ func (a *dependencyFaultAction) Prepare(ctx context.Context, state *DependencyFa
 	return &action_kit_api.PrepareResult{}, nil
 }
 
-func (a *dependencyFaultAction) Start(_ context.Context, state *DependencyFaultState) (*action_kit_api.StartResult, error) {
+func (a *dependencyFaultAction) Start(ctx context.Context, state *DependencyFaultState) (*action_kit_api.StartResult, error) {
 	handle, ok := getDependencyFaultHandle(state.ExecutionId)
 	if !ok {
 		return nil, fmt.Errorf("no transparent-proxy handle for execution %s", state.ExecutionId)
 	}
 	if err := handle.proxy.Start(); err != nil {
+		// The proxy never came up: drop the handle (and clean up its bundle/rules)
+		// so it doesn't linger in the map and block every future fault in this
+		// netns via the overlap guard.
+		if h, taken := takeDependencyFaultHandle(state.ExecutionId); taken {
+			a.teardown(ctx, h)
+		}
 		return nil, fmt.Errorf("failed to start transparent-proxy: %w", err)
 	}
 	return &action_kit_api.StartResult{}, nil
@@ -252,9 +258,10 @@ func (a *dependencyFaultAction) Status(ctx context.Context, state *DependencyFau
 	if exited, err := handle.proxy.Exited(); exited {
 		// The proxy is gone; still run the out-of-band revert so a proxy that
 		// died before its Guard could clean up doesn't leak interception rules.
-		// Without this, a Stop after a Completed status finds no handle and skips
-		// the safety revert entirely.
-		a.teardown(ctx, state.ExecutionId, handle)
+		// take makes this single-shot even if Stop races this Status.
+		if h, taken := takeDependencyFaultHandle(state.ExecutionId); taken {
+			a.teardown(ctx, h)
+		}
 		if err != nil {
 			return &action_kit_api.StatusResult{
 				Completed: true,
@@ -269,22 +276,19 @@ func (a *dependencyFaultAction) Status(ctx context.Context, state *DependencyFau
 }
 
 func (a *dependencyFaultAction) Stop(ctx context.Context, state *DependencyFaultState) (*action_kit_api.StopResult, error) {
-	handle, ok := getDependencyFaultHandle(state.ExecutionId)
-	if !ok {
-		return nil, nil
+	if h, taken := takeDependencyFaultHandle(state.ExecutionId); taken {
+		a.teardown(ctx, h)
 	}
-	a.teardown(ctx, state.ExecutionId, handle)
 	return nil, nil
 }
 
-// teardown stops the proxy and runs the idempotent out-of-band revert, then
-// drops the handle. It is safe to call more than once and from either Status
-// (proxy exited) or Stop — removeDependencyFaultHandle makes the second call a
-// no-op, and proxy.Stop / Revert are both idempotent.
-func (a *dependencyFaultAction) teardown(ctx context.Context, executionId string, handle *proxyHandle) {
+// teardown stops the proxy and runs the idempotent out-of-band revert. The
+// caller must have claimed the handle via takeDependencyFaultHandle, so teardown
+// runs exactly once per execution even when Status (proxy exited) and Stop race.
+func (a *dependencyFaultAction) teardown(ctx context.Context, handle *proxyHandle) {
 	// Terminate the proxy: its in-process Guard tears down the interception.
 	if err := handle.proxy.Stop(); err != nil {
-		log.Warn().Err(err).Str("execution_id", executionId).Msg("failed to stop transparent-proxy")
+		log.Warn().Err(err).Str("id", handle.id).Msg("failed to stop transparent-proxy")
 	}
 
 	// Belt-and-suspenders: an idempotent out-of-band revert removes the rules
@@ -295,10 +299,8 @@ func (a *dependencyFaultAction) teardown(ctx context.Context, executionId string
 		Env:           []string{"XTABLES_LOCKFILE=/tmp/xtables.lock"},
 	})
 	if err := proxyfault.Revert(ctx, runner, handle.opts); err != nil {
-		log.Warn().Err(err).Str("execution_id", executionId).Msg("out-of-band interception revert failed")
+		log.Warn().Err(err).Str("id", handle.id).Msg("out-of-band interception revert failed")
 	}
-
-	removeDependencyFaultHandle(executionId)
 }
 
 // --- parameters & parsing ---
@@ -349,8 +351,16 @@ func (a *dependencyFaultAction) parseOpts(request action_kit_api.PrepareActionRe
 	if err != nil {
 		return proxyfault.Opts{}, fmt.Errorf("invalid dependency CIDR: %w", err)
 	}
-	if len(includeCIDRs) == 0 {
-		includeCIDRs = network.NetAny // 0.0.0.0/0 + ::/0 (proxy currently intercepts IPv4)
+	userProvidedCIDRs := len(includeCIDRs) > 0
+	if !userProvidedCIDRs {
+		includeCIDRs = network.NetAny // 0.0.0.0/0 + ::/0
+	}
+	// Interception is currently IPv4-only, so drop IPv6 CIDRs (this reduces the
+	// default NetAny to 0.0.0.0/0). If the user scoped the fault to IPv6 only, it
+	// would silently never match — surface that instead.
+	includeCIDRs = filterIPv4CIDRs(includeCIDRs)
+	if userProvidedCIDRs && len(includeCIDRs) == 0 {
+		return proxyfault.Opts{}, fmt.Errorf("dependency CIDRs are IPv6 only, but interception is currently IPv4-only")
 	}
 
 	excludeCIDRs, err := a.buildExcludes(request)
@@ -395,8 +405,16 @@ func percentageToProbability(v any) float64 {
 		pct = float64(n)
 	case int64:
 		pct = float64(n)
+	case string:
+		f, err := strconv.ParseFloat(strings.TrimSpace(n), 64)
+		if err != nil {
+			return 0.5 // unparseable: fall back to the declared 50% default
+		}
+		pct = f
 	default:
-		return 1.0
+		// Unknown type: fall back to the declared 50% default rather than the
+		// least-conservative "always".
+		return 0.5
 	}
 	p := pct / 100.0
 	if p < 0 {
@@ -493,6 +511,20 @@ func getDependencyFaultHandle(executionId string) (*proxyHandle, bool) {
 	return h, ok
 }
 
+// takeDependencyFaultHandle atomically removes and returns a filled handle, so
+// exactly one of racing Status/Stop callers tears it down. An unfilled
+// reservation (nil proxy) is left in place and reported as absent.
+func takeDependencyFaultHandle(executionId string) (*proxyHandle, bool) {
+	dependencyFaultHandlesLock.Lock()
+	defer dependencyFaultHandlesLock.Unlock()
+	h, ok := dependencyFaultHandles[executionId]
+	if !ok || h == nil || h.proxy == nil {
+		return nil, false
+	}
+	delete(dependencyFaultHandles, executionId)
+	return h, true
+}
+
 // reserveDependencyFaultHandle atomically claims the execution's slot, unless an
 // already-active dependency fault overlaps the same network namespace and scope.
 // Returns:
@@ -565,6 +597,18 @@ func cidrsOverlap(a, b []net.IPNet) bool {
 		}
 	}
 	return false
+}
+
+// filterIPv4CIDRs keeps only IPv4 prefixes; the transparent proxy intercepts
+// IPv4 only, so IPv6 CIDRs would never match.
+func filterIPv4CIDRs(cidrs []net.IPNet) []net.IPNet {
+	out := cidrs[:0:0]
+	for _, c := range cidrs {
+		if c.IP.To4() != nil {
+			out = append(out, c)
+		}
+	}
+	return out
 }
 
 func storeDependencyFaultHandle(executionId string, h *proxyHandle) {

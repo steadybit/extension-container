@@ -448,10 +448,13 @@ func Test_percentageToProbability(t *testing.T) {
 	require.Equal(t, 1.0, percentageToProbability(100))
 	require.Equal(t, 0.5, percentageToProbability(50))
 	require.Equal(t, 0.25, percentageToProbability(25.0))
-	// Out-of-range clamps; non-numeric falls back to always.
+	// Numeric strings parse (so an explicit "0" still means never).
+	require.Equal(t, 0.0, percentageToProbability("0"))
+	require.Equal(t, 0.5, percentageToProbability("50"))
+	// Out-of-range clamps; unparseable falls back to the 50% default (not "always").
 	require.Equal(t, 1.0, percentageToProbability(150))
 	require.Equal(t, 0.0, percentageToProbability(-10))
-	require.Equal(t, 1.0, percentageToProbability("nope"))
+	require.Equal(t, 0.5, percentageToProbability("nope"))
 }
 
 func Test_dependency_hostname_required_and_first(t *testing.T) {
