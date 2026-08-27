@@ -370,7 +370,8 @@ func (a *dependencyFaultAction) parseOpts(request action_kit_api.PrepareActionRe
 		return proxyfault.Opts{}, err
 	}
 	fault.Hosts = extutil.ToStringArray(cfg["hostname"])
-	fault.Probability = percentageToProbability(cfg["percentage"])
+	prob := percentageToProbability(cfg["percentage"])
+	fault.Probability = &prob
 
 	duration := time.Duration(extutil.ToInt64(cfg["duration"])) * time.Millisecond
 
