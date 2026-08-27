@@ -48,7 +48,7 @@ type dependencyFaultSpec struct {
 var latencyFaultSpec = dependencyFaultSpec{
 	id:          "network_dependency_latency",
 	label:       "Delay Dependency Traffic",
-	description: "Transparently proxy the container's outgoing traffic to a dependency and add latency, selected by hostname/SNI.",
+	description: "Add latency to calls to a specific dependency, matched by hostname (TLS SNI / HTTP Host). Works over HTTPS and for CDN/cloud endpoints with shared or rotating IPs — use this to slow one named dependency, rather than Network Delay which slows all traffic to an IP.",
 	extraParams: []action_kit_api.ActionParameter{{
 		Name: "delay", Label: "Latency", Description: extutil.Ptr("Latency to add before forwarding to the dependency."),
 		Type: action_kit_api.ActionParameterTypeDuration, DefaultValue: extutil.Ptr("500ms"), Required: extutil.Ptr(true), Order: extutil.Ptr(3),
@@ -65,7 +65,7 @@ var latencyFaultSpec = dependencyFaultSpec{
 var httpAbortFaultSpec = dependencyFaultSpec{
 	id:          "network_dependency_http_abort",
 	label:       "HTTP Abort Dependency Traffic",
-	description: "Transparently proxy the container's outgoing cleartext HTTP traffic to a dependency and return an HTTP error status, selected by Host header.",
+	description: "Return an HTTP error status for calls to a specific dependency, matched by Host header. Cleartext HTTP only — for HTTPS dependencies use Reset Dependency Connections instead.",
 	extraParams: []action_kit_api.ActionParameter{{
 		Name: "httpStatus", Label: "HTTP Status", Description: extutil.Ptr("HTTP status code to return (cleartext HTTP only)."),
 		Type: action_kit_api.ActionParameterTypeInteger, DefaultValue: extutil.Ptr("503"), Required: extutil.Ptr(true), Order: extutil.Ptr(3),
@@ -83,7 +83,7 @@ var httpAbortFaultSpec = dependencyFaultSpec{
 var resetFaultSpec = dependencyFaultSpec{
 	id:          "network_dependency_reset",
 	label:       "Reset Dependency Connections",
-	description: "Transparently proxy the container's outgoing traffic to a dependency and reset (RST) matching connections, selected by hostname/SNI.",
+	description: "Reset (RST) connections to a specific dependency, matched by hostname (TLS SNI / HTTP Host). Works over HTTPS and for shared or rotating IPs — a hostname-targeted alternative to the packet-level Network attacks.",
 	buildFault: func(map[string]any) (proxyfault.Fault, error) {
 		return proxyfault.Fault{Reset: true}, nil
 	},
@@ -143,7 +143,7 @@ func (a *dependencyFaultAction) Describe() action_kit_api.ActionDescription {
 			SelectionTemplates: &targetSelectionTemplates,
 		},
 		Technology:  extutil.Ptr("Container"),
-		Category:    extutil.Ptr("Network"),
+		Category:    extutil.Ptr("Dependency"),
 		Kind:        action_kit_api.Attack,
 		TimeControl: action_kit_api.TimeControlExternal,
 		Status: extutil.Ptr(action_kit_api.MutatingEndpointReferenceWithCallInterval{
