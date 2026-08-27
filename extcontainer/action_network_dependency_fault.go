@@ -107,7 +107,6 @@ var (
 
 type DependencyFaultState struct {
 	ExecutionId string
-	ContainerID string
 }
 
 type dependencyFaultAction struct {
@@ -163,20 +162,19 @@ func (a *dependencyFaultAction) defaultPorts() string {
 }
 
 func (a *dependencyFaultAction) Prepare(ctx context.Context, state *DependencyFaultState, request action_kit_api.PrepareActionRequestBody) (*action_kit_api.PrepareResult, error) {
+	opts, err := a.parseOpts(request)
+	if err != nil {
+		return nil, err
+	}
+
 	// Cleartext-only faults (HTTP abort) cannot act on HTTPS: the proxy would have
 	// to terminate TLS to inject a status, which it deliberately does not do. Fail
 	// early with a clear message rather than silently passing 443 traffic through.
-	if a.spec.cleartextHTTPOnly {
-		ports, err := parsePortsList(extutil.ToString(request.Config["port"]))
-		if err != nil {
-			return nil, err
-		}
-		if slices.Contains(ports, uint16(443)) {
-			return &action_kit_api.PrepareResult{Error: &action_kit_api.ActionKitError{
-				Title:  "HTTP Abort works on cleartext HTTP only — port 443 (HTTPS/TLS) cannot be aborted without terminating TLS. Remove 443 from the ports, or use 'Reset Dependency Connections' or 'Delay Dependency Traffic' for HTTPS dependencies.",
-				Status: extutil.Ptr(action_kit_api.Failed),
-			}}, nil
-		}
+	if a.spec.cleartextHTTPOnly && slices.Contains(opts.Ports, uint16(443)) {
+		return &action_kit_api.PrepareResult{Error: &action_kit_api.ActionKitError{
+			Title:  "HTTP Abort works on cleartext HTTP only — port 443 (HTTPS/TLS) cannot be aborted without terminating TLS. Remove 443 from the ports, or use 'Reset Dependency Connections' or 'Delay Dependency Traffic' for HTTPS dependencies.",
+			Status: extutil.Ptr(action_kit_api.Failed),
+		}}, nil
 	}
 
 	container, _, err := getContainerTarget(ctx, a.client, *request.Target)
@@ -205,19 +203,13 @@ func (a *dependencyFaultAction) Prepare(ctx context.Context, state *DependencyFa
 		}
 	}
 
-	opts, err := a.parseOpts(request)
-	if err != nil {
-		return nil, err
-	}
-
 	// Idempotent + race-safe: atomically claim the execution slot, unless another
 	// active dependency fault already overlaps this target's network namespace
 	// (containers in the same pod share it). Two overlapping faults in one netns
 	// don't stack — the first-installed proxy captures the traffic — so fail with
 	// a clear message instead of silently doing nothing.
 	state.ExecutionId = request.ExecutionId.String()
-	state.ContainerID = containerId
-	reserved, conflictWith := reserveDependencyFaultHandle(state.ExecutionId, networkNamespaceInode(processInfo), opts.IncludeCIDRs, opts.Ports)
+	reserved, conflictWith := reserveDependencyFaultHandle(state.ExecutionId, processInfo, opts)
 	if conflictWith != "" {
 		return &action_kit_api.PrepareResult{Error: &action_kit_api.ActionKitError{
 			Title:  "Another dependency fault is already active on this target's network namespace with an overlapping port/CIDR scope. Two overlapping dependency faults on the same target don't stack — the first one wins. Stop it first, or scope this fault to different ports or CIDRs.",
@@ -324,6 +316,7 @@ func commonDependencyParameters(portsDefault string) []action_kit_api.ActionPara
 		{
 			Name: "percentage", Label: "Percentage", Description: extutil.Ptr("Percentage of matching connections the fault is applied to."),
 			Type: action_kit_api.ActionParameterTypePercentage, DefaultValue: extutil.Ptr("50"), Required: extutil.Ptr(true), Order: extutil.Ptr(2),
+			MinValue: extutil.Ptr(0), MaxValue: extutil.Ptr(100),
 		},
 		{
 			Name: "ip", Label: "Dependency CIDRs", Description: extutil.Ptr("Intercept traffic destined for these IP CIDRs. Defaults to all destinations. Note: interception is currently IPv4 only."),
@@ -492,9 +485,9 @@ func getDependencyFaultHandle(executionId string) (*proxyHandle, bool) {
 	dependencyFaultHandlesLock.Lock()
 	defer dependencyFaultHandlesLock.Unlock()
 	h, ok := dependencyFaultHandles[executionId]
-	// A nil entry is a reservation held by an in-flight Prepare; treat it as
-	// absent so Start/Status/Stop never dereference an unfilled handle.
-	if h == nil {
+	// An unfilled reservation (no proxy yet) is held by an in-flight Prepare;
+	// treat it as absent so Start/Status/Stop never dereference a nil proxy.
+	if h == nil || h.proxy == nil {
 		return nil, false
 	}
 	return h, ok
@@ -512,22 +505,27 @@ func getDependencyFaultHandle(executionId string) (*proxyHandle, bool) {
 //     (idempotent retry).
 //
 // The check and the claim happen under one lock, so concurrent Prepares can't
-// both spawn a sidecar for the same execution or miss each other's scope.
-func reserveDependencyFaultHandle(executionId string, netnsInode uint64, cidrs []net.IPNet, ports []uint16) (reserved bool, conflictWith string) {
+// both spawn a sidecar for the same execution or miss each other's scope: the
+// reservation records the netns and scope up front (not a bare placeholder), so
+// a second Prepare in the same netns sees the pending fault and is rejected.
+func reserveDependencyFaultHandle(executionId string, sidecar ociruntime.LinuxProcessInfo, opts proxyfault.Opts) (reserved bool, conflictWith string) {
 	dependencyFaultHandlesLock.Lock()
 	defer dependencyFaultHandlesLock.Unlock()
 	if _, exists := dependencyFaultHandles[executionId]; exists {
 		return false, ""
 	}
+	inode := networkNamespaceInode(sidecar)
 	for id, h := range dependencyFaultHandles {
 		if h == nil {
-			continue // an in-flight reservation with no scope/netns recorded yet
+			continue
 		}
-		if netnsInode != 0 && netnsInode == networkNamespaceInode(h.sidecar) && scopesOverlap(h.opts, cidrs, ports) {
+		if inode != 0 && inode == networkNamespaceInode(h.sidecar) && scopesOverlap(h.opts, opts.IncludeCIDRs, opts.Ports) {
 			return false, id
 		}
 	}
-	dependencyFaultHandles[executionId] = nil
+	// Reserve with the netns + scope recorded (proxy nil until storeDependency-
+	// FaultHandle fills it) so a concurrent Prepare can conflict-check against it.
+	dependencyFaultHandles[executionId] = &proxyHandle{opts: opts, sidecar: sidecar}
 	return true, ""
 }
 

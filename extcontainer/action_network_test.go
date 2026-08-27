@@ -399,31 +399,47 @@ func Test_reserveDependencyFaultHandle_conflict(t *testing.T) {
 	ns := func(inode uint64) ociruntime.LinuxProcessInfo {
 		return ociruntime.LinuxProcessInfo{Namespaces: []ociruntime.LinuxNamespace{{Type: specs.NetworkNamespace, Inode: inode}}}
 	}
+	optsFor := func(ports ...uint16) proxyfault.Opts {
+		return proxyfault.Opts{IncludeCIDRs: all, Ports: ports}
+	}
 	// Active fault: netns 100, ports 80+443.
-	storeDependencyFaultHandle("exec-A", &proxyHandle{opts: proxyfault.Opts{IncludeCIDRs: all, Ports: []uint16{80, 443}}, sidecar: ns(100)})
+	storeDependencyFaultHandle("exec-A", &proxyHandle{proxy: fakeProxy{}, opts: optsFor(80, 443), sidecar: ns(100)})
 
 	// Same netns + overlapping ports => conflict with exec-A.
-	reserved, conflict := reserveDependencyFaultHandle("exec-B", 100, all, []uint16{443})
+	reserved, conflict := reserveDependencyFaultHandle("exec-B", ns(100), optsFor(443))
 	require.False(t, reserved)
 	require.Equal(t, "exec-A", conflict)
 
 	// Same netns, disjoint ports => reserved, no conflict.
-	reserved, conflict = reserveDependencyFaultHandle("exec-C", 100, all, []uint16{8080})
+	reserved, conflict = reserveDependencyFaultHandle("exec-C", ns(100), optsFor(8080))
 	require.True(t, reserved)
 	require.Empty(t, conflict)
+
+	// A pending reservation (recorded scope, not yet filled) still conflicts —
+	// this is the TOCTOU the recorded-scope reservation closes.
+	reserved, conflict = reserveDependencyFaultHandle("exec-C2", ns(100), optsFor(8080))
+	require.False(t, reserved)
+	require.Equal(t, "exec-C", conflict)
 	removeDependencyFaultHandle("exec-C")
 
 	// Different netns => reserved, no conflict.
-	reserved, conflict = reserveDependencyFaultHandle("exec-D", 200, all, []uint16{443})
+	reserved, conflict = reserveDependencyFaultHandle("exec-D", ns(200), optsFor(443))
 	require.True(t, reserved)
 	require.Empty(t, conflict)
 	removeDependencyFaultHandle("exec-D")
 
 	// Same execution id => idempotent: not reserved, not a conflict.
-	reserved, conflict = reserveDependencyFaultHandle("exec-A", 100, all, []uint16{443})
+	reserved, conflict = reserveDependencyFaultHandle("exec-A", ns(100), optsFor(443))
 	require.False(t, reserved)
 	require.Empty(t, conflict)
 }
+
+// fakeProxy is a filled (non-reservation) handle marker for the conflict test.
+type fakeProxy struct{}
+
+func (fakeProxy) Start() error         { return nil }
+func (fakeProxy) Stop() error          { return nil }
+func (fakeProxy) Exited() (bool, error) { return false, nil }
 
 func Test_percentageToProbability(t *testing.T) {
 	// 0% must map to never (0.0), not always — the whole point of the fix.
@@ -456,11 +472,12 @@ func Test_dependency_hostname_required_and_first(t *testing.T) {
 func Test_httpAbort_Prepare_rejects_https_port(t *testing.T) {
 	a := &dependencyFaultAction{spec: httpAbortFaultSpec}
 
-	// 443 present -> fail fast with a user-facing error (the check runs before any
-	// container lookup, so a nil runtime/client is never reached).
+	// 443 present -> user-facing error before any container lookup (so a nil
+	// runtime/client is never reached). httpStatus is required and always sent by
+	// the platform, so include it.
 	for _, ports := range []string{"443", "80,443"} {
 		res, err := a.Prepare(context.Background(), &DependencyFaultState{}, action_kit_api.PrepareActionRequestBody{
-			Config: map[string]interface{}{"port": ports},
+			Config: map[string]interface{}{"port": ports, "httpStatus": 503, "percentage": 100},
 		})
 		require.NoError(t, err)
 		require.NotNil(t, res)
