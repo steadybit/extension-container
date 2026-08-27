@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -37,6 +38,11 @@ type dependencyFaultSpec struct {
 	description string
 	extraParams []action_kit_api.ActionParameter
 	buildFault  func(cfg map[string]any) (proxyfault.Fault, error)
+	// cleartextHTTPOnly marks a fault that can only act on cleartext HTTP (the
+	// L7 status injection). It drops 443 from the default intercept ports and
+	// makes Prepare reject an explicit 443, since HTTPS/TLS cannot be aborted
+	// without terminating TLS.
+	cleartextHTTPOnly bool
 }
 
 var latencyFaultSpec = dependencyFaultSpec{
@@ -71,6 +77,7 @@ var httpAbortFaultSpec = dependencyFaultSpec{
 		}
 		return proxyfault.Fault{HTTPStatus: status}, nil
 	},
+	cleartextHTTPOnly: true,
 }
 
 var resetFaultSpec = dependencyFaultSpec{
@@ -142,11 +149,36 @@ func (a *dependencyFaultAction) Describe() action_kit_api.ActionDescription {
 		Status: extutil.Ptr(action_kit_api.MutatingEndpointReferenceWithCallInterval{
 			CallInterval: extutil.Ptr("2s"),
 		}),
-		Parameters: append(commonDependencyParameters(), a.spec.extraParams...),
+		Parameters: append(commonDependencyParameters(a.defaultPorts()), a.spec.extraParams...),
 	}
 }
 
+// defaultPorts is the default intercept-port list shown in the UI. Cleartext-only
+// faults (HTTP abort) drop 443, since HTTPS/TLS cannot be aborted.
+func (a *dependencyFaultAction) defaultPorts() string {
+	if a.spec.cleartextHTTPOnly {
+		return "80"
+	}
+	return "80,443"
+}
+
 func (a *dependencyFaultAction) Prepare(ctx context.Context, state *DependencyFaultState, request action_kit_api.PrepareActionRequestBody) (*action_kit_api.PrepareResult, error) {
+	// Cleartext-only faults (HTTP abort) cannot act on HTTPS: the proxy would have
+	// to terminate TLS to inject a status, which it deliberately does not do. Fail
+	// early with a clear message rather than silently passing 443 traffic through.
+	if a.spec.cleartextHTTPOnly {
+		ports, err := parsePortsList(extutil.ToString(request.Config["port"]))
+		if err != nil {
+			return nil, err
+		}
+		if slices.Contains(ports, uint16(443)) {
+			return &action_kit_api.PrepareResult{Error: &action_kit_api.ActionKitError{
+				Title:  "HTTP Abort works on cleartext HTTP only — port 443 (HTTPS/TLS) cannot be aborted without terminating TLS. Remove 443 from the ports, or use 'Reset Dependency Connections' or 'Delay Dependency Traffic' for HTTPS dependencies.",
+				Status: extutil.Ptr(action_kit_api.Failed),
+			}}, nil
+		}
+	}
+
 	container, _, err := getContainerTarget(ctx, a.client, *request.Target)
 	if err != nil {
 		return nil, err
@@ -257,7 +289,7 @@ func (a *dependencyFaultAction) Stop(ctx context.Context, state *DependencyFault
 
 // --- parameters & parsing ---
 
-func commonDependencyParameters() []action_kit_api.ActionParameter {
+func commonDependencyParameters(portsDefault string) []action_kit_api.ActionParameter {
 	return []action_kit_api.ActionParameter{
 		{
 			Name: "duration", Label: "Duration", Description: extutil.Ptr("How long to inject the fault."),
@@ -277,7 +309,7 @@ func commonDependencyParameters() []action_kit_api.ActionParameter {
 		},
 		{
 			Name: "port", Label: "Dependency Ports", Description: extutil.Ptr("Comma-separated destination ports to intercept."),
-			Type: action_kit_api.ActionParameterTypeString, DefaultValue: extutil.Ptr("80,443"), Required: extutil.Ptr(false), Order: extutil.Ptr(12), Advanced: extutil.Ptr(true),
+			Type: action_kit_api.ActionParameterTypeString, DefaultValue: extutil.Ptr(portsDefault), Required: extutil.Ptr(false), Order: extutil.Ptr(12), Advanced: extutil.Ptr(true),
 		},
 		{
 			Name: "excludeIp", Label: "Exclude CIDRs", Description: extutil.Ptr("Never intercept traffic to these CIDRs (in addition to the automatically protected agent/extension endpoints)."),

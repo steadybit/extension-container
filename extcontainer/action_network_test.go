@@ -339,3 +339,38 @@ func (m mockedContainer) ImageName() string {
 func (m mockedContainer) Labels() map[string]string {
 	return m.labels
 }
+
+func Test_dependency_defaultPorts(t *testing.T) {
+	require.Equal(t, "80,443", (&dependencyFaultAction{spec: latencyFaultSpec}).defaultPorts())
+	require.Equal(t, "80,443", (&dependencyFaultAction{spec: resetFaultSpec}).defaultPorts())
+	// HTTP abort is cleartext-only, so 443 is dropped from the default.
+	require.Equal(t, "80", (&dependencyFaultAction{spec: httpAbortFaultSpec}).defaultPorts())
+
+	// The Describe()d port parameter default reflects it.
+	portDefault := func(a *dependencyFaultAction) string {
+		for _, p := range a.Describe().Parameters {
+			if p.Name == "port" {
+				return *p.DefaultValue
+			}
+		}
+		return ""
+	}
+	require.Equal(t, "80", portDefault(&dependencyFaultAction{spec: httpAbortFaultSpec}))
+	require.Equal(t, "80,443", portDefault(&dependencyFaultAction{spec: latencyFaultSpec}))
+}
+
+func Test_httpAbort_Prepare_rejects_https_port(t *testing.T) {
+	a := &dependencyFaultAction{spec: httpAbortFaultSpec}
+
+	// 443 present -> fail fast with a user-facing error (the check runs before any
+	// container lookup, so a nil runtime/client is never reached).
+	for _, ports := range []string{"443", "80,443"} {
+		res, err := a.Prepare(context.Background(), &DependencyFaultState{}, action_kit_api.PrepareActionRequestBody{
+			Config: map[string]interface{}{"port": ports},
+		})
+		require.NoError(t, err)
+		require.NotNil(t, res)
+		require.NotNil(t, res.Error, "ports %q should be rejected", ports)
+		require.Equal(t, action_kit_api.Failed, *res.Error.Status)
+	}
+}
