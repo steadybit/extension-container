@@ -359,6 +359,19 @@ func Test_dependency_defaultPorts(t *testing.T) {
 	require.Equal(t, "80,443", portDefault(&dependencyFaultAction{spec: latencyFaultSpec}))
 }
 
+func Test_percentageToProbability(t *testing.T) {
+	// 0% must map to never (0.0), not always — the whole point of the fix.
+	require.Equal(t, 0.0, percentageToProbability(0))
+	require.Equal(t, 0.0, percentageToProbability(int64(0)))
+	require.Equal(t, 1.0, percentageToProbability(100))
+	require.Equal(t, 0.5, percentageToProbability(50))
+	require.Equal(t, 0.25, percentageToProbability(25.0))
+	// Out-of-range clamps; non-numeric falls back to always.
+	require.Equal(t, 1.0, percentageToProbability(150))
+	require.Equal(t, 0.0, percentageToProbability(-10))
+	require.Equal(t, 1.0, percentageToProbability("nope"))
+}
+
 func Test_dependency_hostname_required_and_first(t *testing.T) {
 	for _, spec := range []dependencyFaultSpec{latencyFaultSpec, httpAbortFaultSpec, resetFaultSpec} {
 		var hostname *action_kit_api.ActionParameter
