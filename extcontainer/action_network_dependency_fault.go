@@ -73,11 +73,11 @@ var httpAbortFaultSpec = dependencyFaultSpec{
 		},
 		{
 			Name: "responseBody", Label: "Response Body", Description: extutil.Ptr("Optional body to return. Leave empty for a default message. Content-Length is set automatically."),
-			Type: action_kit_api.ActionParameterTypeTextarea, Required: extutil.Ptr(false), Order: extutil.Ptr(4), Advanced: extutil.Ptr(true),
+			Type: action_kit_api.ActionParameterTypeTextarea, Required: extutil.Ptr(false), Order: extutil.Ptr(4),
 		},
 		{
 			Name: "responseHeaders", Label: "Response Headers", Description: extutil.Ptr("Optional headers to return (e.g. Content-Type, Retry-After)."),
-			Type: action_kit_api.ActionParameterTypeKeyValue, Required: extutil.Ptr(false), Order: extutil.Ptr(5), Advanced: extutil.Ptr(true),
+			Type: action_kit_api.ActionParameterTypeKeyValue, Required: extutil.Ptr(false), Order: extutil.Ptr(5),
 		},
 	},
 	buildFault: func(cfg map[string]any) (proxyfault.Fault, error) {
