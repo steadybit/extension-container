@@ -63,7 +63,7 @@ var latencyFaultSpec = dependencyFaultSpec{
 }
 
 var httpAbortFaultSpec = dependencyFaultSpec{
-	id:          "network_dependency_http_abort",
+	id:          "network_dependency_http_response",
 	label:       "Fake Response",
 	description: "Return a synthesized HTTP response (L7) for a specific dependency's cleartext HTTP calls — a status code, and optionally a custom body and headers — selected at L7 by Host header. Cleartext HTTP only; for HTTPS dependencies use 'Drop Connection' instead.",
 	extraParams: []action_kit_api.ActionParameter{
