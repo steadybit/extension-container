@@ -64,18 +64,36 @@ var latencyFaultSpec = dependencyFaultSpec{
 
 var httpAbortFaultSpec = dependencyFaultSpec{
 	id:          "network_dependency_http_abort",
-	label:       "Intercept and Abort",
-	description: "Return an HTTP error status for calls to a specific dependency, matched by Host header. Cleartext HTTP only — for HTTPS dependencies use 'Intercept and Reset' instead.",
-	extraParams: []action_kit_api.ActionParameter{{
-		Name: "httpStatus", Label: "HTTP Status", Description: extutil.Ptr("HTTP status code to return (cleartext HTTP only)."),
-		Type: action_kit_api.ActionParameterTypeInteger, DefaultValue: extutil.Ptr("503"), Required: extutil.Ptr(true), Order: extutil.Ptr(3),
-	}},
+	label:       "Intercept and Modify Response",
+	description: "Intercept a specific dependency's cleartext HTTP calls and return a synthesized response — a status code, and optionally a custom body and headers — matched by Host header. Cleartext HTTP only; for HTTPS dependencies use 'Intercept and Reset' instead.",
+	extraParams: []action_kit_api.ActionParameter{
+		{
+			Name: "httpStatus", Label: "Response Status", Description: extutil.Ptr("HTTP status code to return (cleartext HTTP only)."),
+			Type: action_kit_api.ActionParameterTypeInteger, DefaultValue: extutil.Ptr("503"), Required: extutil.Ptr(true), Order: extutil.Ptr(3),
+		},
+		{
+			Name: "responseBody", Label: "Response Body", Description: extutil.Ptr("Optional body to return. Leave empty for a default message. Content-Length is set automatically."),
+			Type: action_kit_api.ActionParameterTypeTextarea, Required: extutil.Ptr(false), Order: extutil.Ptr(4), Advanced: extutil.Ptr(true),
+		},
+		{
+			Name: "responseHeaders", Label: "Response Headers", Description: extutil.Ptr("Optional headers to return (e.g. Content-Type, Retry-After)."),
+			Type: action_kit_api.ActionParameterTypeKeyValue, Required: extutil.Ptr(false), Order: extutil.Ptr(5), Advanced: extutil.Ptr(true),
+		},
+	},
 	buildFault: func(cfg map[string]any) (proxyfault.Fault, error) {
 		status := int(extutil.ToInt64(cfg["httpStatus"]))
 		if status < 100 || status > 599 {
 			return proxyfault.Fault{}, fmt.Errorf("httpStatus must be within [100,599], got %d", status)
 		}
-		return proxyfault.Fault{HTTPStatus: status}, nil
+		var headers map[string]string
+		if cfg["responseHeaders"] != nil {
+			h, err := extutil.ToKeyValue(cfg, "responseHeaders")
+			if err != nil {
+				return proxyfault.Fault{}, fmt.Errorf("invalid responseHeaders: %w", err)
+			}
+			headers = h
+		}
+		return proxyfault.Fault{HTTPStatus: status, HTTPBody: extutil.ToString(cfg["responseBody"]), HTTPHeaders: headers}, nil
 	},
 	cleartextHTTPOnly: true,
 }
@@ -172,7 +190,7 @@ func (a *dependencyFaultAction) Prepare(ctx context.Context, state *DependencyFa
 	// early with a clear message rather than silently passing 443 traffic through.
 	if a.spec.cleartextHTTPOnly && slices.Contains(opts.Ports, uint16(443)) {
 		return &action_kit_api.PrepareResult{Error: &action_kit_api.ActionKitError{
-			Title:  "HTTP Abort works on cleartext HTTP only — port 443 (HTTPS/TLS) cannot be aborted without terminating TLS. Remove 443 from the ports, or use 'Intercept and Reset' or 'Intercept and Delay' for HTTPS dependencies.",
+			Title:  "'Intercept and Modify Response' synthesizes an HTTP response, which works on cleartext HTTP only — port 443 (HTTPS/TLS) can't be modified without terminating TLS. Remove 443 from the ports, or use 'Intercept and Reset' or 'Intercept and Delay' for HTTPS dependencies.",
 			Status: extutil.Ptr(action_kit_api.Failed),
 		}}, nil
 	}
