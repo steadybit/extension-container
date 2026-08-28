@@ -47,8 +47,8 @@ type dependencyFaultSpec struct {
 
 var latencyFaultSpec = dependencyFaultSpec{
 	id:          "network_dependency_latency",
-	label:       "Intercept and Delay",
-	description: "Add latency to calls to a specific dependency, matched by hostname (TLS SNI / HTTP Host). Works over HTTPS and for CDN/cloud endpoints with shared or rotating IPs — use this to slow one named dependency, rather than Network Delay which slows all traffic to an IP.",
+	label:       "Slow Dependency",
+	description: "Add latency to calls to a specific dependency, selected at L7 by hostname (TLS SNI / HTTP Host). Works over HTTPS and for CDN/cloud endpoints with shared or rotating IPs — slows one named dependency, unlike Network Delay which slows all traffic to an IP.",
 	extraParams: []action_kit_api.ActionParameter{{
 		Name: "delay", Label: "Latency", Description: extutil.Ptr("Latency to add before forwarding to the dependency."),
 		Type: action_kit_api.ActionParameterTypeDuration, DefaultValue: extutil.Ptr("500ms"), Required: extutil.Ptr(true), Order: extutil.Ptr(3),
@@ -64,8 +64,8 @@ var latencyFaultSpec = dependencyFaultSpec{
 
 var httpAbortFaultSpec = dependencyFaultSpec{
 	id:          "network_dependency_http_abort",
-	label:       "Intercept and Modify Response",
-	description: "Intercept a specific dependency's cleartext HTTP calls and return a synthesized response — a status code, and optionally a custom body and headers — matched by Host header. Cleartext HTTP only; for HTTPS dependencies use 'Intercept and Reset' instead.",
+	label:       "Fake Response",
+	description: "Return a synthesized HTTP response (L7) for a specific dependency's cleartext HTTP calls — a status code, and optionally a custom body and headers — selected at L7 by Host header. Cleartext HTTP only; for HTTPS dependencies use 'Drop Connection' instead.",
 	extraParams: []action_kit_api.ActionParameter{
 		{
 			Name: "httpStatus", Label: "Response Status", Description: extutil.Ptr("HTTP status code to return (cleartext HTTP only)."),
@@ -100,8 +100,8 @@ var httpAbortFaultSpec = dependencyFaultSpec{
 
 var resetFaultSpec = dependencyFaultSpec{
 	id:          "network_dependency_reset",
-	label:       "Intercept and Reset",
-	description: "Reset (RST) connections to a specific dependency, matched by hostname (TLS SNI / HTTP Host). Works over HTTPS and for shared or rotating IPs — a hostname-targeted alternative to the packet-level Network attacks.",
+	label:       "Drop Connection",
+	description: "Reset (RST) connections to a specific dependency, selected at L7 by hostname (TLS SNI / HTTP Host). Works over HTTPS and for shared or rotating IPs — a hostname-targeted alternative to the packet-level Network attacks.",
 	buildFault: func(map[string]any) (proxyfault.Fault, error) {
 		return proxyfault.Fault{Reset: true}, nil
 	},
@@ -190,7 +190,7 @@ func (a *dependencyFaultAction) Prepare(ctx context.Context, state *DependencyFa
 	// early with a clear message rather than silently passing 443 traffic through.
 	if a.spec.cleartextHTTPOnly && slices.Contains(opts.Ports, uint16(443)) {
 		return &action_kit_api.PrepareResult{Error: &action_kit_api.ActionKitError{
-			Title:  "'Intercept and Modify Response' synthesizes an HTTP response, which works on cleartext HTTP only — port 443 (HTTPS/TLS) can't be modified without terminating TLS. Remove 443 from the ports, or use 'Intercept and Reset' or 'Intercept and Delay' for HTTPS dependencies.",
+			Title:  "'Fake Response' synthesizes an HTTP response, which works on cleartext HTTP only — port 443 (HTTPS/TLS) can't be modified without terminating TLS. Remove 443 from the ports, or use 'Drop Connection' or 'Slow Dependency' for HTTPS dependencies.",
 			Status: extutil.Ptr(action_kit_api.Failed),
 		}}, nil
 	}
