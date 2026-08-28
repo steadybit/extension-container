@@ -373,13 +373,14 @@ func (a *dependencyFaultAction) parseOpts(request action_kit_api.PrepareActionRe
 	if !userProvidedCIDRs {
 		includeCIDRs = network.NetAny // 0.0.0.0/0 + ::/0
 	}
-	// Interception is currently IPv4-only, so drop IPv6 CIDRs (this reduces the
-	// default NetAny to 0.0.0.0/0). If the user scoped the fault to IPv6 only, it
-	// would silently never match — surface that instead.
-	includeCIDRs = filterIPv4CIDRs(includeCIDRs)
-	if userProvidedCIDRs && len(includeCIDRs) == 0 {
-		return proxyfault.Opts{}, fmt.Errorf("dependency CIDRs are IPv6 only, but interception is currently IPv4-only")
+	// Interception is currently IPv4-only. The default NetAny is silently reduced
+	// to IPv4; but if the user explicitly listed any IPv6 CIDR, error rather than
+	// quietly narrowing the fault's scope below what they configured.
+	filtered := filterIPv4CIDRs(includeCIDRs)
+	if userProvidedCIDRs && len(filtered) < len(includeCIDRs) {
+		return proxyfault.Opts{}, fmt.Errorf("dependency CIDRs include IPv6, but interception is currently IPv4-only; remove the IPv6 CIDRs")
 	}
+	includeCIDRs = filtered
 
 	excludeCIDRs, err := a.buildExcludes(request)
 	if err != nil {
