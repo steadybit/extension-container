@@ -381,7 +381,7 @@ func Test_scopesOverlap(t *testing.T) {
 
 	// Overlap requires BOTH ports and CIDRs to intersect.
 	require.True(t, scopesOverlap(proxyfault.Opts{IncludeCIDRs: all, Ports: []uint16{80, 443}}, all, []uint16{443}))
-	require.False(t, scopesOverlap(proxyfault.Opts{IncludeCIDRs: all, Ports: []uint16{80}}, all, []uint16{443}))  // ports disjoint
+	require.False(t, scopesOverlap(proxyfault.Opts{IncludeCIDRs: all, Ports: []uint16{80}}, all, []uint16{443}))   // ports disjoint
 	require.False(t, scopesOverlap(proxyfault.Opts{IncludeCIDRs: ten, Ports: []uint16{443}}, priv, []uint16{443})) // cidrs disjoint
 }
 
@@ -437,9 +437,10 @@ func Test_reserveDependencyFaultHandle_conflict(t *testing.T) {
 // fakeProxy is a filled (non-reservation) handle marker for the conflict test.
 type fakeProxy struct{}
 
-func (fakeProxy) Start() error         { return nil }
-func (fakeProxy) Stop() error          { return nil }
-func (fakeProxy) Exited() (bool, error) { return false, nil }
+func (fakeProxy) Start() error                         { return nil }
+func (fakeProxy) Stop() error                          { return nil }
+func (fakeProxy) Exited() (bool, error)                { return false, nil }
+func (fakeProxy) Metrics() (proxyfault.Snapshot, bool) { return proxyfault.Snapshot{}, false }
 
 func Test_percentageToProbability(t *testing.T) {
 	// 0% must map to never (0.0), not always — the whole point of the fix.

@@ -47,12 +47,21 @@ type dependencyFaultSpec struct {
 
 var latencyFaultSpec = dependencyFaultSpec{
 	id:          "network_dependency_latency",
-	label:       "Slow Dependency",
+	label:       "Slow HTTP(s) Dependency",
 	description: "Add latency to calls to a specific dependency, selected at L7 by hostname (TLS SNI / HTTP Host). Works over HTTPS and for CDN/cloud endpoints with shared or rotating IPs — slows one named dependency, unlike Network Delay which slows all traffic to an IP.",
-	extraParams: []action_kit_api.ActionParameter{{
-		Name: "delay", Label: "Latency", Description: extutil.Ptr("Latency to add before forwarding to the dependency."),
-		Type: action_kit_api.ActionParameterTypeDuration, DefaultValue: extutil.Ptr("500ms"), Required: extutil.Ptr(true), Order: extutil.Ptr(3),
-	}},
+	extraParams: []action_kit_api.ActionParameter{
+		{
+			Name: "delay", Label: "Latency", Description: extutil.Ptr("Latency to add before forwarding to the dependency."),
+			Type: action_kit_api.ActionParameterTypeDuration, DefaultValue: extutil.Ptr("500ms"), Required: extutil.Ptr(true), Order: extutil.Ptr(3),
+		},
+		{
+			Name:  "resetExisting",
+			Label: "Reset existing connections",
+			Description: extutil.Ptr("Reset the target's already-open connections to the dependency when the attack starts, so pooled/keep-alive connections reconnect through the proxy and immediately experience the latency. " +
+				"Disable to affect only newly opened connections (existing connections keep their original, un-delayed path until they are closed)."),
+			Type: action_kit_api.ActionParameterTypeBoolean, DefaultValue: extutil.Ptr("true"), Required: extutil.Ptr(false), Order: extutil.Ptr(4),
+		},
+	},
 	buildFault: func(cfg map[string]any) (proxyfault.Fault, error) {
 		d := time.Duration(extutil.ToInt64(cfg["delay"])) * time.Millisecond
 		if d <= 0 {
@@ -64,8 +73,8 @@ var latencyFaultSpec = dependencyFaultSpec{
 
 var httpAbortFaultSpec = dependencyFaultSpec{
 	id:          "network_dependency_http_response",
-	label:       "Fake Response",
-	description: "Return a synthesized HTTP response (L7) for a specific dependency's cleartext HTTP calls — a status code, and optionally a custom body and headers — selected at L7 by Host header. Cleartext HTTP only; for HTTPS dependencies use 'Drop Connection' instead.",
+	label:       "Intercept HTTP Request",
+	description: "Intercept a specific dependency's cleartext HTTP requests and return a synthesized HTTP response (L7) — a status code, and optionally a custom body, headers and a delay — selected at L7 by Host header. Cleartext HTTP only; for HTTPS dependencies use 'Slow HTTP(s) Dependency' or the L7 mode of 'Reset TCP Connection'.",
 	extraParams: []action_kit_api.ActionParameter{
 		{
 			Name: "httpStatus", Label: "Response Status", Description: extutil.Ptr("HTTP status code to return (cleartext HTTP only)."),
@@ -78,6 +87,10 @@ var httpAbortFaultSpec = dependencyFaultSpec{
 		{
 			Name: "responseHeaders", Label: "Response Headers", Description: extutil.Ptr("Optional headers to return (e.g. Content-Type, Retry-After)."),
 			Type: action_kit_api.ActionParameterTypeKeyValue, Required: extutil.Ptr(false), Order: extutil.Ptr(5),
+		},
+		{
+			Name: "responseDelay", Label: "Response Delay", Description: extutil.Ptr("Optional delay before returning the synthesized response, to mimic a slow-then-failing dependency and produce more realistic fake responses."),
+			Type: action_kit_api.ActionParameterTypeDuration, DefaultValue: extutil.Ptr("0s"), Required: extutil.Ptr(false), Order: extutil.Ptr(6),
 		},
 	},
 	buildFault: func(cfg map[string]any) (proxyfault.Fault, error) {
@@ -93,15 +106,22 @@ var httpAbortFaultSpec = dependencyFaultSpec{
 			}
 			headers = h
 		}
-		return proxyfault.Fault{HTTPStatus: status, HTTPBody: extutil.ToString(cfg["responseBody"]), HTTPHeaders: headers}, nil
+		// Response Delay reuses the proxy's latency stage, which runs before the
+		// synthesized response is written — so the client waits, then gets the fake
+		// response.
+		delay := time.Duration(extutil.ToInt64(cfg["responseDelay"])) * time.Millisecond
+		return proxyfault.Fault{HTTPStatus: status, HTTPBody: extutil.ToString(cfg["responseBody"]), HTTPHeaders: headers, Latency: delay}, nil
 	},
 	cleartextHTTPOnly: true,
 }
 
+// resetFaultSpec is not registered as a standalone action: the L7 connection
+// reset is exposed through the "Reset TCP Connection" attack's L7 checkbox,
+// which drives a dependencyFaultAction built from this spec.
 var resetFaultSpec = dependencyFaultSpec{
 	id:          "network_dependency_reset",
-	label:       "Drop Connection",
-	description: "Reset (RST) connections to a specific dependency, selected at L7 by hostname (TLS SNI / HTTP Host). Works over HTTPS and for shared or rotating IPs — a hostname-targeted alternative to the packet-level Network attacks.",
+	label:       "Reset TCP Connection (L7)",
+	description: "Reset (RST) connections to a specific dependency, selected at L7 by hostname (TLS SNI / HTTP Host).",
 	buildFault: func(map[string]any) (proxyfault.Fault, error) {
 		return proxyfault.Fault{Reset: true}, nil
 	},
@@ -141,10 +161,6 @@ func NewNetworkHttpAbortDependencyAction(r ociruntime.OciRuntime, client types.C
 	return &dependencyFaultAction{ociRuntime: r, client: client, spec: httpAbortFaultSpec}
 }
 
-func NewNetworkResetDependencyAction(r ociruntime.OciRuntime, client types.Client) action_kit_sdk.Action[DependencyFaultState] {
-	return &dependencyFaultAction{ociRuntime: r, client: client, spec: resetFaultSpec}
-}
-
 func (a *dependencyFaultAction) NewEmptyState() DependencyFaultState {
 	return DependencyFaultState{}
 }
@@ -166,9 +182,20 @@ func (a *dependencyFaultAction) Describe() action_kit_api.ActionDescription {
 		Status: extutil.Ptr(action_kit_api.MutatingEndpointReferenceWithCallInterval{
 			CallInterval: extutil.Ptr("2s"),
 		}),
+		Widgets: extutil.Ptr([]action_kit_api.Widget{
+			action_kit_api.MarkdownWidget{
+				Type:        action_kit_api.ComSteadybitWidgetMarkdown,
+				Title:       "Dependency Fault Statistics",
+				MessageType: dependencyStatsMessageType,
+				Append:      false,
+			},
+		}),
 		Parameters: append(commonDependencyParameters(a.defaultPorts()), a.spec.extraParams...),
 	}
 }
+
+// dependencyStatsMessageType ties the Status messages to the Markdown widget.
+const dependencyStatsMessageType = "dependency_fault_stats_markdown"
 
 // defaultPorts is the default intercept-port list shown in the UI. Cleartext-only
 // faults (HTTP abort) drop 443, since HTTPS/TLS cannot be aborted.
@@ -190,7 +217,7 @@ func (a *dependencyFaultAction) Prepare(ctx context.Context, state *DependencyFa
 	// early with a clear message rather than silently passing 443 traffic through.
 	if a.spec.cleartextHTTPOnly && slices.Contains(opts.Ports, uint16(443)) {
 		return &action_kit_api.PrepareResult{Error: &action_kit_api.ActionKitError{
-			Title:  "'Fake Response' synthesizes an HTTP response, which works on cleartext HTTP only — port 443 (HTTPS/TLS) can't be modified without terminating TLS. Remove 443 from the ports, or use 'Drop Connection' or 'Slow Dependency' for HTTPS dependencies.",
+			Title:  "'Intercept HTTP Request' synthesizes an HTTP response, which works on cleartext HTTP only — port 443 (HTTPS/TLS) can't be modified without terminating TLS. Remove 443 from the ports, or use 'Slow HTTP(s) Dependency' or the L7 mode of 'Reset TCP Connection' for HTTPS dependencies.",
 			Status: extutil.Ptr(action_kit_api.Failed),
 		}}, nil
 	}
@@ -290,7 +317,49 @@ func (a *dependencyFaultAction) Status(ctx context.Context, state *DependencyFau
 		// completion, not an error.
 		return &action_kit_api.StatusResult{Completed: true}, nil
 	}
-	return &action_kit_api.StatusResult{Completed: false}, nil
+	return &action_kit_api.StatusResult{
+		Completed: false,
+		Messages:  dependencyStatsMessages(handle.proxy),
+	}, nil
+}
+
+// dependencyStatsMessages renders the proxy's latest metrics snapshot as the
+// Markdown-widget message. Returns nil (no update) until the first snapshot
+// arrives.
+func dependencyStatsMessages(proxy proxyfault.Proxy) *action_kit_api.Messages {
+	snap, ok := proxy.Metrics()
+	if !ok {
+		return nil
+	}
+	return extutil.Ptr(action_kit_api.Messages{{
+		Message:   formatDependencyStatsMarkdown(snap),
+		Timestamp: extutil.Ptr(time.Now()),
+		Type:      extutil.Ptr(dependencyStatsMessageType),
+	}})
+}
+
+func formatDependencyStatsMarkdown(s proxyfault.Snapshot) string {
+	var b strings.Builder
+	b.WriteString("### Interception\n")
+	fmt.Fprintf(&b, "- **Connections matched:** %d\n", s.ConnectionsMatched)
+	fmt.Fprintf(&b, "- **Faults applied:** %d\n", s.ConnectionsAborted+s.LatencyApplied+s.HTTPResponsesInjected)
+	b.WriteString("\n### What was done\n")
+	fmt.Fprintf(&b, "- **Latency applied:** %d\n", s.LatencyApplied)
+	fmt.Fprintf(&b, "- **HTTP responses injected:** %d\n", s.HTTPResponsesInjected)
+	fmt.Fprintf(&b, "- **Connections reset:** %d\n", s.ConnectionsAborted)
+	fmt.Fprintf(&b, "- **Forwarded untouched:** %d\n", s.ConnectionsProxied)
+	if len(s.PerHost) > 0 {
+		b.WriteString("\n### By dependency\n")
+		b.WriteString("| Hostname | Matched | Faulted |\n|---|---|---|\n")
+		for _, h := range s.SortedHosts() {
+			st := s.PerHost[h]
+			fmt.Fprintf(&b, "| %s | %d | %d |\n", h, st.Matched, st.Faulted)
+		}
+	}
+	if s.ConnectionsMatched == 0 {
+		b.WriteString("\n_No matching connections intercepted yet. If this stays at zero, check the hostname, ports, and that traffic actually flows through this network namespace._")
+	}
+	return b.String()
 }
 
 func (a *dependencyFaultAction) Stop(ctx context.Context, state *DependencyFaultState) (*action_kit_api.StopResult, error) {
@@ -397,16 +466,28 @@ func (a *dependencyFaultAction) parseOpts(request action_kit_api.PrepareActionRe
 
 	duration := time.Duration(extutil.ToInt64(cfg["duration"])) * time.Millisecond
 
+	// resetExisting (default true) resets warm connection pools on start so the
+	// fault bites immediately; NoFlush is its inverse. Specs without the parameter
+	// keep the default (flush on).
+	resetExisting := true
+	if cfg["resetExisting"] != nil {
+		resetExisting = extutil.ToBool(cfg["resetExisting"])
+	}
+
 	return proxyfault.Opts{
 		ExecutionId: request.ExecutionId.String()[24:],
 		// ProxyPort 0: the proxy binds an OS-chosen port and targets its own
 		// interception at that exact port, avoiding a pre-allocation race.
-		ProxyPort:    0,
-		MaxDuration:  duration + 30*time.Second, // deadman if Stop never arrives
-		IncludeCIDRs: includeCIDRs,
-		ExcludeCIDRs: excludeCIDRs,
-		Ports:        ports,
-		Fault:        fault,
+		ProxyPort:   0,
+		MaxDuration: duration + 30*time.Second, // deadman if Stop never arrives
+		// Emit metrics snapshots on stdout so Status can render live intercept
+		// statistics (matched/faulted per hostname).
+		MetricsStdoutInterval: 1 * time.Second,
+		NoFlush:               !resetExisting,
+		IncludeCIDRs:          includeCIDRs,
+		ExcludeCIDRs:          excludeCIDRs,
+		Ports:                 ports,
+		Fault:                 fault,
 	}, nil
 }
 
