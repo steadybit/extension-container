@@ -89,8 +89,8 @@ var httpAbortFaultSpec = dependencyFaultSpec{
 			Type: action_kit_api.ActionParameterTypeKeyValue, Required: extutil.Ptr(false), Order: extutil.Ptr(5),
 		},
 		{
-			Name: "responseDelay", Label: "Response Delay", Description: extutil.Ptr("Optional delay before returning the synthesized response, to mimic a slow-then-failing dependency and produce more realistic fake responses."),
-			Type: action_kit_api.ActionParameterTypeDuration, DefaultValue: extutil.Ptr("0s"), Required: extutil.Ptr(false), Order: extutil.Ptr(6),
+			Name: "responseDelay", Label: "Response Delay (ms)", Description: extutil.Ptr("Optional delay in milliseconds before returning the synthesized response, to mimic a slow-then-failing dependency and produce more realistic fake responses."),
+			Type: action_kit_api.ActionParameterTypeInteger, DefaultValue: extutil.Ptr("0"), Required: extutil.Ptr(false), Order: extutil.Ptr(6), MinValue: extutil.Ptr(0),
 		},
 	},
 	buildFault: func(cfg map[string]any) (proxyfault.Fault, error) {
