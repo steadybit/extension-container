@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/rs/zerolog/log"
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
@@ -161,12 +162,19 @@ func (a *networkTcpResetAction) Prepare(ctx context.Context, state *NetworkTcpRe
 	// The proxy requires an explicit port list; the shared 'port' param is a string
 	// array (empty = "all" in packet-level mode), so normalise it to the
 	// comma-separated string the dependency engine expects, defaulting to 80,443.
+	// Copy the config first — mutating the caller's request.Config in place would
+	// be a hidden side-effect on the shared map.
 	ports := extutil.ToStringArray(request.Config["port"])
 	if len(ports) == 0 {
 		ports = []string{"80", "443"}
 	}
-	request.Config["port"] = strings.Join(ports, ",")
-	return a.l7.Prepare(ctx, &state.Dependency, request)
+	l7Request := request
+	l7Request.Config = make(map[string]interface{}, len(request.Config)+1)
+	for k, v := range request.Config {
+		l7Request.Config[k] = v
+	}
+	l7Request.Config["port"] = strings.Join(ports, ",")
+	return a.l7.Prepare(ctx, &state.Dependency, l7Request)
 }
 
 func (a *networkTcpResetAction) Start(ctx context.Context, state *NetworkTcpResetState) (*action_kit_api.StartResult, error) {
@@ -180,9 +188,17 @@ func (a *networkTcpResetAction) Status(ctx context.Context, state *NetworkTcpRes
 	if state.L7 {
 		return a.l7.Status(ctx, &state.Dependency)
 	}
-	// Packet-level mode has no live status; the platform ends the step by its
-	// duration or an explicit Stop.
-	return &action_kit_api.StatusResult{Completed: false}, nil
+	// Packet-level mode has no live statistics; the platform ends the step by its
+	// duration or an explicit Stop. Emit a one-line note into the shared stats
+	// widget so it explains itself instead of rendering an empty panel.
+	return &action_kit_api.StatusResult{
+		Completed: false,
+		Messages: extutil.Ptr(action_kit_api.Messages{{
+			Message:   "Per-hostname statistics are collected only in L7 mode (enable **Reset at L7 by hostname**). Packet-level TCP reset does not report per-connection statistics.",
+			Timestamp: extutil.Ptr(time.Now()),
+			Type:      extutil.Ptr(dependencyStatsMessageType),
+		}}),
+	}, nil
 }
 
 func (a *networkTcpResetAction) Stop(ctx context.Context, state *NetworkTcpResetState) (*action_kit_api.StopResult, error) {

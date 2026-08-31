@@ -342,7 +342,7 @@ func formatDependencyStatsMarkdown(s proxyfault.Snapshot) string {
 	var b strings.Builder
 	b.WriteString("### Interception\n")
 	fmt.Fprintf(&b, "- **Connections matched:** %d\n", s.ConnectionsMatched)
-	fmt.Fprintf(&b, "- **Faults applied:** %d\n", s.ConnectionsAborted+s.LatencyApplied+s.HTTPResponsesInjected)
+	fmt.Fprintf(&b, "- **Connections faulted:** %d\n", s.ConnectionsFaulted)
 	b.WriteString("\n### What was done\n")
 	fmt.Fprintf(&b, "- **Latency applied:** %d\n", s.LatencyApplied)
 	fmt.Fprintf(&b, "- **HTTP responses injected:** %d\n", s.HTTPResponsesInjected)
