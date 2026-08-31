@@ -1,5 +1,16 @@
 # Changelog
 
+## v1.7.8
+
+- build(deps): bump github.com/steadybit/action-kit/go/action_kit_test
+- build(deps): bump github.com/steadybit/discovery-kit/go/discovery_kit_test
+- build(deps): bump github.com/stretchr/testify from 1.12.0 to 1.12.1
+- build(deps): bump golang from 1.26-trixie to 1.27-trixie
+- build(deps): bump k8s.io/client-go from 0.36.3 to 0.36.4
+- chore: bump runc to v1.5.1 and crun to 1.29.1 (#493)
+- fix(linuxpkg): add missing iptables/fallocate rpm deps, drop unused ps (#494)
+- fix: extract dns-inject straight to its arch-suffixed path (#495)
+
 ## v1.7.7
 
 - build(deps): bump github.com/stretchr/testify from 1.11.1 to 1.12.0
