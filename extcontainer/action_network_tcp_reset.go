@@ -67,7 +67,7 @@ func (a *networkTcpResetAction) NewEmptyState() NetworkTcpResetState {
 func (a *networkTcpResetAction) Describe() action_kit_api.ActionDescription {
 	return action_kit_api.ActionDescription{
 		Id:          fmt.Sprintf("%s.network_tcp_reset", BaseActionID),
-		Label:       "Reset TCP Connection",
+		Label:       "Reset TCP/HTTP(S) Connection",
 		Description: "Injects TCP resets for matching connections. By default this is a packet-level reset by IP/port (incoming and outgoing). Enable 'Reset at L7 by hostname' to instead reset connections to a named dependency selected by TLS SNI / HTTP Host — which also works over HTTPS and for shared/rotating IPs.",
 		Version:     extbuild.GetSemverVersionStringOrUnknown(),
 		Icon:        extutil.Ptr(tcpResetIcon),

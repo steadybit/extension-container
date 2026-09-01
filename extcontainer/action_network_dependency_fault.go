@@ -74,7 +74,7 @@ var latencyFaultSpec = dependencyFaultSpec{
 var httpAbortFaultSpec = dependencyFaultSpec{
 	id:          "network_dependency_http_response",
 	label:       "Intercept HTTP Request",
-	description: "Intercept a specific dependency's cleartext HTTP requests and return a synthesized HTTP response (L7) — a status code, and optionally a custom body, headers and a delay — selected at L7 by Host header. Cleartext HTTP only; for HTTPS dependencies use 'Slow HTTP(s) Dependency' or the L7 mode of 'Reset TCP Connection'.",
+	description: "Intercept a specific dependency's cleartext HTTP requests and return a synthesized HTTP response (L7) — a status code, and optionally a custom body, headers and a delay — selected at L7 by Host header. Cleartext HTTP only; for HTTPS dependencies use 'Slow HTTP(s) Dependency' or the L7 mode of 'Reset TCP/HTTP(S) Connection'.",
 	extraParams: []action_kit_api.ActionParameter{
 		{
 			Name: "httpStatus", Label: "Response Status", Description: extutil.Ptr("HTTP status code to return (cleartext HTTP only)."),
@@ -217,7 +217,7 @@ func (a *dependencyFaultAction) Prepare(ctx context.Context, state *DependencyFa
 	// early with a clear message rather than silently passing 443 traffic through.
 	if a.spec.cleartextHTTPOnly && slices.Contains(opts.Ports, uint16(443)) {
 		return &action_kit_api.PrepareResult{Error: &action_kit_api.ActionKitError{
-			Title:  "'Intercept HTTP Request' synthesizes an HTTP response, which works on cleartext HTTP only — port 443 (HTTPS/TLS) can't be modified without terminating TLS. Remove 443 from the ports, or use 'Slow HTTP(s) Dependency' or the L7 mode of 'Reset TCP Connection' for HTTPS dependencies.",
+			Title:  "'Intercept HTTP Request' synthesizes an HTTP response, which works on cleartext HTTP only — port 443 (HTTPS/TLS) can't be modified without terminating TLS. Remove 443 from the ports, or use 'Slow HTTP(s) Dependency' or the L7 mode of 'Reset TCP/HTTP(S) Connection' for HTTPS dependencies.",
 			Status: extutil.Ptr(action_kit_api.Failed),
 		}}, nil
 	}
