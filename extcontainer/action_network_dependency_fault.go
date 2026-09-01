@@ -57,8 +57,7 @@ var latencyFaultSpec = dependencyFaultSpec{
 		{
 			Name:  "resetExisting",
 			Label: "Reset existing connections",
-			Description: extutil.Ptr("Reset the target's already-open connections to the dependency when the attack starts, so pooled/keep-alive connections reconnect through the proxy and immediately experience the latency. " +
-				"Disable to affect only newly opened connections (existing connections keep their original, un-delayed path until they are closed)."),
+			Description: extutil.Ptr("Reset existing keep-alive/pooled connections at start so they reconnect through the proxy and feel the latency immediately. Off = only new connections are affected."),
 			Type: action_kit_api.ActionParameterTypeBoolean, DefaultValue: extutil.Ptr("true"), Required: extutil.Ptr(false), Order: extutil.Ptr(4),
 		},
 	},
