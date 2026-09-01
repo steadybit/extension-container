@@ -1045,7 +1045,7 @@ func testNetworkDependencyFault(t *testing.T, m *e2e.Minikube, e *e2e.Extension)
 	t.Run("intercept returns a synthesized status for cleartext HTTP", func(t *testing.T) {
 		config := map[string]any{
 			"duration": 60000, "hostname": []string{host},
-			"percentage": 100, "port": []string{"80"}, "httpStatus": 503,
+			"percentage": 100, "port": "80", "httpStatus": 503,
 		}
 		action, err := e.RunAction(fmt.Sprintf("%s.network_dependency_http_response", extcontainer.BaseActionID), target, config, &action_kit_api.ExecutionContext{})
 		require.NoError(t, err)
@@ -1064,7 +1064,7 @@ func testNetworkDependencyFault(t *testing.T, m *e2e.Minikube, e *e2e.Extension)
 	t.Run("slow dependency adds latency to the container's calls", func(t *testing.T) {
 		config := map[string]any{
 			"duration": 60000, "hostname": []string{host},
-			"percentage": 100, "port": []string{"443"}, "delay": 2000,
+			"percentage": 100, "port": "443", "delay": 2000,
 		}
 		action, err := e.RunAction(fmt.Sprintf("%s.network_dependency_latency", extcontainer.BaseActionID), target, config, &action_kit_api.ExecutionContext{})
 		require.NoError(t, err)
