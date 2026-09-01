@@ -104,6 +104,10 @@ func TestWithMinikube(t *testing.T) {
 			Test: testNetworkTcpReset,
 		},
 		{
+			Name: "network dependency faults (proxy: slow / intercept / L7 reset)",
+			Test: testNetworkDependencyFault,
+		},
+		{
 			Name: "network delay",
 			Test: testNetworkDelay,
 		},
@@ -1003,6 +1007,85 @@ func testNetworkTcpReset(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 
 		require.Equal(t, hostnameBefore, hostnameAfter, "must not alter the hostname")
 	}
+	requireAllSidecarsCleanedUp(t, m, e)
+}
+
+// testNetworkDependencyFault exercises the three transparent-proxy attacks on a
+// container. The proxy runs in the target container's own netns and hooks its
+// OUTPUT chain, so the container's own outbound traffic (nginx curl) is what gets
+// intercepted.
+func testNetworkDependencyFault(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
+	if m.Runtime == "cri-o" && m.Driver == "docker" {
+		t.Skip("Due to https://github.com/kubernetes/minikube/issues/16371 this test is skipped for cri-o")
+	}
+
+	nginx := e2e.Nginx{Minikube: m}
+	require.NoError(t, nginx.Deploy("nginx-dependency-fault"), "failed to create pod")
+	defer func() { _ = nginx.Delete() }()
+	target, err := nginx.Target()
+	require.NoError(t, err)
+
+	const host = "steadybit.com"
+
+	t.Run("L7 reset drops the container's connections to the dependency", func(t *testing.T) {
+		nginx.AssertCanReach(t, "https://"+host, true)
+		config := map[string]any{
+			"duration": 60000, "l7": true, "hostname": []string{host},
+			"percentage": 100, "port": []string{"443"},
+		}
+		action, err := e.RunAction(fmt.Sprintf("%s.network_tcp_reset", extcontainer.BaseActionID), target, config, &action_kit_api.ExecutionContext{})
+		require.NoError(t, err)
+		defer func() { _ = action.Cancel() }()
+
+		nginx.AssertCanReach(t, "https://"+host, false)
+		require.NoError(t, action.Cancel())
+		nginx.AssertCanReach(t, "https://"+host, true)
+	})
+
+	t.Run("intercept returns a synthesized status for cleartext HTTP", func(t *testing.T) {
+		config := map[string]any{
+			"duration": 60000, "hostname": []string{host},
+			"percentage": 100, "port": "80", "httpStatus": 503,
+		}
+		action, err := e.RunAction(fmt.Sprintf("%s.network_dependency_http_response", extcontainer.BaseActionID), target, config, &action_kit_api.ExecutionContext{})
+		require.NoError(t, err)
+		defer func() { _ = action.Cancel() }()
+
+		e2e.Retry(t, 10, 500*time.Millisecond, func(r *e2e.R) {
+			out, _ := m.PodExec(nginx.Pod, "nginx", "curl", "--max-time", "5", "-s", "-o", "/dev/null", "-w", "%{http_code}", "http://"+host)
+			if code := strings.TrimSpace(out); code != "503" {
+				r.Failed = true
+				_, _ = fmt.Fprintf(r.Log, "expected synthesized 503, got %q", code)
+			}
+		})
+		require.NoError(t, action.Cancel())
+	})
+
+	t.Run("slow dependency adds latency to the container's calls", func(t *testing.T) {
+		config := map[string]any{
+			"duration": 60000, "hostname": []string{host},
+			"percentage": 100, "port": "443", "delay": 2000,
+		}
+		action, err := e.RunAction(fmt.Sprintf("%s.network_dependency_latency", extcontainer.BaseActionID), target, config, &action_kit_api.ExecutionContext{})
+		require.NoError(t, err)
+		defer func() { _ = action.Cancel() }()
+
+		e2e.Retry(t, 10, 1*time.Second, func(r *e2e.R) {
+			out, err := m.PodExec(nginx.Pod, "nginx", "curl", "--max-time", "10", "-s", "-o", "/dev/null", "-w", "%{time_total}", "https://"+host)
+			if err != nil {
+				r.Failed = true
+				_, _ = fmt.Fprintf(r.Log, "request failed: %v", err)
+				return
+			}
+			secs, _ := strconv.ParseFloat(strings.TrimSpace(out), 64)
+			if secs < 1.5 {
+				r.Failed = true
+				_, _ = fmt.Fprintf(r.Log, "expected the 2s injected latency, but the call took only %.2fs", secs)
+			}
+		})
+		require.NoError(t, action.Cancel())
+	})
+
 	requireAllSidecarsCleanedUp(t, m, e)
 }
 
