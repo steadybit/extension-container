@@ -106,8 +106,8 @@ func tcpResetParameters() []action_kit_api.ActionParameter {
 		{
 			Name:  "l7",
 			Label: "Reset at L7 by hostname (SNI/Host)",
-			Description: extutil.Ptr("Off (default): reset connections at the packet level by IP/port, incoming and outgoing (iptables). " +
-				"On: reset connections to a dependency selected at L7 by TLS SNI / HTTP Host — targets a named dependency, works over HTTPS and for shared/rotating IPs, is outgoing only, supports a percentage, and reports per-hostname statistics."),
+			Description: extutil.Ptr("Off: packet-level reset by IP/port (iptables). " +
+				"On: reset a dependency selected by TLS SNI / HTTP Host — works over HTTPS and shared/rotating IPs."),
 			Type: action_kit_api.ActionParameterTypeBoolean, DefaultValue: extutil.Ptr("false"), Required: extutil.Ptr(false), Order: extutil.Ptr(1),
 		},
 		{
