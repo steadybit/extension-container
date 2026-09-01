@@ -6,10 +6,13 @@ package extcontainer
 import (
 	"context"
 	"fmt"
+	"net"
+
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
 	"github.com/steadybit/action-kit/go/action_kit_commons/network"
 	"github.com/steadybit/action-kit/go/action_kit_commons/network/netfault"
+	"github.com/steadybit/action-kit/go/action_kit_commons/network/proxyfault"
 	"github.com/steadybit/action-kit/go/action_kit_commons/ociruntime"
 	"github.com/steadybit/extension-container/extcontainer/container/types"
 	"github.com/steadybit/extension-kit/extconversion"
@@ -338,4 +341,151 @@ func (m mockedContainer) ImageName() string {
 
 func (m mockedContainer) Labels() map[string]string {
 	return m.labels
+}
+
+func Test_dependency_defaultPorts(t *testing.T) {
+	require.Equal(t, "80,443", (&dependencyFaultAction{spec: latencyFaultSpec}).defaultPorts())
+	require.Equal(t, "80,443", (&dependencyFaultAction{spec: resetFaultSpec}).defaultPorts())
+	// HTTP abort is cleartext-only, so 443 is dropped from the default.
+	require.Equal(t, "80", (&dependencyFaultAction{spec: httpAbortFaultSpec}).defaultPorts())
+
+	// The Describe()d port parameter default reflects it.
+	portDefault := func(a *dependencyFaultAction) string {
+		for _, p := range a.Describe().Parameters {
+			if p.Name == "port" {
+				return *p.DefaultValue
+			}
+		}
+		return ""
+	}
+	require.Equal(t, "80", portDefault(&dependencyFaultAction{spec: httpAbortFaultSpec}))
+	require.Equal(t, "80,443", portDefault(&dependencyFaultAction{spec: latencyFaultSpec}))
+}
+
+func mustCIDR(t *testing.T, s string) net.IPNet {
+	_, n, err := net.ParseCIDR(s)
+	require.NoError(t, err)
+	return *n
+}
+
+func Test_scopesOverlap(t *testing.T) {
+	all := []net.IPNet{mustCIDR(t, "0.0.0.0/0")}
+	ten := []net.IPNet{mustCIDR(t, "10.0.0.0/8")}
+	priv := []net.IPNet{mustCIDR(t, "192.168.0.0/16")}
+
+	require.True(t, portsOverlap([]uint16{80, 443}, []uint16{443}))
+	require.False(t, portsOverlap([]uint16{80}, []uint16{443}))
+	require.True(t, cidrsOverlap(all, ten))
+	require.True(t, cidrsOverlap(ten, all))
+	require.False(t, cidrsOverlap(ten, priv))
+
+	// Overlap requires BOTH ports and CIDRs to intersect.
+	require.True(t, scopesOverlap(proxyfault.Opts{IncludeCIDRs: all, Ports: []uint16{80, 443}}, all, []uint16{443}))
+	require.False(t, scopesOverlap(proxyfault.Opts{IncludeCIDRs: all, Ports: []uint16{80}}, all, []uint16{443}))   // ports disjoint
+	require.False(t, scopesOverlap(proxyfault.Opts{IncludeCIDRs: ten, Ports: []uint16{443}}, priv, []uint16{443})) // cidrs disjoint
+}
+
+func Test_reserveDependencyFaultHandle_conflict(t *testing.T) {
+	dependencyFaultHandlesLock.Lock()
+	dependencyFaultHandles = map[string]*proxyHandle{}
+	dependencyFaultHandlesLock.Unlock()
+	t.Cleanup(func() {
+		dependencyFaultHandlesLock.Lock()
+		dependencyFaultHandles = map[string]*proxyHandle{}
+		dependencyFaultHandlesLock.Unlock()
+	})
+
+	all := []net.IPNet{mustCIDR(t, "0.0.0.0/0")}
+	ns := func(inode uint64) ociruntime.LinuxProcessInfo {
+		return ociruntime.LinuxProcessInfo{Namespaces: []ociruntime.LinuxNamespace{{Type: specs.NetworkNamespace, Inode: inode}}}
+	}
+	optsFor := func(ports ...uint16) proxyfault.Opts {
+		return proxyfault.Opts{IncludeCIDRs: all, Ports: ports}
+	}
+	// Active fault: netns 100, ports 80+443.
+	storeDependencyFaultHandle("exec-A", &proxyHandle{proxy: fakeProxy{}, opts: optsFor(80, 443), sidecar: ns(100)})
+
+	// Same netns + overlapping ports => conflict with exec-A.
+	reserved, conflict := reserveDependencyFaultHandle("exec-B", ns(100), optsFor(443))
+	require.False(t, reserved)
+	require.Equal(t, "exec-A", conflict)
+
+	// Same netns, disjoint ports => reserved, no conflict.
+	reserved, conflict = reserveDependencyFaultHandle("exec-C", ns(100), optsFor(8080))
+	require.True(t, reserved)
+	require.Empty(t, conflict)
+
+	// A pending reservation (recorded scope, not yet filled) still conflicts —
+	// this is the TOCTOU the recorded-scope reservation closes.
+	reserved, conflict = reserveDependencyFaultHandle("exec-C2", ns(100), optsFor(8080))
+	require.False(t, reserved)
+	require.Equal(t, "exec-C", conflict)
+	removeDependencyFaultHandle("exec-C")
+
+	// Different netns => reserved, no conflict.
+	reserved, conflict = reserveDependencyFaultHandle("exec-D", ns(200), optsFor(443))
+	require.True(t, reserved)
+	require.Empty(t, conflict)
+	removeDependencyFaultHandle("exec-D")
+
+	// Same execution id => idempotent: not reserved, not a conflict.
+	reserved, conflict = reserveDependencyFaultHandle("exec-A", ns(100), optsFor(443))
+	require.False(t, reserved)
+	require.Empty(t, conflict)
+}
+
+// fakeProxy is a filled (non-reservation) handle marker for the conflict test.
+type fakeProxy struct{}
+
+func (fakeProxy) Start() error                         { return nil }
+func (fakeProxy) Stop() error                          { return nil }
+func (fakeProxy) Exited() (bool, error)                { return false, nil }
+func (fakeProxy) Metrics() (proxyfault.Snapshot, bool) { return proxyfault.Snapshot{}, false }
+
+func Test_percentageToProbability(t *testing.T) {
+	// 0% must map to never (0.0), not always — the whole point of the fix.
+	require.Equal(t, 0.0, percentageToProbability(0))
+	require.Equal(t, 0.0, percentageToProbability(int64(0)))
+	require.Equal(t, 1.0, percentageToProbability(100))
+	require.Equal(t, 0.5, percentageToProbability(50))
+	require.Equal(t, 0.25, percentageToProbability(25.0))
+	// Numeric strings parse (so an explicit "0" still means never).
+	require.Equal(t, 0.0, percentageToProbability("0"))
+	require.Equal(t, 0.5, percentageToProbability("50"))
+	// Out-of-range clamps; unparseable falls back to the 50% default (not "always").
+	require.Equal(t, 1.0, percentageToProbability(150))
+	require.Equal(t, 0.0, percentageToProbability(-10))
+	require.Equal(t, 0.5, percentageToProbability("nope"))
+}
+
+func Test_dependency_hostname_required_and_first(t *testing.T) {
+	for _, spec := range []dependencyFaultSpec{latencyFaultSpec, httpAbortFaultSpec, resetFaultSpec} {
+		var hostname *action_kit_api.ActionParameter
+		for i := range (&dependencyFaultAction{spec: spec}).Describe().Parameters {
+			p := (&dependencyFaultAction{spec: spec}).Describe().Parameters[i]
+			if p.Name == "hostname" {
+				hostname = &p
+			}
+		}
+		require.NotNil(t, hostname, "spec %s missing hostname param", spec.id)
+		require.True(t, *hostname.Required, "hostname must be required for %s", spec.id)
+		require.Equal(t, 0, *hostname.Order, "hostname must be first (order 0) for %s", spec.id)
+	}
+}
+
+func Test_httpAbort_Prepare_rejects_https_port(t *testing.T) {
+	a := &dependencyFaultAction{spec: httpAbortFaultSpec}
+
+	// 443 present -> user-facing error before any container lookup (so a nil
+	// runtime/client is never reached). httpStatus is required and always sent by
+	// the platform, so include it.
+	for _, ports := range []string{"443", "80,443"} {
+		res, err := a.Prepare(context.Background(), &DependencyFaultState{}, action_kit_api.PrepareActionRequestBody{
+			Config: map[string]interface{}{"port": ports, "httpStatus": 503, "percentage": 100},
+		})
+		require.NoError(t, err)
+		require.NotNil(t, res)
+		require.NotNil(t, res.Error, "ports %q should be rejected", ports)
+		require.Equal(t, action_kit_api.Failed, *res.Error.Status)
+	}
 }

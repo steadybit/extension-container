@@ -4,3 +4,4 @@ STEADYBIT_EXTENSION_UNIX_SOCKET=/run/steadybit/extension-container.sock
 STEADYBIT_EXTENSION_NSMOUNT_PATH=/opt/steadybit/extension-container/nsmount
 STEADYBIT_EXTENSION_MEMFILL_PATH=/opt/steadybit/extension-container/memfill
 STEADYBIT_EXTENSION_DNS_INJECT_PATH=/opt/steadybit/extension-container/dns-inject
+STEADYBIT_EXTENSION_TRANSPARENT_PROXY_PATH=/opt/steadybit/extension-container/transparent-proxy
