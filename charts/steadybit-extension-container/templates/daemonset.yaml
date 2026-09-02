@@ -105,6 +105,12 @@ spec:
                 fieldRef:
                   fieldPath: spec.nodeName
             {{- include "extensionlib.deployment.env" (list .) | nindent 12 }}
+            {{- if .Values.tlsIntercept.existingSecret }}
+            - name: STEADYBIT_EXTENSION_TLS_INTERCEPT_CA_CERT
+              value: /etc/steadybit/tls-intercept/{{ .Values.tlsIntercept.certKey }}
+            - name: STEADYBIT_EXTENSION_TLS_INTERCEPT_CA_KEY
+              value: /etc/steadybit/tls-intercept/{{ .Values.tlsIntercept.keyKey }}
+            {{- end }}
             {{- with .Values.extraEnv }}
               {{- toYaml . | nindent 12 }}
             {{- end }}
@@ -121,6 +127,11 @@ spec:
               mountPath: {{ include "containerEngine.socket" . | quote }}
             - name: "ociruntime-root"
               mountPath: {{ include "ociRuntime.get" (list . "root") | quote }}
+            {{- with .Values.tlsIntercept.existingSecret }}
+            - name: tls-intercept-ca
+              mountPath: /etc/steadybit/tls-intercept
+              readOnly: true
+            {{- end }}
             {{- include "extensionlib.deployment.volumeMounts" (list .) | nindent 12 }}
           livenessProbe:
             initialDelaySeconds: {{ .Values.probes.liveness.initialDelaySeconds }}
@@ -148,6 +159,16 @@ spec:
             {{- . | nindent 12 }}
             {{- end }}
       volumes:
+        {{- with .Values.tlsIntercept.existingSecret }}
+        - name: tls-intercept-ca
+          secret:
+            secretName: {{ . }}
+            # Readable by the extension's non-root user. Ownership of a Secret
+            # volume is root:root unless fsGroup is set, so a stricter mode makes
+            # the CA unreadable and interception silently unavailable. The Secret
+            # is mounted into this pod only.
+            defaultMode: 0444
+        {{- end }}
         - name: tmp-dir
           emptyDir: {}
         - name: cgroup-root

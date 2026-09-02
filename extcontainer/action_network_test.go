@@ -528,12 +528,15 @@ func Test_dependencyFault_tlsInterceptCA(t *testing.T) {
 	latency := &dependencyFaultAction{spec: latencyFaultSpec}
 
 	// Unconfigured: HTTPS is never decrypted.
-	require.Nil(t, httpAbort.tlsInterceptCA())
+	ca, err := httpAbort.tlsInterceptCA()
+	require.NoError(t, err)
+	require.Nil(t, ca)
 	require.Equal(t, "80", httpAbort.defaultPorts())
 
 	withInterceptCA(t)
 
-	ca := httpAbort.tlsInterceptCA()
+	ca, err = httpAbort.tlsInterceptCA()
+	require.NoError(t, err)
 	require.NotNil(t, ca)
 	require.Equal(t, "CERT-PEM", string(ca.CertPEM))
 	require.Equal(t, "KEY-PEM", string(ca.KeyPEM))
@@ -541,7 +544,9 @@ func Test_dependencyFault_tlsInterceptCA(t *testing.T) {
 	require.Equal(t, "80,443", httpAbort.defaultPorts())
 
 	// Latency already works over HTTPS at L4, so it never asks to decrypt.
-	require.Nil(t, latency.tlsInterceptCA())
+	lca, err := latency.tlsInterceptCA()
+	require.NoError(t, err)
+	require.Nil(t, lca)
 	require.Equal(t, "80,443", latency.defaultPorts())
 }
 
@@ -573,4 +578,22 @@ func Test_formatDependencyStatsMarkdown_rejected(t *testing.T) {
 	// Nothing rejected: no scary note.
 	md = formatDependencyStatsMarkdown(proxyfault.Snapshot{ConnectionsMatched: 1, ConnectionsFaulted: 1})
 	require.NotContains(t, md, "rejected the injected certificate")
+}
+
+// A CA that is configured but unreadable must fail loudly. Falling back to
+// "cleartext only" would let HTTPS flow untouched while the operator believes
+// it is being faulted — and would report a permissions problem as an
+// unsupported-protocol one.
+func Test_dependencyFault_tlsInterceptCA_unreadable(t *testing.T) {
+	prevCert, prevKey := config.Config.TLSInterceptCaCert, config.Config.TLSInterceptCaKey
+	t.Cleanup(func() {
+		config.Config.TLSInterceptCaCert, config.Config.TLSInterceptCaKey = prevCert, prevKey
+	})
+	config.Config.TLSInterceptCaCert = t.TempDir() + "/missing.crt"
+	config.Config.TLSInterceptCaKey = t.TempDir() + "/missing.key"
+
+	ca, err := (&dependencyFaultAction{spec: httpAbortFaultSpec}).tlsInterceptCA()
+	require.Error(t, err)
+	require.Nil(t, ca)
+	require.Contains(t, err.Error(), "cannot read the configured TLS interception CA")
 }

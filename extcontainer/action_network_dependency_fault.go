@@ -218,23 +218,25 @@ func (a *dependencyFaultAction) defaultPorts() string {
 // untouched. Only a cleartext-only fault (the synthesized HTTP response) has
 // anything to gain from decrypting; latency and reset already work on HTTPS at
 // L4, so they never ask for it.
-func (a *dependencyFaultAction) tlsInterceptCA() *proxyfault.TLSInterceptCA {
+//
+// A CA that is configured but unreadable is an error rather than a silent
+// downgrade: quietly falling back would let HTTPS traffic flow untouched while
+// the operator believes it is being faulted.
+func (a *dependencyFaultAction) tlsInterceptCA() (*proxyfault.TLSInterceptCA, error) {
 	if !a.spec.cleartextHTTPOnly || !config.Config.TLSInterceptEnabled() {
-		return nil
+		return nil, nil
 	}
 	// Read at attack time rather than cached at startup, so replacing the Secret
 	// takes effect on the next attack without restarting the extension.
 	certPEM, err := os.ReadFile(config.Config.TLSInterceptCaCert)
 	if err != nil {
-		log.Warn().Err(err).Msg("failed to read the TLS interception CA certificate; HTTPS will not be intercepted")
-		return nil
+		return nil, fmt.Errorf("cannot read the configured TLS interception CA certificate: %w", err)
 	}
 	keyPEM, err := os.ReadFile(config.Config.TLSInterceptCaKey)
 	if err != nil {
-		log.Warn().Err(err).Msg("failed to read the TLS interception CA key; HTTPS will not be intercepted")
-		return nil
+		return nil, fmt.Errorf("cannot read the configured TLS interception CA key: %w", err)
 	}
-	return &proxyfault.TLSInterceptCA{CertPEM: certPEM, KeyPEM: keyPEM}
+	return &proxyfault.TLSInterceptCA{CertPEM: certPEM, KeyPEM: keyPEM}, nil
 }
 
 // hint adapts the action-level hint to whether HTTPS interception is available,
@@ -258,7 +260,7 @@ func (a *dependencyFaultAction) Prepare(ctx context.Context, state *DependencyFa
 	// Cleartext-only faults (HTTP abort) cannot act on HTTPS: the proxy would have
 	// to terminate TLS to inject a status, which it deliberately does not do. Fail
 	// early with a clear message rather than silently passing 443 traffic through.
-	if a.spec.cleartextHTTPOnly && a.tlsInterceptCA() == nil && slices.Contains(opts.Ports, uint16(443)) {
+	if a.spec.cleartextHTTPOnly && !config.Config.TLSInterceptEnabled() && slices.Contains(opts.Ports, uint16(443)) {
 		return &action_kit_api.PrepareResult{Error: &action_kit_api.ActionKitError{
 			Title:  "'Intercept HTTP Request' synthesizes an HTTP response, which works on cleartext HTTP only — port 443 (HTTPS/TLS) can't be modified without terminating TLS. Remove 443 from the ports, or use 'Slow HTTP(s) Dependency' or the L7 mode of 'Reset TCP/HTTP(s) Connection' for HTTPS dependencies.",
 			Status: extutil.Ptr(action_kit_api.Failed),
@@ -513,6 +515,11 @@ func (a *dependencyFaultAction) parseOpts(request action_kit_api.PrepareActionRe
 	prob := percentageToProbability(cfg["percentage"])
 	fault.Probability = &prob
 
+	interceptCA, err := a.tlsInterceptCA()
+	if err != nil {
+		return proxyfault.Opts{}, err
+	}
+
 	duration := time.Duration(extutil.ToInt64(cfg["duration"])) * time.Millisecond
 
 	// resetExisting (default true) resets warm connection pools on start so the
@@ -538,7 +545,7 @@ func (a *dependencyFaultAction) parseOpts(request action_kit_api.PrepareActionRe
 		Ports:                 ports,
 		Fault:                 fault,
 		// nil unless a CA is configured, so HTTPS stays untouched by default.
-		TLSInterceptCA: a.tlsInterceptCA(),
+		TLSInterceptCA: interceptCA,
 	}, nil
 }
 
