@@ -117,7 +117,7 @@ var httpAbortFaultSpec = dependencyFaultSpec{
 	cleartextHTTPOnly: true,
 	hint: &action_kit_api.ActionHint{
 		Type:    action_kit_api.HintWarning,
-		Content: "Response status and body apply to **cleartext HTTP only** — HTTPS/TLS traffic is passed through unchanged.",
+		Content: "Response status and body apply to **cleartext HTTP only** — HTTPS (port 443) isn't supported.",
 	},
 }
 
