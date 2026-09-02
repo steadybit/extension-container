@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"os"
 
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
@@ -507,8 +508,16 @@ func Test_httpAbort_Prepare_rejects_https_port(t *testing.T) {
 func withInterceptCA(t *testing.T) {
 	t.Helper()
 	prevCert, prevKey := config.Config.TLSInterceptCaCert, config.Config.TLSInterceptCaKey
-	config.Config.TLSInterceptCaCert = "/etc/steadybit/ca.crt"
-	config.Config.TLSInterceptCaKey = "/etc/steadybit/ca.key"
+	dir := t.TempDir()
+	certPath, keyPath := dir+"/ca.crt", dir+"/ca.key"
+	if err := os.WriteFile(certPath, []byte("CERT-PEM"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(keyPath, []byte("KEY-PEM"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	config.Config.TLSInterceptCaCert = certPath
+	config.Config.TLSInterceptCaKey = keyPath
 	t.Cleanup(func() {
 		config.Config.TLSInterceptCaCert, config.Config.TLSInterceptCaKey = prevCert, prevKey
 	})
@@ -526,8 +535,8 @@ func Test_dependencyFault_tlsInterceptCA(t *testing.T) {
 
 	ca := httpAbort.tlsInterceptCA()
 	require.NotNil(t, ca)
-	require.Equal(t, "/etc/steadybit/ca.crt", ca.CertPath)
-	require.Equal(t, "/etc/steadybit/ca.key", ca.KeyPath)
+	require.Equal(t, "CERT-PEM", string(ca.CertPEM))
+	require.Equal(t, "KEY-PEM", string(ca.KeyPEM))
 	// 443 becomes a sensible default once the proxy can terminate it.
 	require.Equal(t, "80,443", httpAbort.defaultPorts())
 

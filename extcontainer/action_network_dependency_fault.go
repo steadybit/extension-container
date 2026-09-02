@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"os"
 	"slices"
 	"strconv"
 	"strings"
@@ -221,10 +222,19 @@ func (a *dependencyFaultAction) tlsInterceptCA() *proxyfault.TLSInterceptCA {
 	if !a.spec.cleartextHTTPOnly || !config.Config.TLSInterceptEnabled() {
 		return nil
 	}
-	return &proxyfault.TLSInterceptCA{
-		CertPath: config.Config.TLSInterceptCaCert,
-		KeyPath:  config.Config.TLSInterceptCaKey,
+	// Read at attack time rather than cached at startup, so replacing the Secret
+	// takes effect on the next attack without restarting the extension.
+	certPEM, err := os.ReadFile(config.Config.TLSInterceptCaCert)
+	if err != nil {
+		log.Warn().Err(err).Msg("failed to read the TLS interception CA certificate; HTTPS will not be intercepted")
+		return nil
 	}
+	keyPEM, err := os.ReadFile(config.Config.TLSInterceptCaKey)
+	if err != nil {
+		log.Warn().Err(err).Msg("failed to read the TLS interception CA key; HTTPS will not be intercepted")
+		return nil
+	}
+	return &proxyfault.TLSInterceptCA{CertPEM: certPEM, KeyPEM: keyPEM}
 }
 
 // hint adapts the action-level hint to whether HTTPS interception is available,
