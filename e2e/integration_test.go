@@ -6,8 +6,15 @@ package e2e
 import (
 	"bytes"
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/pem"
 	"fmt"
 	"math"
+	"math/big"
 	"net"
 	"os"
 	"os/exec"
@@ -42,10 +49,16 @@ func TestWithMinikube(t *testing.T) {
 		Name: "extension-container",
 		Port: 8086,
 		ExtraArgs: func(m *e2e.Minikube) []string {
+			// Published before install so the chart can mount it; this is what
+			// enables the HTTPS path of 'Intercept HTTP Request'.
+			if err := createInterceptCASecret(m); err != nil {
+				panic(fmt.Sprintf("failed to create the interception CA secret: %s", err))
+			}
 			args := []string{
 				"--set", fmt.Sprintf("container.engine=%s", m.Runtime),
 				"--set", "logging.level=debug",
 				"--set", "discovery.attributes.excludes={container.label.*}",
+				"--set", "tlsIntercept.existingSecret=" + tlsInterceptSecretName,
 			}
 			//on cri-o runtimes, we need to set the ociRuntime to crun for minikube > 1.38
 			if m.Runtime == "cri-o" {
@@ -106,6 +119,10 @@ func TestWithMinikube(t *testing.T) {
 		{
 			Name: "network dependency faults (proxy: slow / intercept / L7 reset)",
 			Test: testNetworkDependencyFault,
+		},
+		{
+			Name: "network dependency fault over HTTPS (proxy: TLS interception)",
+			Test: testNetworkDependencyFaultHTTPS,
 		},
 		{
 			Name: "network delay",
@@ -2373,4 +2390,144 @@ func getCIDRsFor(s string, maskLen int) (cidrs []string) {
 		cidrs = append(cidrs, cidr.String())
 	}
 	return
+}
+
+// --- HTTPS response injection ---
+
+const tlsInterceptSecretName = "e2e-intercept-ca"
+
+// interceptCA is generated once per run and shared by the extension (which
+// signs with it) and the target container (which is asked to trust it).
+var interceptCA struct {
+	certPEM []byte
+	keyPEM  []byte
+}
+
+func init() {
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		panic(err)
+	}
+	tmpl := &x509.Certificate{
+		SerialNumber:          big.NewInt(1),
+		Subject:               pkix.Name{CommonName: "Steadybit E2E Intercept CA"},
+		NotBefore:             time.Now().Add(-time.Hour),
+		NotAfter:              time.Now().Add(24 * time.Hour),
+		IsCA:                  true,
+		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
+		BasicConstraintsValid: true,
+	}
+	der, err := x509.CreateCertificate(rand.Reader, tmpl, tmpl, key.Public(), key)
+	if err != nil {
+		panic(err)
+	}
+	keyDER, err := x509.MarshalECPrivateKey(key)
+	if err != nil {
+		panic(err)
+	}
+	interceptCA.certPEM = pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der})
+	interceptCA.keyPEM = pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: keyDER})
+}
+
+// createInterceptCASecret publishes the CA before the extension is installed,
+// so the chart can mount it. Idempotent across repeated local runs.
+func createInterceptCASecret(m *e2e.Minikube) error {
+	client := m.GetClient()
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	_ = client.CoreV1().Secrets("default").Delete(ctx, tlsInterceptSecretName, metav1.DeleteOptions{})
+	_, err := client.CoreV1().Secrets("default").Create(ctx, &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Name: tlsInterceptSecretName, Namespace: "default"},
+		Data:       map[string][]byte{"ca.crt": interceptCA.certPEM, "ca.key": interceptCA.keyPEM},
+	}, metav1.CreateOptions{})
+	return err
+}
+
+// testNetworkDependencyFaultHTTPS covers the opt-in HTTPS path: with a CA the
+// proxy terminates a matched TLS connection and answers it itself.
+//
+// The assertions are deliberately three-sided, because "the client got a 503"
+// alone would not prove interception is working as designed:
+//   - a client trusting the CA receives the synthesized status;
+//   - a client that does not trust it fails, rather than silently reaching the
+//     real dependency;
+//   - both recover once the attack stops.
+func testNetworkDependencyFaultHTTPS(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
+	if m.Runtime == "cri-o" && m.Driver == "docker" {
+		t.Skip("Due to https://github.com/kubernetes/minikube/issues/16371 this test is skipped for cri-o")
+	}
+
+	nginx := e2e.Nginx{Minikube: m}
+	require.NoError(t, nginx.Deploy("nginx-dependency-tls"), "failed to create pod")
+	defer func() { _ = nginx.Delete() }()
+	target, err := nginx.Target()
+	require.NoError(t, err)
+
+	const host = "steadybit.com"
+
+	// Hand the CA to the target so it can opt into trusting the interception,
+	// the way a customer installs it into a workload's truststore.
+	_, err = m.PodExec(nginx.Pod, "nginx", "sh", "-c",
+		fmt.Sprintf("cat > /tmp/intercept-ca.crt <<'PEMEOF'\n%s\nPEMEOF", string(interceptCA.certPEM)))
+	require.NoError(t, err, "failed to place the CA in the target")
+
+	// curl with --cacert trusts ONLY our CA, so it is the "workload that trusts
+	// the interception"; plain curl uses the system store and stands in for one
+	// that does not.
+	curlTrusting := func() string {
+		out, _ := m.PodExec(nginx.Pod, "nginx", "curl", "--max-time", "10", "-s", "-o", "/dev/null",
+			"-w", "%{http_code}", "--cacert", "/tmp/intercept-ca.crt", "https://"+host)
+		return strings.TrimSpace(out)
+	}
+	curlSystemTrust := func() string {
+		out, _ := m.PodExec(nginx.Pod, "nginx", "curl", "--max-time", "10", "-s", "-o", "/dev/null",
+			"-w", "%{http_code}", "https://"+host)
+		return strings.TrimSpace(out)
+	}
+
+	// Baseline: the real dependency answers, and our CA is not involved.
+	e2e.Retry(t, 8, 500*time.Millisecond, func(r *e2e.R) {
+		if code := curlSystemTrust(); code == "000" || code == "" {
+			r.Failed = true
+			_, _ = fmt.Fprintf(r.Log, "dependency unreachable before the attack (got %q)", code)
+		}
+	})
+
+	config := map[string]any{
+		"duration": 60000, "hostname": []string{host},
+		"percentage": 100, "port": "443", "httpStatus": 503,
+		"responseBody": "e2e-injected",
+	}
+	action, err := e.RunAction(fmt.Sprintf("%s.network_dependency_http_response", extcontainer.BaseActionID), target, config, &action_kit_api.ExecutionContext{})
+	require.NoError(t, err)
+	defer func() { _ = action.Cancel() }()
+
+	// A workload trusting the CA gets the synthesized status over HTTPS — the
+	// capability this whole path exists for.
+	e2e.Retry(t, 15, 1*time.Second, func(r *e2e.R) {
+		if code := curlTrusting(); code != "503" {
+			r.Failed = true
+			_, _ = fmt.Fprintf(r.Log, "expected a synthesized 503 over HTTPS, got %q", code)
+		}
+	})
+
+	// A workload that does not trust the CA must fail closed. If this returned
+	// 200 the connection would have reached the real dependency, meaning the
+	// attack silently did nothing.
+	e2e.Retry(t, 15, 1*time.Second, func(r *e2e.R) {
+		if code := curlSystemTrust(); code != "000" {
+			r.Failed = true
+			_, _ = fmt.Fprintf(r.Log, "a client not trusting the CA should fail the handshake, got %q", code)
+		}
+	})
+
+	require.NoError(t, action.Cancel())
+
+	// Teardown restores the real dependency for both clients.
+	e2e.Retry(t, 15, 1*time.Second, func(r *e2e.R) {
+		if code := curlSystemTrust(); code == "000" || code == "" {
+			r.Failed = true
+			_, _ = fmt.Fprintf(r.Log, "dependency still unreachable after cancel (got %q)", code)
+		}
+	})
 }
