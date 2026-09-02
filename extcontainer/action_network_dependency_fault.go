@@ -117,7 +117,7 @@ var httpAbortFaultSpec = dependencyFaultSpec{
 	cleartextHTTPOnly: true,
 	hint: &action_kit_api.ActionHint{
 		Type:    action_kit_api.HintWarning,
-		Content: "The synthesized **response status and body apply to cleartext HTTP requests only**. HTTPS/TLS traffic can't be rewritten without terminating TLS, so port 443 is excluded — for HTTPS dependencies use **Slow HTTP(s) Dependency** or the L7 mode of **Reset TCP/HTTP(s) Connection**.",
+		Content: "Response status and body apply to **cleartext HTTP only** — HTTPS/TLS traffic is passed through unchanged.",
 	},
 }
 
