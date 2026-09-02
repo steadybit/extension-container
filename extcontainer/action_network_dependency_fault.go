@@ -58,10 +58,10 @@ var latencyFaultSpec = dependencyFaultSpec{
 			Type: action_kit_api.ActionParameterTypeDuration, DefaultValue: extutil.Ptr("500ms"), Required: extutil.Ptr(true), Order: extutil.Ptr(3),
 		},
 		{
-			Name:  "resetExisting",
-			Label: "Reset existing connections",
+			Name:        "resetExisting",
+			Label:       "Reset existing connections",
 			Description: extutil.Ptr("Reset existing keep-alive/pooled connections at start so they reconnect through the proxy and feel the latency immediately. Off = only new connections are affected."),
-			Type: action_kit_api.ActionParameterTypeBoolean, DefaultValue: extutil.Ptr("true"), Required: extutil.Ptr(false), Order: extutil.Ptr(4),
+			Type:        action_kit_api.ActionParameterTypeBoolean, DefaultValue: extutil.Ptr("true"), Required: extutil.Ptr(false), Order: extutil.Ptr(4),
 		},
 	},
 	buildFault: func(cfg map[string]any) (proxyfault.Fault, error) {
@@ -176,7 +176,7 @@ func (a *dependencyFaultAction) Describe() action_kit_api.ActionDescription {
 		Id:          fmt.Sprintf("%s.%s", BaseActionID, a.spec.id),
 		Label:       a.spec.label,
 		Description: a.spec.description,
-		Hint:        a.spec.hint,
+		Hint:        a.hint(),
 		Version:     extbuild.GetSemverVersionStringOrUnknown(),
 		TargetSelection: &action_kit_api.TargetSelection{
 			TargetType:         targetID,
@@ -207,10 +207,36 @@ const dependencyStatsMessageType = "dependency_fault_stats_markdown"
 // defaultPorts is the default intercept-port list shown in the UI. Cleartext-only
 // faults (HTTP abort) drop 443, since HTTPS/TLS cannot be aborted.
 func (a *dependencyFaultAction) defaultPorts() string {
-	if a.spec.cleartextHTTPOnly {
+	if a.spec.cleartextHTTPOnly && !config.Config.TLSInterceptEnabled() {
 		return "80"
 	}
 	return "80,443"
+}
+
+// tlsInterceptCA returns the CA to hand the proxy, or nil to leave HTTPS
+// untouched. Only a cleartext-only fault (the synthesized HTTP response) has
+// anything to gain from decrypting; latency and reset already work on HTTPS at
+// L4, so they never ask for it.
+func (a *dependencyFaultAction) tlsInterceptCA() *proxyfault.TLSInterceptCA {
+	if !a.spec.cleartextHTTPOnly || !config.Config.TLSInterceptEnabled() {
+		return nil
+	}
+	return &proxyfault.TLSInterceptCA{
+		CertPath: config.Config.TLSInterceptCaCert,
+		KeyPath:  config.Config.TLSInterceptCaKey,
+	}
+}
+
+// hint adapts the action-level hint to whether HTTPS interception is available,
+// so the UI never warns about a limitation that no longer applies.
+func (a *dependencyFaultAction) hint() *action_kit_api.ActionHint {
+	if a.spec.cleartextHTTPOnly && config.Config.TLSInterceptEnabled() {
+		return &action_kit_api.ActionHint{
+			Type:    action_kit_api.HintInfo,
+			Content: "HTTPS interception is enabled — the target's workloads must trust the configured CA, or their connections fail instead of receiving the response.",
+		}
+	}
+	return a.spec.hint
 }
 
 func (a *dependencyFaultAction) Prepare(ctx context.Context, state *DependencyFaultState, request action_kit_api.PrepareActionRequestBody) (*action_kit_api.PrepareResult, error) {
@@ -222,7 +248,7 @@ func (a *dependencyFaultAction) Prepare(ctx context.Context, state *DependencyFa
 	// Cleartext-only faults (HTTP abort) cannot act on HTTPS: the proxy would have
 	// to terminate TLS to inject a status, which it deliberately does not do. Fail
 	// early with a clear message rather than silently passing 443 traffic through.
-	if a.spec.cleartextHTTPOnly && slices.Contains(opts.Ports, uint16(443)) {
+	if a.spec.cleartextHTTPOnly && a.tlsInterceptCA() == nil && slices.Contains(opts.Ports, uint16(443)) {
 		return &action_kit_api.PrepareResult{Error: &action_kit_api.ActionKitError{
 			Title:  "'Intercept HTTP Request' synthesizes an HTTP response, which works on cleartext HTTP only — port 443 (HTTPS/TLS) can't be modified without terminating TLS. Remove 443 from the ports, or use 'Slow HTTP(s) Dependency' or the L7 mode of 'Reset TCP/HTTP(s) Connection' for HTTPS dependencies.",
 			Status: extutil.Ptr(action_kit_api.Failed),
@@ -363,6 +389,12 @@ func formatDependencyStatsMarkdown(s proxyfault.Snapshot) string {
 			fmt.Fprintf(&b, "| %s | %d | %d |\n", h, st.Matched, st.Faulted)
 		}
 	}
+	// A rejection means the client refused the certificate we minted for it, so
+	// the fault never applied. Surfacing it here is the difference between the
+	// operator seeing "the CA isn't trusted" and seeing an unexplained no-op.
+	if s.TLSInterceptRejected > 0 {
+		fmt.Fprintf(&b, "\n_**%d HTTPS connection(s) rejected the injected certificate.** The target's workload must trust the configured CA — and it usually reads its truststore at startup, so it may need restarting after the CA was installed. Certificate pinning and mutual TLS cannot be intercepted._\n", s.TLSInterceptRejected)
+	}
 	if s.ConnectionsMatched == 0 {
 		b.WriteString("\n_No matching connections intercepted yet. If this stays at zero, check the hostname, ports, and that traffic actually flows through this network namespace._")
 	}
@@ -495,6 +527,8 @@ func (a *dependencyFaultAction) parseOpts(request action_kit_api.PrepareActionRe
 		ExcludeCIDRs:          excludeCIDRs,
 		Ports:                 ports,
 		Fault:                 fault,
+		// nil unless a CA is configured, so HTTPS stays untouched by default.
+		TLSInterceptCA: a.tlsInterceptCA(),
 	}, nil
 }
 

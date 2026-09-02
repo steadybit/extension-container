@@ -14,6 +14,7 @@ import (
 	"github.com/steadybit/action-kit/go/action_kit_commons/network/netfault"
 	"github.com/steadybit/action-kit/go/action_kit_commons/network/proxyfault"
 	"github.com/steadybit/action-kit/go/action_kit_commons/ociruntime"
+	"github.com/steadybit/extension-container/config"
 	"github.com/steadybit/extension-container/extcontainer/container/types"
 	"github.com/steadybit/extension-kit/extconversion"
 	"github.com/stretchr/testify/mock"
@@ -500,4 +501,67 @@ func Test_httpAbort_Prepare_rejects_https_port(t *testing.T) {
 		require.NotNil(t, res.Error, "ports %q should be rejected", ports)
 		require.Equal(t, action_kit_api.Failed, *res.Error.Status)
 	}
+}
+
+// withInterceptCA points the global config at a CA for the duration of a test.
+func withInterceptCA(t *testing.T) {
+	t.Helper()
+	prevCert, prevKey := config.Config.TLSInterceptCaCert, config.Config.TLSInterceptCaKey
+	config.Config.TLSInterceptCaCert = "/etc/steadybit/ca.crt"
+	config.Config.TLSInterceptCaKey = "/etc/steadybit/ca.key"
+	t.Cleanup(func() {
+		config.Config.TLSInterceptCaCert, config.Config.TLSInterceptCaKey = prevCert, prevKey
+	})
+}
+
+func Test_dependencyFault_tlsInterceptCA(t *testing.T) {
+	httpAbort := &dependencyFaultAction{spec: httpAbortFaultSpec}
+	latency := &dependencyFaultAction{spec: latencyFaultSpec}
+
+	// Unconfigured: HTTPS is never decrypted.
+	require.Nil(t, httpAbort.tlsInterceptCA())
+	require.Equal(t, "80", httpAbort.defaultPorts())
+
+	withInterceptCA(t)
+
+	ca := httpAbort.tlsInterceptCA()
+	require.NotNil(t, ca)
+	require.Equal(t, "/etc/steadybit/ca.crt", ca.CertPath)
+	require.Equal(t, "/etc/steadybit/ca.key", ca.KeyPath)
+	// 443 becomes a sensible default once the proxy can terminate it.
+	require.Equal(t, "80,443", httpAbort.defaultPorts())
+
+	// Latency already works over HTTPS at L4, so it never asks to decrypt.
+	require.Nil(t, latency.tlsInterceptCA())
+	require.Equal(t, "80,443", latency.defaultPorts())
+}
+
+func Test_dependencyFault_hint_withInterceptCA(t *testing.T) {
+	withInterceptCA(t)
+
+	// The cleartext-only warning would now be wrong, so it is replaced by the
+	// constraint that actually applies: the target must trust the CA.
+	hint := (&dependencyFaultAction{spec: httpAbortFaultSpec}).hint()
+	require.NotNil(t, hint)
+	require.Equal(t, action_kit_api.HintInfo, hint.Type)
+	require.Contains(t, hint.Content, "trust the configured CA")
+	require.NotContains(t, hint.Content, "cleartext HTTP only")
+
+	require.Nil(t, (&dependencyFaultAction{spec: latencyFaultSpec}).hint())
+}
+
+func Test_formatDependencyStatsMarkdown_rejected(t *testing.T) {
+	// A rejection is the "CA isn't trusted" diagnosis; without it the operator
+	// only sees connections that matched but were never faulted.
+	md := formatDependencyStatsMarkdown(proxyfault.Snapshot{
+		ConnectionsMatched:   2,
+		ConnectionsFaulted:   0,
+		TLSInterceptRejected: 2,
+	})
+	require.Contains(t, md, "rejected the injected certificate")
+	require.Contains(t, md, "trust the configured CA")
+
+	// Nothing rejected: no scary note.
+	md = formatDependencyStatsMarkdown(proxyfault.Snapshot{ConnectionsMatched: 1, ConnectionsFaulted: 1})
+	require.NotContains(t, md, "rejected the injected certificate")
 }

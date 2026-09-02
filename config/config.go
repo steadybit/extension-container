@@ -35,6 +35,23 @@ type Specification struct {
 	//     preserved instead of being reset to kernel defaults.
 	// STEADYBIT_EXTENSION_NETWORK_STRICT_ROOT_QDISC
 	NetworkStrictRootQdisc bool `json:"networkStrictRootQdisc" split_words:"true" required:"false" default:"true"`
+	// TLSInterceptCaCert / TLSInterceptCaKey point at a PEM certificate authority
+	// used by 'Intercept HTTP Request' to mint per-hostname certificates, which is
+	// what lets it return a synthesized response for an HTTPS dependency instead
+	// of cleartext HTTP only. Unset (the default) leaves HTTPS untouched.
+	//
+	// The CA is the customer's: they generate it, choose its validity, and install
+	// it in the truststores of the workloads they want to fault. Because it can
+	// impersonate any HTTPS endpoint to anything trusting it, mount it from a
+	// Secret and keep this to test environments.
+	// STEADYBIT_EXTENSION_TLS_INTERCEPT_CA_CERT / _KEY
+	TLSInterceptCaCert string `json:"tlsInterceptCaCert" envconfig:"TLS_INTERCEPT_CA_CERT" required:"false"`
+	TLSInterceptCaKey  string `json:"tlsInterceptCaKey" envconfig:"TLS_INTERCEPT_CA_KEY" required:"false"`
+}
+
+// TLSInterceptEnabled reports whether HTTPS response injection is configured.
+func (s Specification) TLSInterceptEnabled() bool {
+	return s.TLSInterceptCaCert != "" && s.TLSInterceptCaKey != ""
 }
 
 var (
@@ -77,6 +94,11 @@ func parseArgs(cfg *Specification) error {
 }
 
 func ValidateConfiguration() {
+	// Half a CA is never usable, and the resulting failure (every interception
+	// handshake failing) is far harder to diagnose than refusing to start.
+	if (Config.TLSInterceptCaCert == "") != (Config.TLSInterceptCaKey == "") {
+		log.Fatal().Msg("STEADYBIT_EXTENSION_TLS_INTERCEPT_CA_CERT and STEADYBIT_EXTENSION_TLS_INTERCEPT_CA_KEY must be set together")
+	}
 	if Config.DisableDiscoveryExcludes {
 		log.Info().Msg("Discovery excludes are disabled. Will also discover containers labeled with steadybit.com/discovery-disabled.")
 	}
