@@ -43,6 +43,9 @@ type dependencyFaultSpec struct {
 	// makes Prepare reject an explicit 443, since HTTPS/TLS cannot be aborted
 	// without terminating TLS.
 	cleartextHTTPOnly bool
+	// hint, when set, is rendered as an action-level hint in the UI (spanning all
+	// parameters) — e.g. warning that the synthesized status/body is HTTP-only.
+	hint *action_kit_api.ActionHint
 }
 
 var latencyFaultSpec = dependencyFaultSpec{
@@ -112,6 +115,10 @@ var httpAbortFaultSpec = dependencyFaultSpec{
 		return proxyfault.Fault{HTTPStatus: status, HTTPBody: extutil.ToString(cfg["responseBody"]), HTTPHeaders: headers, Latency: delay}, nil
 	},
 	cleartextHTTPOnly: true,
+	hint: &action_kit_api.ActionHint{
+		Type:    action_kit_api.HintWarning,
+		Content: "Response status and body apply to **cleartext HTTP only** — HTTPS (port 443) isn't supported.",
+	},
 }
 
 // resetFaultSpec is not registered as a standalone action: the L7 connection
@@ -169,6 +176,7 @@ func (a *dependencyFaultAction) Describe() action_kit_api.ActionDescription {
 		Id:          fmt.Sprintf("%s.%s", BaseActionID, a.spec.id),
 		Label:       a.spec.label,
 		Description: a.spec.description,
+		Hint:        a.spec.hint,
 		Version:     extbuild.GetSemverVersionStringOrUnknown(),
 		TargetSelection: &action_kit_api.TargetSelection{
 			TargetType:         targetID,

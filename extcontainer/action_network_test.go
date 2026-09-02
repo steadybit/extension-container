@@ -362,6 +362,18 @@ func Test_dependency_defaultPorts(t *testing.T) {
 	require.Equal(t, "80,443", portDefault(&dependencyFaultAction{spec: latencyFaultSpec}))
 }
 
+func Test_dependencyFault_hint(t *testing.T) {
+	// The HTTP-abort action carries an action-level (global) hint warning that the
+	// synthesized status/body applies to cleartext HTTP only.
+	httpAbort := (&dependencyFaultAction{spec: httpAbortFaultSpec}).Describe()
+	require.NotNil(t, httpAbort.Hint)
+	require.Equal(t, action_kit_api.HintWarning, httpAbort.Hint.Type)
+	require.Contains(t, httpAbort.Hint.Content, "cleartext HTTP")
+
+	// The latency action has no such restriction, so it carries no hint.
+	require.Nil(t, (&dependencyFaultAction{spec: latencyFaultSpec}).Describe().Hint)
+}
+
 func mustCIDR(t *testing.T, s string) net.IPNet {
 	_, n, err := net.ParseCIDR(s)
 	require.NoError(t, err)
