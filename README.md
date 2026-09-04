@@ -23,6 +23,8 @@ our [Reliability Hub](https://hub.steadybit.com/extension/com.steadybit.extensio
 | `STEADYBIT_EXTENSION_DISABLE_DISCOVERY_EXCLUDES`    | `discovery.disableExcludes`                                  | Ignore discovery excludes specified by `steadybit.com/discovery-disabled`                                                  | false    | `false` |
 | `STEADYBIT_EXTENSION_DISCOVERY_ATTRIBUTES_EXCLUDES` | `discovery.attributes.excludes`                              | List of Target Attributes which will be excluded during discovery. Checked by key equality and supporting trailing "*"     | false    |         |
 | `STEADYBIT_EXTENSION_HOSTNAME`                      |                                                              | Optional hostname for the targets to be reported. If not given will be read from the UTS namespace of the init process     | false    |         |
+| `STEADYBIT_EXTENSION_TLS_INTERCEPT_CA_CERT`         | `tlsIntercept.existingSecret`                                | PEM CA certificate enabling 'Intercept HTTP Request' to synthesize responses for **HTTPS** dependencies. Test environments only — see below. | yes      |         |
+| `STEADYBIT_EXTENSION_TLS_INTERCEPT_CA_KEY`          | `tlsIntercept.existingSecret`                                | PEM private key matching the CA certificate.                                                                              | yes      |         |
 
 Beyond the settings above, this extension supports the configuration common to all Steadybit
 extensions:
@@ -198,3 +200,28 @@ The version and revision of the extension:
 - are printed during the startup of the extension
 - are added as a Docker label to the image
 - are available via the `version.txt`/`revision.txt` files in the root of the image
+
+
+## HTTPS response injection (opt-in)
+
+`Intercept HTTP Request` normally synthesizes a response for **cleartext HTTP**
+only. Supplying a certificate authority lets it do the same for an **HTTPS**
+dependency: the proxy terminates the matched TLS connection with a certificate
+it mints for that hostname, and answers the request itself. The real dependency
+is never contacted.
+
+```bash
+kubectl -n <ns> create secret generic intercept-ca \
+  --from-file=ca.crt=ca.crt --from-file=ca.key=ca.key
+
+helm upgrade ... --set tlsIntercept.existingSecret=intercept-ca
+```
+
+**The CA is yours.** You generate it, choose how long it lives, and install it in
+the truststores of the workloads you want to fault — a workload that does not
+trust it fails the connection instead of receiving the synthesized response, and
+that is reported in the attack's statistics rather than silently doing nothing.
+Certificate pinning and mutual TLS cannot be intercepted.
+
+> ⚠️ The private key can impersonate **any** HTTPS endpoint to anything that
+> trusts it. Keep this to test environments, and treat the Secret accordingly.

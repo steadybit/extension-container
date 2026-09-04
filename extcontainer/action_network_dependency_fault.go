@@ -80,7 +80,7 @@ var httpAbortFaultSpec = dependencyFaultSpec{
 	description: "Intercept a specific dependency's cleartext HTTP requests and return a synthesized HTTP response (L7) — a status code, and optionally a custom body, headers and a delay — selected at L7 by Host header. Cleartext HTTP only; for HTTPS dependencies use 'Slow HTTP(s) Dependency' or the L7 mode of 'Reset TCP/HTTP(s) Connection'.",
 	extraParams: []action_kit_api.ActionParameter{
 		{
-			Name: "httpStatus", Label: "Response Status", Description: extutil.Ptr("HTTP status code to return (cleartext HTTP only)."),
+			Name: "httpStatus", Label: "Response Status", Description: extutil.Ptr("HTTP status code to return."),
 			Type: action_kit_api.ActionParameterTypeInteger, DefaultValue: extutil.Ptr("503"), Required: extutil.Ptr(true), Order: extutil.Ptr(3),
 		},
 		{
@@ -176,7 +176,7 @@ func (a *dependencyFaultAction) Describe() action_kit_api.ActionDescription {
 	return action_kit_api.ActionDescription{
 		Id:          fmt.Sprintf("%s.%s", BaseActionID, a.spec.id),
 		Label:       a.spec.label,
-		Description: a.spec.description,
+		Description: a.description(),
 		Hint:        a.hint(),
 		Version:     extbuild.GetSemverVersionStringOrUnknown(),
 		TargetSelection: &action_kit_api.TargetSelection{
@@ -222,8 +222,13 @@ func (a *dependencyFaultAction) defaultPorts() string {
 // A CA that is configured but unreadable is an error rather than a silent
 // downgrade: quietly falling back would let HTTPS traffic flow untouched while
 // the operator believes it is being faulted.
-func (a *dependencyFaultAction) tlsInterceptCA() (*proxyfault.TLSInterceptCA, error) {
+func (a *dependencyFaultAction) tlsInterceptCA(ports []uint16) (*proxyfault.TLSInterceptCA, error) {
 	if !a.spec.cleartextHTTPOnly || !config.Config.TLSInterceptEnabled() {
+		return nil, nil
+	}
+	// Only needed to decrypt 443. Reading it for a cleartext-only scope would let
+	// a broken CA mount break port-80 attacks that never wanted interception.
+	if !slices.Contains(ports, uint16(443)) {
 		return nil, nil
 	}
 	// Read at attack time rather than cached at startup, so replacing the Secret
@@ -236,7 +241,24 @@ func (a *dependencyFaultAction) tlsInterceptCA() (*proxyfault.TLSInterceptCA, er
 	if err != nil {
 		return nil, fmt.Errorf("cannot read the configured TLS interception CA key: %w", err)
 	}
+	// An empty half is silently dropped further down the chain, which would leave
+	// HTTPS spliced through untouched while the UI claims interception is on —
+	// the exact silent no-op this path exists to avoid.
+	if len(certPEM) == 0 || len(keyPEM) == 0 {
+		return nil, fmt.Errorf("the configured TLS interception CA is empty (%s / %s)",
+			config.Config.TLSInterceptCaCert, config.Config.TLSInterceptCaKey)
+	}
 	return &proxyfault.TLSInterceptCA{CertPEM: certPEM, KeyPEM: keyPEM}, nil
+}
+
+// description adapts the action description the same way as hint(), so an
+// operator with interception configured is not told HTTPS is unsupported
+// directly above a hint saying it is enabled.
+func (a *dependencyFaultAction) description() string {
+	if a.spec.cleartextHTTPOnly && config.Config.TLSInterceptEnabled() {
+		return "Intercept a specific dependency's HTTP requests and return a synthesized HTTP response (L7) — a status code, and optionally a custom body, headers and a delay — selected at L7 by Host header or TLS SNI. HTTPS is included because an interception CA is configured; the target's workloads must trust it."
+	}
+	return a.spec.description
 }
 
 // hint adapts the action-level hint to whether HTTPS interception is available,
@@ -515,7 +537,7 @@ func (a *dependencyFaultAction) parseOpts(request action_kit_api.PrepareActionRe
 	prob := percentageToProbability(cfg["percentage"])
 	fault.Probability = &prob
 
-	interceptCA, err := a.tlsInterceptCA()
+	interceptCA, err := a.tlsInterceptCA(ports)
 	if err != nil {
 		return proxyfault.Opts{}, err
 	}

@@ -528,14 +528,14 @@ func Test_dependencyFault_tlsInterceptCA(t *testing.T) {
 	latency := &dependencyFaultAction{spec: latencyFaultSpec}
 
 	// Unconfigured: HTTPS is never decrypted.
-	ca, err := httpAbort.tlsInterceptCA()
+	ca, err := httpAbort.tlsInterceptCA([]uint16{443})
 	require.NoError(t, err)
 	require.Nil(t, ca)
 	require.Equal(t, "80", httpAbort.defaultPorts())
 
 	withInterceptCA(t)
 
-	ca, err = httpAbort.tlsInterceptCA()
+	ca, err = httpAbort.tlsInterceptCA([]uint16{443})
 	require.NoError(t, err)
 	require.NotNil(t, ca)
 	require.Equal(t, "CERT-PEM", string(ca.CertPEM))
@@ -544,7 +544,7 @@ func Test_dependencyFault_tlsInterceptCA(t *testing.T) {
 	require.Equal(t, "80,443", httpAbort.defaultPorts())
 
 	// Latency already works over HTTPS at L4, so it never asks to decrypt.
-	lca, err := latency.tlsInterceptCA()
+	lca, err := latency.tlsInterceptCA([]uint16{443})
 	require.NoError(t, err)
 	require.Nil(t, lca)
 	require.Equal(t, "80,443", latency.defaultPorts())
@@ -592,8 +592,45 @@ func Test_dependencyFault_tlsInterceptCA_unreadable(t *testing.T) {
 	config.Config.TLSInterceptCaCert = t.TempDir() + "/missing.crt"
 	config.Config.TLSInterceptCaKey = t.TempDir() + "/missing.key"
 
-	ca, err := (&dependencyFaultAction{spec: httpAbortFaultSpec}).tlsInterceptCA()
+	ca, err := (&dependencyFaultAction{spec: httpAbortFaultSpec}).tlsInterceptCA([]uint16{443})
 	require.Error(t, err)
 	require.Nil(t, ca)
 	require.Contains(t, err.Error(), "cannot read the configured TLS interception CA")
+}
+
+// The CA is only needed to decrypt 443. Demanding it for a cleartext-only scope
+// would let a broken CA mount break port-80 attacks that never wanted it.
+func Test_dependencyFault_tlsInterceptCA_notNeededForCleartextPorts(t *testing.T) {
+	withInterceptCA(t)
+	ca, err := (&dependencyFaultAction{spec: httpAbortFaultSpec}).tlsInterceptCA([]uint16{80})
+	require.NoError(t, err)
+	require.Nil(t, ca, "port 80 only must not require the CA")
+}
+
+// An empty CA half is dropped silently further down the chain, which would
+// leave HTTPS spliced through untouched while the UI claims interception is on.
+func Test_dependencyFault_tlsInterceptCA_emptyIsAnError(t *testing.T) {
+	prevCert, prevKey := config.Config.TLSInterceptCaCert, config.Config.TLSInterceptCaKey
+	t.Cleanup(func() {
+		config.Config.TLSInterceptCaCert, config.Config.TLSInterceptCaKey = prevCert, prevKey
+	})
+	dir := t.TempDir()
+	certPath, keyPath := dir+"/empty.crt", dir+"/empty.key"
+	require.NoError(t, os.WriteFile(certPath, nil, 0600))
+	require.NoError(t, os.WriteFile(keyPath, []byte("KEY"), 0600))
+	config.Config.TLSInterceptCaCert, config.Config.TLSInterceptCaKey = certPath, keyPath
+
+	ca, err := (&dependencyFaultAction{spec: httpAbortFaultSpec}).tlsInterceptCA([]uint16{443})
+	require.Error(t, err)
+	require.Nil(t, ca)
+	require.Contains(t, err.Error(), "empty")
+}
+
+// With a CA configured the description must not still tell the operator that
+// HTTPS is unsupported, directly above a hint saying interception is on.
+func Test_dependencyFault_description_withInterceptCA(t *testing.T) {
+	withInterceptCA(t)
+	d := (&dependencyFaultAction{spec: httpAbortFaultSpec}).description()
+	require.NotContains(t, d, "Cleartext HTTP only")
+	require.Contains(t, d, "trust")
 }

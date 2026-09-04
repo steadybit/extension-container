@@ -35,6 +35,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	acorev1 "k8s.io/client-go/applyconfigurations/core/v1"
@@ -49,16 +50,20 @@ func TestWithMinikube(t *testing.T) {
 		Name: "extension-container",
 		Port: 8086,
 		ExtraArgs: func(m *e2e.Minikube) []string {
-			// Published before install so the chart can mount it; this is what
-			// enables the HTTPS path of 'Intercept HTTP Request'.
-			if err := createInterceptCASecret(m); err != nil {
-				panic(fmt.Sprintf("failed to create the interception CA secret: %s", err))
-			}
 			args := []string{
 				"--set", fmt.Sprintf("container.engine=%s", m.Runtime),
 				"--set", "logging.level=debug",
 				"--set", "discovery.attributes.excludes={container.label.*}",
-				"--set", "tlsIntercept.existingSecret=" + tlsInterceptSecretName,
+			}
+			// Published before install so the chart can mount it; this is what
+			// enables the HTTPS path of 'Intercept HTTP Request'. A failure here is
+			// not fatal to the suite — ExtraArgs runs outside a test, so panicking
+			// would kill the whole run; leaving the CA unset instead makes only the
+			// HTTPS case fail, with a readable assertion.
+			if err := createInterceptCASecret(m); err != nil {
+				log.Warn().Err(err).Msg("failed to publish the interception CA secret")
+			} else {
+				args = append(args, "--set", "tlsIntercept.existingSecret="+tlsInterceptSecretName)
 			}
 			//on cri-o runtimes, we need to set the ociRuntime to crun for minikube > 1.38
 			if m.Runtime == "cri-o" {
@@ -2435,11 +2440,18 @@ func createInterceptCASecret(m *e2e.Minikube) error {
 	client := m.GetClient()
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	_ = client.CoreV1().Secrets("default").Delete(ctx, tlsInterceptSecretName, metav1.DeleteOptions{})
-	_, err := client.CoreV1().Secrets("default").Create(ctx, &corev1.Secret{
+	// Get-or-update rather than delete/create: ExtraArgs runs on every helm
+	// upgrade the harness performs, and churning a Secret underneath a live
+	// DaemonSet mount (or racing a still-propagating delete) would be a
+	// self-inflicted flake.
+	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{Name: tlsInterceptSecretName, Namespace: "default"},
 		Data:       map[string][]byte{"ca.crt": interceptCA.certPEM, "ca.key": interceptCA.keyPEM},
-	}, metav1.CreateOptions{})
+	}
+	_, err := client.CoreV1().Secrets("default").Create(ctx, secret, metav1.CreateOptions{})
+	if errors.IsAlreadyExists(err) {
+		_, err = client.CoreV1().Secrets("default").Update(ctx, secret, metav1.UpdateOptions{})
+	}
 	return err
 }
 
@@ -2530,4 +2542,9 @@ func testNetworkDependencyFaultHTTPS(t *testing.T, m *e2e.Minikube, e *e2e.Exten
 			_, _ = fmt.Fprintf(r.Log, "dependency still unreachable after cancel (got %q)", code)
 		}
 	})
+
+	// The TLS-interception teardown path is the newest here, so assert it like
+	// every other network test: a leaked proxy sidecar would otherwise go
+	// unnoticed and poison whichever test runs next.
+	requireAllSidecarsCleanedUp(t, m, e)
 }

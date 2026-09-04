@@ -50,9 +50,16 @@ spec:
       {{- with (.Values.priorityClassName | default (dig "priorityClassName" nil (.Values.global | default dict))) }}
       priorityClassName: {{ . }}
       {{- end }}
-      {{- with .Values.podSecurityContext }}
+      {{- if or .Values.podSecurityContext .Values.tlsIntercept.existingSecret }}
       securityContext:
+      {{- with .Values.podSecurityContext }}
       {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tlsIntercept.existingSecret }}
+        # Makes the mounted CA group-owned by the extension's user, so the key
+        # can stay 0440 instead of world-readable.
+        fsGroup: {{ $.Values.tlsIntercept.fsGroup | default 10000 }}
+      {{- end }}
       {{- end }}
       hostPID: true
       {{- include "extensionlib.imagePullSecrets" . | nindent 6 }}
@@ -107,9 +114,9 @@ spec:
             {{- include "extensionlib.deployment.env" (list .) | nindent 12 }}
             {{- if .Values.tlsIntercept.existingSecret }}
             - name: STEADYBIT_EXTENSION_TLS_INTERCEPT_CA_CERT
-              value: /etc/steadybit/tls-intercept/{{ .Values.tlsIntercept.certKey }}
+              value: /etc/steadybit/tls-intercept/{{ .Values.tlsIntercept.certKey | default "ca.crt" }}
             - name: STEADYBIT_EXTENSION_TLS_INTERCEPT_CA_KEY
-              value: /etc/steadybit/tls-intercept/{{ .Values.tlsIntercept.keyKey }}
+              value: /etc/steadybit/tls-intercept/{{ .Values.tlsIntercept.keyKey | default "ca.key" }}
             {{- end }}
             {{- with .Values.extraEnv }}
               {{- toYaml . | nindent 12 }}
@@ -163,11 +170,24 @@ spec:
         - name: tls-intercept-ca
           secret:
             secretName: {{ . }}
-            # Readable by the extension's non-root user. Ownership of a Secret
-            # volume is root:root unless fsGroup is set, so a stricter mode makes
-            # the CA unreadable and interception silently unavailable. The Secret
-            # is mounted into this pod only.
-            defaultMode: 0444
+            # Only the two keys we use, so an unrelated key in the same Secret is
+            # never exposed to the extension.
+            items:
+              - key: {{ $.Values.tlsIntercept.certKey | default "ca.crt" }}
+                path: {{ $.Values.tlsIntercept.certKey | default "ca.crt" }}
+              - key: {{ $.Values.tlsIntercept.keyKey | default "ca.key" }}
+                path: {{ $.Values.tlsIntercept.keyKey | default "ca.key" }}
+            # A Secret volume is owned root:root unless fsGroup is set, and the
+            # extension runs non-root with DAC_OVERRIDE outside its capability
+            # bounding set — so 0400 is genuinely unreadable here. fsGroup below
+            # makes the group the running one, which lets this stay 0440 rather
+            # than world-readable for what is a CA private key.
+            defaultMode: 0440
+            # Missing or renamed Secret must not wedge the whole extension:
+            # without this the pod hangs in ContainerCreating and takes all
+            # discovery and every attack on the node with it, not just this
+            # opt-in feature.
+            optional: true
         {{- end }}
         - name: tmp-dir
           emptyDir: {}

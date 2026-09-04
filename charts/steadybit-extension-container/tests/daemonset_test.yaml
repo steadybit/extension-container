@@ -191,3 +191,35 @@ tests:
             - global-pull-secret
     asserts:
       - matchSnapshot: {}
+  - it: renders nothing for TLS interception by default
+    asserts:
+      - notContains:
+          path: spec.template.spec.volumes
+          content:
+            name: tls-intercept-ca
+          any: true
+  - it: mounts the interception CA when a Secret is given
+    set:
+      tlsIntercept.existingSecret: my-ca
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: tls-intercept-ca
+            secret:
+              secretName: my-ca
+              defaultMode: 288
+              optional: true
+              items:
+                - key: ca.crt
+                  path: ca.crt
+                - key: ca.key
+                  path: ca.key
+      - equal:
+          path: spec.template.spec.securityContext.fsGroup
+          value: 10000
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: STEADYBIT_EXTENSION_TLS_INTERCEPT_CA_CERT
+            value: /etc/steadybit/tls-intercept/ca.crt

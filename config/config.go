@@ -3,7 +3,9 @@
 package config
 
 import (
+	"crypto/tls"
 	"flag"
+	"fmt"
 	"os"
 	"strings"
 
@@ -45,8 +47,8 @@ type Specification struct {
 	// impersonate any HTTPS endpoint to anything trusting it, mount it from a
 	// Secret and keep this to test environments.
 	// STEADYBIT_EXTENSION_TLS_INTERCEPT_CA_CERT / _KEY
-	TLSInterceptCaCert string `json:"tlsInterceptCaCert" envconfig:"TLS_INTERCEPT_CA_CERT" required:"false"`
-	TLSInterceptCaKey  string `json:"tlsInterceptCaKey" envconfig:"TLS_INTERCEPT_CA_KEY" required:"false"`
+	TLSInterceptCaCert string `json:"tlsInterceptCaCert" split_words:"true" required:"false"`
+	TLSInterceptCaKey  string `json:"tlsInterceptCaKey" split_words:"true" required:"false"`
 }
 
 // TLSInterceptEnabled reports whether HTTPS response injection is configured.
@@ -99,6 +101,9 @@ func ValidateConfiguration() {
 	if (Config.TLSInterceptCaCert == "") != (Config.TLSInterceptCaKey == "") {
 		log.Fatal().Msg("STEADYBIT_EXTENSION_TLS_INTERCEPT_CA_CERT and STEADYBIT_EXTENSION_TLS_INTERCEPT_CA_KEY must be set together")
 	}
+	if err := Config.validateInterceptCA(); err != nil {
+		log.Fatal().Msg(err.Error())
+	}
 	if Config.DisableDiscoveryExcludes {
 		log.Info().Msg("Discovery excludes are disabled. Will also discover containers labeled with steadybit.com/discovery-disabled.")
 	}
@@ -124,5 +129,27 @@ func (d *DisallowedName) Decode(value string) error {
 	}
 	d.g = g
 	d.p = value
+	return nil
+}
+
+// validateInterceptCA checks the configured CA is actually loadable. Without
+// this, a path that does not exist or a Secret key holding something other than
+// a keypair passes startup and only surfaces per-attack — or, worse, as HTTPS
+// quietly flowing through untouched while the UI says interception is on.
+func (s Specification) validateInterceptCA() error {
+	if !s.TLSInterceptEnabled() {
+		return nil
+	}
+	certPEM, err := os.ReadFile(s.TLSInterceptCaCert)
+	if err != nil {
+		return fmt.Errorf("cannot read STEADYBIT_EXTENSION_TLS_INTERCEPT_CA_CERT: %w", err)
+	}
+	keyPEM, err := os.ReadFile(s.TLSInterceptCaKey)
+	if err != nil {
+		return fmt.Errorf("cannot read STEADYBIT_EXTENSION_TLS_INTERCEPT_CA_KEY: %w", err)
+	}
+	if _, err := tls.X509KeyPair(certPEM, keyPEM); err != nil {
+		return fmt.Errorf("the configured TLS interception CA is not a usable certificate/key pair: %w", err)
+	}
 	return nil
 }

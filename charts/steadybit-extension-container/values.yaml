@@ -225,3 +225,7 @@ tlsIntercept:
   certKey: ca.crt
   # tlsIntercept.keyKey -- Key within the Secret holding the PEM private key.
   keyKey: ca.key
+  # tlsIntercept.fsGroup -- Supplemental group applied to the pod so the mounted
+  # CA is group-readable by the non-root extension user. Defaults to the image's
+  # user (10000); override if you also override runAsUser.
+  fsGroup: 10000
