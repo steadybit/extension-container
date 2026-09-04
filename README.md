@@ -23,8 +23,8 @@ our [Reliability Hub](https://hub.steadybit.com/extension/com.steadybit.extensio
 | `STEADYBIT_EXTENSION_DISABLE_DISCOVERY_EXCLUDES`    | `discovery.disableExcludes`                                  | Ignore discovery excludes specified by `steadybit.com/discovery-disabled`                                                  | false    | `false` |
 | `STEADYBIT_EXTENSION_DISCOVERY_ATTRIBUTES_EXCLUDES` | `discovery.attributes.excludes`                              | List of Target Attributes which will be excluded during discovery. Checked by key equality and supporting trailing "*"     | false    |         |
 | `STEADYBIT_EXTENSION_HOSTNAME`                      |                                                              | Optional hostname for the targets to be reported. If not given will be read from the UTS namespace of the init process     | false    |         |
-| `STEADYBIT_EXTENSION_TLS_INTERCEPT_CA_CERT`         | `tlsIntercept.existingSecret`                                | PEM CA certificate enabling 'Intercept Outgoing HTTP Request' to synthesize responses for **HTTPS** dependencies. Test environments only — see below. | yes      |         |
-| `STEADYBIT_EXTENSION_TLS_INTERCEPT_CA_KEY`          | `tlsIntercept.existingSecret`                                | PEM private key matching the CA certificate.                                                                              | yes      |         |
+| `STEADYBIT_EXTENSION_TLS_INTERCEPT_CA_CERT`         | `tlsIntercept.existingSecret`                                | PEM CA certificate enabling 'Intercept Outgoing HTTP Request' to synthesize responses for **HTTPS** dependencies. Test environments only — see below. | no      |         |
+| `STEADYBIT_EXTENSION_TLS_INTERCEPT_CA_KEY`          | `tlsIntercept.existingSecret`                                | PEM private key matching the CA certificate.                                                                              | no      |         |
 
 Beyond the settings above, this extension supports the configuration common to all Steadybit
 extensions:
