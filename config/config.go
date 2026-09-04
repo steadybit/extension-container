@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/gobwas/glob"
 	"github.com/kelseyhightower/envconfig"
@@ -38,7 +39,7 @@ type Specification struct {
 	// STEADYBIT_EXTENSION_NETWORK_STRICT_ROOT_QDISC
 	NetworkStrictRootQdisc bool `json:"networkStrictRootQdisc" split_words:"true" required:"false" default:"true"`
 	// TLSInterceptCaCert / TLSInterceptCaKey point at a PEM certificate authority
-	// used by 'Intercept HTTP Request' to mint per-hostname certificates, which is
+	// used by 'Intercept Outgoing HTTP Request' to mint per-hostname certificates, which is
 	// what lets it return a synthesized response for an HTTPS dependency instead
 	// of cleartext HTTP only. Unset (the default) leaves HTTPS untouched.
 	//
@@ -49,6 +50,12 @@ type Specification struct {
 	// STEADYBIT_EXTENSION_TLS_INTERCEPT_CA_CERT / _KEY
 	TLSInterceptCaCert string `json:"tlsInterceptCaCert" split_words:"true" required:"false"`
 	TLSInterceptCaKey  string `json:"tlsInterceptCaKey" split_words:"true" required:"false"`
+	// TLSInterceptLeafValidity is how long the per-hostname certificates the
+	// proxy mints stay valid. Shorter narrows the window in which a leaf that
+	// escaped the proxy could be used; it is always clamped to the CA's own
+	// expiry. Empty keeps the proxy's default (24h).
+	// STEADYBIT_EXTENSION_TLS_INTERCEPT_LEAF_VALIDITY
+	TLSInterceptLeafValidity time.Duration `json:"tlsInterceptLeafValidity" split_words:"true" required:"false"`
 }
 
 // TLSInterceptEnabled reports whether HTTPS response injection is configured.
