@@ -1,5 +1,12 @@
 # Changelog
 
+
+## Unreleased
+
+- `Intercept HTTP Request` can now synthesize responses for **HTTPS** dependencies,
+  not only cleartext HTTP, when an interception CA is configured via
+  `tlsIntercept.existingSecret`. Off by default; HTTPS is left untouched without it.
+
 ## v1.7.8
 
 - build(deps): bump github.com/steadybit/action-kit/go/action_kit_test
