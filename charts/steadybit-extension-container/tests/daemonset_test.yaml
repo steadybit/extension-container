@@ -208,16 +208,12 @@ tests:
             name: tls-intercept-ca
             secret:
               secretName: my-ca
-              defaultMode: 288
               optional: true
               items:
                 - key: ca.crt
                   path: ca.crt
                 - key: ca.key
                   path: ca.key
-      - equal:
-          path: spec.template.spec.securityContext.fsGroup
-          value: 10000
       - contains:
           path: spec.template.spec.containers[0].env
           content:

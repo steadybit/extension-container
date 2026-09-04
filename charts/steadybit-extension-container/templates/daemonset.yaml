@@ -50,16 +50,9 @@ spec:
       {{- with (.Values.priorityClassName | default (dig "priorityClassName" nil (.Values.global | default dict))) }}
       priorityClassName: {{ . }}
       {{- end }}
-      {{- if or .Values.podSecurityContext .Values.tlsIntercept.existingSecret }}
-      securityContext:
       {{- with .Values.podSecurityContext }}
+      securityContext:
       {{- toYaml . | nindent 8 }}
-      {{- end }}
-      {{- with .Values.tlsIntercept.existingSecret }}
-        # Makes the mounted CA group-owned by the extension's user, so the key
-        # can stay 0440 instead of world-readable.
-        fsGroup: {{ $.Values.tlsIntercept.fsGroup | default 10000 }}
-      {{- end }}
       {{- end }}
       hostPID: true
       {{- include "extensionlib.imagePullSecrets" . | nindent 6 }}
@@ -171,22 +164,20 @@ spec:
           secret:
             secretName: {{ . }}
             # Only the two keys we use, so an unrelated key in the same Secret is
-            # never exposed to the extension.
+            # never handed to the extension.
             items:
               - key: {{ $.Values.tlsIntercept.certKey | default "ca.crt" }}
                 path: {{ $.Values.tlsIntercept.certKey | default "ca.crt" }}
               - key: {{ $.Values.tlsIntercept.keyKey | default "ca.key" }}
                 path: {{ $.Values.tlsIntercept.keyKey | default "ca.key" }}
-            # A Secret volume is owned root:root unless fsGroup is set, and the
-            # extension runs non-root with DAC_OVERRIDE outside its capability
-            # bounding set — so 0400 is genuinely unreadable here. fsGroup below
-            # makes the group the running one, which lets this stay 0440 rather
-            # than world-readable for what is a CA private key.
-            defaultMode: 0440
-            # Missing or renamed Secret must not wedge the whole extension:
-            # without this the pod hangs in ContainerCreating and takes all
-            # discovery and every attack on the node with it, not just this
-            # opt-in feature.
+            # No defaultMode: this matches how extensionlib already mounts the
+            # extension's own TLS keys, and the binary is setcap'd with
+            # DAC_OVERRIDE so it reads them regardless of ownership.
+            #
+            # optional, unlike extensionlib's certificates, because this is an
+            # opt-in feature: a Secret that is missing, renamed, or mid-rotation
+            # must not hang every pod in ContainerCreating and take all discovery
+            # and every attack on the node down with it.
             optional: true
         {{- end }}
         - name: tmp-dir
