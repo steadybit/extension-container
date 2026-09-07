@@ -5,7 +5,14 @@ package extcontainer
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	crand "crypto/rand"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/pem"
 	"fmt"
+	"math/big"
 	"net"
 	"os"
 
@@ -510,10 +517,11 @@ func withInterceptCA(t *testing.T) {
 	prevCert, prevKey := config.Config.TLSInterceptCaCert, config.Config.TLSInterceptCaKey
 	dir := t.TempDir()
 	certPath, keyPath := dir+"/ca.crt", dir+"/ca.key"
-	if err := os.WriteFile(certPath, []byte("CERT-PEM"), 0600); err != nil {
+	certPEM, keyPEM := testCAPEM(t)
+	if err := os.WriteFile(certPath, certPEM, 0600); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(keyPath, []byte("KEY-PEM"), 0600); err != nil {
+	if err := os.WriteFile(keyPath, keyPEM, 0600); err != nil {
 		t.Fatal(err)
 	}
 	config.Config.TLSInterceptCaCert = certPath
@@ -538,8 +546,8 @@ func Test_dependencyFault_tlsInterceptCA(t *testing.T) {
 	ca, err = httpAbort.tlsInterceptCA([]uint16{443})
 	require.NoError(t, err)
 	require.NotNil(t, ca)
-	require.Equal(t, "CERT-PEM", string(ca.CertPEM))
-	require.Equal(t, "KEY-PEM", string(ca.KeyPEM))
+	require.Contains(t, string(ca.CertPEM), "BEGIN CERTIFICATE")
+	require.Contains(t, string(ca.KeyPEM), "PRIVATE KEY")
 	// 443 becomes a sensible default once the proxy can terminate it.
 	require.Equal(t, "80,443", httpAbort.defaultPorts())
 
@@ -633,4 +641,47 @@ func Test_dependencyFault_description_withInterceptCA(t *testing.T) {
 	d := (&dependencyFaultAction{spec: httpAbortFaultSpec}).description()
 	require.NotContains(t, d, "Cleartext HTTP only")
 	require.Contains(t, d, "trust")
+}
+
+// Readable and non-empty is not enough: the startup check only logs, so a CA
+// whose halves do not match reaches the attack path. Catching it here names the
+// problem instead of surfacing a bare proxy-startup failure.
+func Test_dependencyFault_tlsInterceptCA_mismatchedPairIsAnError(t *testing.T) {
+	prevCert, prevKey := config.Config.TLSInterceptCaCert, config.Config.TLSInterceptCaKey
+	t.Cleanup(func() {
+		config.Config.TLSInterceptCaCert, config.Config.TLSInterceptCaKey = prevCert, prevKey
+	})
+	dir := t.TempDir()
+	certPath, keyPath := dir+"/ca.crt", dir+"/ca.key"
+	require.NoError(t, os.WriteFile(certPath, []byte("-----BEGIN CERTIFICATE-----\nnot-a-cert\n-----END CERTIFICATE-----\n"), 0600))
+	require.NoError(t, os.WriteFile(keyPath, []byte("-----BEGIN EC PRIVATE KEY-----\nnot-a-key\n-----END EC PRIVATE KEY-----\n"), 0600))
+	config.Config.TLSInterceptCaCert, config.Config.TLSInterceptCaKey = certPath, keyPath
+
+	ca, err := (&dependencyFaultAction{spec: httpAbortFaultSpec}).tlsInterceptCA([]uint16{443})
+	require.Error(t, err)
+	require.Nil(t, ca)
+	require.Contains(t, err.Error(), "not a usable certificate/key pair")
+}
+
+// testCAPEM builds a genuine, minimal signing CA, since tlsInterceptCA now
+// verifies the pair rather than only reading it.
+func testCAPEM(t *testing.T) (certPEM, keyPEM []byte) {
+	t.Helper()
+	key, err := ecdsa.GenerateKey(elliptic.P256(), crand.Reader)
+	require.NoError(t, err)
+	tmpl := &x509.Certificate{
+		SerialNumber:          big.NewInt(1),
+		Subject:               pkix.Name{CommonName: "Test Intercept CA"},
+		NotBefore:             time.Now().Add(-time.Hour),
+		NotAfter:              time.Now().Add(24 * time.Hour),
+		IsCA:                  true,
+		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
+		BasicConstraintsValid: true,
+	}
+	der, err := x509.CreateCertificate(crand.Reader, tmpl, tmpl, key.Public(), key)
+	require.NoError(t, err)
+	keyDER, err := x509.MarshalECPrivateKey(key)
+	require.NoError(t, err)
+	return pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der}),
+		pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: keyDER})
 }

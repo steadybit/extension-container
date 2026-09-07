@@ -5,6 +5,7 @@ package extcontainer
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"net"
 	"os"
@@ -247,6 +248,13 @@ func (a *dependencyFaultAction) tlsInterceptCA(ports []uint16) (*proxyfault.TLSI
 	if len(certPEM) == 0 || len(keyPEM) == 0 {
 		return nil, fmt.Errorf("the configured TLS interception CA is empty (%s / %s)",
 			config.Config.TLSInterceptCaCert, config.Config.TLSInterceptCaKey)
+	}
+	// Readable and non-empty is not enough. The startup check only logs, so a CA
+	// that is corrupt or whose halves do not match — mid-rotation, say — reaches
+	// here; without this it would surface as a bare "transparent-proxy failed"
+	// once the proxy rejected it, instead of naming the actual problem.
+	if _, err := tls.X509KeyPair(certPEM, keyPEM); err != nil {
+		return nil, fmt.Errorf("the configured TLS interception CA is not a usable certificate/key pair: %w", err)
 	}
 	return &proxyfault.TLSInterceptCA{
 		CertPEM:      certPEM,
