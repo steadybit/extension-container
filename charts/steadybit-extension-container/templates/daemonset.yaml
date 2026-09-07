@@ -105,6 +105,12 @@ spec:
                 fieldRef:
                   fieldPath: spec.nodeName
             {{- include "extensionlib.deployment.env" (list .) | nindent 12 }}
+            {{- if .Values.tlsIntercept.existingSecret }}
+            - name: STEADYBIT_EXTENSION_TLS_INTERCEPT_CA_CERT
+              value: /etc/steadybit/tls-intercept/{{ .Values.tlsIntercept.certKey | default "ca.crt" }}
+            - name: STEADYBIT_EXTENSION_TLS_INTERCEPT_CA_KEY
+              value: /etc/steadybit/tls-intercept/{{ .Values.tlsIntercept.keyKey | default "ca.key" }}
+            {{- end }}
             {{- with .Values.extraEnv }}
               {{- toYaml . | nindent 12 }}
             {{- end }}
@@ -121,6 +127,11 @@ spec:
               mountPath: {{ include "containerEngine.socket" . | quote }}
             - name: "ociruntime-root"
               mountPath: {{ include "ociRuntime.get" (list . "root") | quote }}
+            {{- with .Values.tlsIntercept.existingSecret }}
+            - name: tls-intercept-ca
+              mountPath: /etc/steadybit/tls-intercept
+              readOnly: true
+            {{- end }}
             {{- include "extensionlib.deployment.volumeMounts" (list .) | nindent 12 }}
           livenessProbe:
             initialDelaySeconds: {{ .Values.probes.liveness.initialDelaySeconds }}
@@ -148,6 +159,27 @@ spec:
             {{- . | nindent 12 }}
             {{- end }}
       volumes:
+        {{- with .Values.tlsIntercept.existingSecret }}
+        - name: tls-intercept-ca
+          secret:
+            secretName: {{ . }}
+            # Only the two keys we use, so an unrelated key in the same Secret is
+            # never handed to the extension.
+            items:
+              - key: {{ $.Values.tlsIntercept.certKey | default "ca.crt" }}
+                path: {{ $.Values.tlsIntercept.certKey | default "ca.crt" }}
+              - key: {{ $.Values.tlsIntercept.keyKey | default "ca.key" }}
+                path: {{ $.Values.tlsIntercept.keyKey | default "ca.key" }}
+            # No defaultMode: this matches how extensionlib already mounts the
+            # extension's own TLS keys, and the binary is setcap'd with
+            # DAC_OVERRIDE so it reads them regardless of ownership.
+            #
+            # optional, unlike extensionlib's certificates, because this is an
+            # opt-in feature: a Secret that is missing, renamed, or mid-rotation
+            # must not hang every pod in ContainerCreating and take all discovery
+            # and every attack on the node down with it.
+            optional: true
+        {{- end }}
         - name: tmp-dir
           emptyDir: {}
         - name: cgroup-root

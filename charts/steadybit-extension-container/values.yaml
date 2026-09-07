@@ -210,3 +210,18 @@ discovery:
 
 # platform -- The platform the extension is running on. Valid values are: kubernetes, gke-autopilot
 platform: kubernetes
+
+# tlsIntercept -- Optional certificate authority enabling the 'Intercept HTTP Request'
+# attack to synthesize responses for HTTPS dependencies, not only cleartext HTTP.
+#
+# The CA is yours: you generate it, choose how long it lives, and install it in the
+# truststores of the workloads you want to fault. Its private key can impersonate any
+# HTTPS endpoint to anything that trusts it, so keep this to test environments.
+tlsIntercept:
+  # tlsIntercept.existingSecret -- Name of an existing Secret holding the CA. Empty
+  # (the default) leaves HTTPS untouched.
+  existingSecret: ""
+  # tlsIntercept.certKey -- Key within the Secret holding the PEM certificate.
+  certKey: ca.crt
+  # tlsIntercept.keyKey -- Key within the Secret holding the PEM private key.
+  keyKey: ca.key
