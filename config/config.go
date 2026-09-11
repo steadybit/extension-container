@@ -121,7 +121,7 @@ func ValidateConfiguration() {
 
 type DisallowedName struct {
 	p string
-	g glob.Glob
+	g *glob.Pattern
 }
 
 func (d DisallowedName) String() string {

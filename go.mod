@@ -11,7 +11,7 @@ require (
 	github.com/containerd/containerd/api v1.11.1
 	github.com/containerd/errdefs v1.0.0
 	github.com/containerd/errdefs/pkg v0.3.0
-	github.com/gobwas/glob v0.2.3
+	github.com/gobwas/glob v1.0.0
 	github.com/google/uuid v1.6.0
 	github.com/kataras/iris/v12 v12.2.11
 	github.com/kelseyhightower/envconfig v1.4.0
