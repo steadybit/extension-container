@@ -103,6 +103,13 @@ func parseArgs(cfg *Specification) error {
 }
 
 func ValidateConfiguration() {
+	// envconfig's `required:"true"` only checks that the variable is *set*: an empty
+	// value satisfies it, so the extension would start with a blank configuration and
+	// fail much later against the target system. Reject blank values here instead.
+	if strings.TrimSpace(Config.ContainerdNamespace) == "" {
+		log.Fatal().Msg("STEADYBIT_EXTENSION_CONTAINERD_NAMESPACE must not be empty.")
+	}
+
 	// Half a CA is never usable, and the resulting failure (every interception
 	// handshake failing) is far harder to diagnose than refusing to start.
 	if (Config.TLSInterceptCaCert == "") != (Config.TLSInterceptCaKey == "") {

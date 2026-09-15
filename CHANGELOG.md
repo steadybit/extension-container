@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+
+- fix: refuse to start when a required parameter is set but empty
 
 ## v1.8.0
 
