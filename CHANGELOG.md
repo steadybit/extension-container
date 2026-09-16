@@ -1,7 +1,9 @@
 # Changelog
 
-## Unreleased
+## v1.8.1
 
+- build(deps): bump golang.org/x/sync from 0.22.0 to 0.23.0
+- chore: add CVE-2026-74860 to the ignores
 - fix: refuse to start when a required parameter is set but empty
 
 ## v1.8.0
