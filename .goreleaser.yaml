@@ -115,11 +115,14 @@ nfpms:
         dependencies:
           - /usr/bin/stress-ng
           - iproute-tc
-          - /usr/sbin/ip
-          - /usr/sbin/iptables-restore
+          - iproute
+          - iptables
           - /usr/bin/fallocate
           - /usr/bin/dig
           - runc
           - libcap
         recommends:
           - kernel-modules-extra
+          # fedora has both backends provide "iptables"; without this the
+          # solver picks iptables-legacy.
+          - iptables-nft
