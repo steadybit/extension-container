@@ -114,7 +114,10 @@ func (a *stopAction) Start(_ context.Context, state *StopActionState) (*action_k
 }
 
 func (a *stopAction) Status(_ context.Context, state *StopActionState) (*action_kit_api.StatusResult, error) {
-	var messages []action_kit_api.Message
+	// Not a nil slice: it marshals to "messages": null, which the StatusResult
+	// schema rejects because the array is not nullable. Neither branch below
+	// appends while the stop is still running, so that is the common case.
+	messages := make([]action_kit_api.Message, 0)
 	completed, err := a.isStopContainerCompleted(state.ExecutionId)
 	if err != nil {
 		messages = append(messages, action_kit_api.Message{
