@@ -38,6 +38,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	acorev1 "k8s.io/client-go/applyconfigurations/core/v1"
 )
 
@@ -1979,14 +1980,29 @@ func testPauseContainer(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 }
 
 func testStopContainer(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
+	// The nginx image runs /docker-entrypoint.sh as PID 1 for several hundred
+	// milliseconds before it exec's nginx. Kubelet reports the pod Running as soon
+	// as that shell is spawned, and a shell running as PID 1 silently drops
+	// SIGTERM/SIGQUIT. A graceful stop issued in that window is lost and the
+	// runtime escalates to SIGKILL after its 10s grace period (exit 137, pod
+	// Failed). Add a readiness probe and wait for Ready so nginx is the one
+	// receiving the signal.
+	withReadinessProbe := func(pod *acorev1.PodApplyConfiguration) {
+		pod.Spec.Containers[0].ReadinessProbe = acorev1.Probe().
+			WithHTTPGet(acorev1.HTTPGetAction().WithPort(intstr.FromInt32(80))).
+			WithPeriodSeconds(1)
+	}
+
 	nginx := e2e.Nginx{Minikube: m}
 	nginx2 := e2e.Nginx{Minikube: m}
-	err := nginx.Deploy("nginx-stop")
+	err := nginx.Deploy("nginx-stop", withReadinessProbe)
 	require.NoError(t, err, "failed to create pod")
-	err = nginx2.Deploy("nginx-stop-2")
+	err = nginx2.Deploy("nginx-stop-2", withReadinessProbe)
 	require.NoError(t, err, "failed to create pod 2")
 	defer func() { _ = nginx.Delete() }()
 	defer func() { _ = nginx2.Delete() }()
+	require.NoError(t, m.WaitForPodReady(nginx.Pod, 30*time.Second))
+	require.NoError(t, m.WaitForPodReady(nginx2.Pod, 30*time.Second))
 
 	target, err := nginx.Target()
 	require.NoError(t, err)
