@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.8.2
+
+- chore(deps): bump extensionlib to ^1.5.5
+- feat: initialize OpenTelemetry tracing (#517)
+- fix(linuxpkg): require iptables/iproute by name, not by sbin path (#520)
+- fix: stop action reported messages as null while still stopping (#518)
+
 ## v1.8.1
 
 - build(deps): bump golang.org/x/sync from 0.22.0 to 0.23.0
