@@ -126,6 +126,26 @@ func (c *client) GetPid(ctx context.Context, containerId string) (int, error) {
 	return int(task.Pid()), nil
 }
 
+func (c *client) State(ctx context.Context, containerId string) (types.ContainerState, error) {
+	tasks := tasksapi.NewTasksClient(c.containerd.Conn())
+	status, err := getStatus(ctx, tasks, containerId)
+	if err != nil {
+		if errdefs.IsNotFound(err) || strings.Contains(err.Error(), "no running task found") {
+			return types.StateStopped, nil
+		}
+		return types.StateStopped, fmt.Errorf("failed to get status for container %s: %w", containerId, err)
+	}
+
+	switch status {
+	case containerd.Paused, containerd.Pausing:
+		return types.StatePaused, nil
+	case containerd.Running:
+		return types.StateRunning, nil
+	default:
+		return types.StateStopped, nil
+	}
+}
+
 func (c *client) Pause(ctx context.Context, id string) error {
 	container, err := c.containerd.LoadContainer(ctx, id)
 	if err != nil {

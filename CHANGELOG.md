@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- fix: pause attack detects when the container is no longer paused instead of failing the rollback
+
 ## v1.8.2
 
 - chore(deps): bump extensionlib to ^1.5.5

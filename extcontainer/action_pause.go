@@ -6,6 +6,7 @@ package extcontainer
 import (
 	"context"
 	"fmt"
+	"github.com/rs/zerolog/log"
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
 	"github.com/steadybit/action-kit/go/action_kit_sdk"
 	"github.com/steadybit/extension-container/extcontainer/container/types"
@@ -98,8 +99,15 @@ func (a *pauseAction) Start(ctx context.Context, state *PauseActionState) (*acti
 }
 
 func (a *pauseAction) Status(ctx context.Context, state *PauseActionState) (*action_kit_api.StatusResult, error) {
-	_, err := a.client.GetPid(ctx, RemovePrefix(state.ContainerId))
+	containerState, err := a.client.State(ctx, RemovePrefix(state.ContainerId))
 	if err != nil {
+		// a failed state lookup is most likely transient - keep the attack running and re-check on the next call
+		log.Warn().Err(err).Str("containerId", state.ContainerId).Msg("Failed to read container state")
+		return &action_kit_api.StatusResult{Completed: false}, nil
+	}
+
+	switch containerState {
+	case types.StateStopped:
 		return &action_kit_api.StatusResult{
 			Completed: true,
 			Messages: new([]action_kit_api.Message{
@@ -109,21 +117,44 @@ func (a *pauseAction) Status(ctx context.Context, state *PauseActionState) (*act
 				},
 			}),
 		}, nil
+	case types.StateRunning:
+		// somebody or something resumed the container behind our back - the attack isn't doing what it claims anymore
+		return &action_kit_api.StatusResult{
+			Completed: true,
+			Error: &action_kit_api.ActionKitError{
+				Title:  fmt.Sprintf("Container %s is not paused anymore", state.TargetLabel),
+				Detail: new("The container was resumed by someone else, e.g. after a restart of the container, the container runtime or a manual unpause."),
+				Status: extutil.Ptr(action_kit_api.Failed),
+			},
+		}, nil
+	default:
+		return &action_kit_api.StatusResult{
+			Completed: false,
+		}, nil
 	}
-	return &action_kit_api.StatusResult{
-		Completed: false,
-	}, nil
 }
 
 func (a *pauseAction) Stop(_ context.Context, state *PauseActionState) (*action_kit_api.StopResult, error) {
 	ctx := context.Background() // don't use the context as the action should be stopped even if the request context is cancelled
-	_, err := a.client.GetPid(ctx, RemovePrefix(state.ContainerId))
+	containerState, err := a.client.State(ctx, RemovePrefix(state.ContainerId))
 	if err != nil {
+		// we don't know the state - try to unpause anyway, that's the safer option
+		log.Warn().Err(err).Str("containerId", state.ContainerId).Msg("Failed to read container state before unpausing")
+	} else if containerState == types.StateStopped {
 		return &action_kit_api.StopResult{
 			Messages: new([]action_kit_api.Message{
 				{
 					Level:   extutil.Ptr(action_kit_api.Warn),
 					Message: fmt.Sprintf("Container %s is not running anymore", state.TargetLabel),
+				},
+			}),
+		}, nil
+	} else if containerState == types.StateRunning {
+		return &action_kit_api.StopResult{
+			Messages: new([]action_kit_api.Message{
+				{
+					Level:   extutil.Ptr(action_kit_api.Warn),
+					Message: fmt.Sprintf("Container %s was not paused anymore, nothing to unpause", state.TargetLabel),
 				},
 			}),
 		}, nil

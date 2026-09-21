@@ -319,6 +319,10 @@ func (c *MockedClient) GetPid(_ context.Context, _ string) (int, error) {
 	panic("implement me")
 }
 
+func (c *MockedClient) State(_ context.Context, _ string) (types.ContainerState, error) {
+	panic("implement me")
+}
+
 func (c *MockedClient) Close() error {
 	panic("implement me")
 }
