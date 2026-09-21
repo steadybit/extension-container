@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- fix: pause attack detects when the container is no longer paused instead of failing the rollback
+
 ## v1.8.1
 
 - build(deps): bump golang.org/x/sync from 0.22.0 to 0.23.0

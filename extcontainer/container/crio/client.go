@@ -10,8 +10,10 @@ import (
 	"fmt"
 	"github.com/steadybit/extension-container/extcontainer/container/types"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/credentials/insecure"
+	grpcstatus "google.golang.org/grpc/status"
 	criapi "k8s.io/cri-api/pkg/apis/runtime/v1"
 	"net"
 	"time"
@@ -114,6 +116,21 @@ func (c *client) GetPid(ctx context.Context, containerId string) (int, error) {
 		return 0, errors.New("failed to read pid form container verbose info")
 	}
 	return info.Pid, nil
+}
+
+func (c *client) State(ctx context.Context, containerId string) (types.ContainerState, error) {
+	// CRI-O doesn't support pausing containers, so a container is either running or it isn't.
+	res, err := c.cri.ContainerStatus(ctx, &criapi.ContainerStatusRequest{ContainerId: containerId})
+	if err != nil {
+		if grpcstatus.Code(err) == codes.NotFound {
+			return types.StateStopped, nil
+		}
+		return types.StateStopped, fmt.Errorf("failed to get container status: %w", err)
+	}
+	if res.GetStatus().GetState() == criapi.ContainerState_CONTAINER_RUNNING {
+		return types.StateRunning, nil
+	}
+	return types.StateStopped, nil
 }
 
 func (c *client) Pause(_ context.Context, _ string) error {

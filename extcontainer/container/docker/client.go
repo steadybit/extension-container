@@ -6,6 +6,7 @@ package docker
 import (
 	"context"
 	"fmt"
+	cerrdefs "github.com/containerd/errdefs"
 	dclient "github.com/moby/moby/client"
 	"github.com/steadybit/extension-container/extcontainer"
 	"github.com/steadybit/extension-container/extcontainer/container/types"
@@ -64,7 +65,34 @@ func (c *client) GetPid(ctx context.Context, containerId string) (int, error) {
 	if err != nil {
 		return 0, fmt.Errorf("failed to inspect container: %w", err)
 	}
+	// docker keeps reporting exited containers until they are removed. Their pid is 0, which is of no use to any caller,
+	// so we report that as an error instead of handing out a pid nobody can work with.
+	if info.Container.State == nil || info.Container.State.Pid == 0 {
+		return 0, fmt.Errorf("container %s isn't running anymore", containerId)
+	}
 	return info.Container.State.Pid, nil
+}
+
+func (c *client) State(ctx context.Context, containerId string) (types.ContainerState, error) {
+	info, err := c.docker.ContainerInspect(ctx, extcontainer.RemovePrefix(containerId), dclient.ContainerInspectOptions{})
+	if err != nil {
+		if cerrdefs.IsNotFound(err) {
+			return types.StateStopped, nil
+		}
+		return types.StateStopped, fmt.Errorf("failed to inspect container: %w", err)
+	}
+
+	state := info.Container.State
+	if state == nil {
+		return types.StateStopped, nil
+	}
+	if state.Paused {
+		return types.StatePaused, nil
+	}
+	if state.Running && state.Pid != 0 {
+		return types.StateRunning, nil
+	}
+	return types.StateStopped, nil
 }
 
 func (c *client) Pause(ctx context.Context, id string) error {
