@@ -106,32 +106,35 @@ func (a *pauseAction) Status(ctx context.Context, state *PauseActionState) (*act
 		return &action_kit_api.StatusResult{Completed: false}, nil
 	}
 
-	switch containerState {
-	case types.StateStopped:
-		return &action_kit_api.StatusResult{
-			Completed: true,
-			Messages: new([]action_kit_api.Message{
-				{
-					Level:   extutil.Ptr(action_kit_api.Warn),
-					Message: fmt.Sprintf("Container %s is not running anymore", state.TargetLabel),
-				},
-			}),
-		}, nil
-	case types.StateRunning:
-		// somebody or something resumed the container behind our back - the attack isn't doing what it claims anymore
-		return &action_kit_api.StatusResult{
-			Completed: true,
-			Error: &action_kit_api.ActionKitError{
-				Title:  fmt.Sprintf("Container %s is not paused anymore", state.TargetLabel),
-				Detail: new("The container was resumed by someone else, e.g. after a restart of the container, the container runtime or a manual unpause."),
-				Status: extutil.Ptr(action_kit_api.Failed),
-			},
-		}, nil
-	default:
+	// Like the stress and fill actions, the attack completes early (not fails) when its effect ends before the duration,
+	// e.g. a liveness probe killing the frozen container or a restart policy bringing it back up.
+	if containerState == types.StatePaused {
 		return &action_kit_api.StatusResult{
 			Completed: false,
 		}, nil
 	}
+	messages, summary := pauseEndedEarly(containerState, state.TargetLabel)
+	return &action_kit_api.StatusResult{
+		Completed: true,
+		Messages:  messages,
+		Summary:   summary,
+	}, nil
+}
+
+func pauseEndedEarly(containerState types.ContainerState, targetLabel string) (*action_kit_api.Messages, *action_kit_api.Summary) {
+	message := fmt.Sprintf("Container %s is not paused anymore", targetLabel)
+	if containerState == types.StateStopped {
+		message = fmt.Sprintf("Container %s is not running anymore", targetLabel)
+	}
+	return new([]action_kit_api.Message{
+			{
+				Level:   extutil.Ptr(action_kit_api.Warn),
+				Message: message,
+			},
+		}), &action_kit_api.Summary{
+			Level: action_kit_api.SummaryLevelWarning,
+			Text:  message + ", the pause ended early",
+		}
 }
 
 func (a *pauseAction) Stop(_ context.Context, state *PauseActionState) (*action_kit_api.StopResult, error) {
@@ -140,23 +143,11 @@ func (a *pauseAction) Stop(_ context.Context, state *PauseActionState) (*action_
 	if err != nil {
 		// we don't know the state - try to unpause anyway, that's the safer option
 		log.Warn().Err(err).Str("containerId", state.ContainerId).Msg("Failed to read container state before unpausing")
-	} else if containerState == types.StateStopped {
+	} else if containerState != types.StatePaused {
+		messages, summary := pauseEndedEarly(containerState, state.TargetLabel)
 		return &action_kit_api.StopResult{
-			Messages: new([]action_kit_api.Message{
-				{
-					Level:   extutil.Ptr(action_kit_api.Warn),
-					Message: fmt.Sprintf("Container %s is not running anymore", state.TargetLabel),
-				},
-			}),
-		}, nil
-	} else if containerState == types.StateRunning {
-		return &action_kit_api.StopResult{
-			Messages: new([]action_kit_api.Message{
-				{
-					Level:   extutil.Ptr(action_kit_api.Warn),
-					Message: fmt.Sprintf("Container %s was not paused anymore, nothing to unpause", state.TargetLabel),
-				},
-			}),
+			Messages: messages,
+			Summary:  summary,
 		}, nil
 	}
 
