@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- fix: pause attack detects when the container is no longer paused instead of failing the rollback
+- fix: pause attack detects when the container is no longer paused instead of failing the rollback. The attack then completes early with a warning summary.
 
 ## v1.8.2
 

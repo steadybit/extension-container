@@ -37,11 +37,11 @@ func TestPauseStatus(t *testing.T) {
 		state         types.ContainerState
 		stateErr      error
 		wantCompleted bool
-		wantError     bool
+		wantSummary   string
 	}{
 		{name: "keeps running while paused", state: types.StatePaused},
-		{name: "completes when the container is gone", state: types.StateStopped, wantCompleted: true},
-		{name: "fails when the container isn't paused anymore", state: types.StateRunning, wantCompleted: true, wantError: true},
+		{name: "completes when the container is gone", state: types.StateStopped, wantCompleted: true, wantSummary: "Container nginx is not running anymore, the pause ended early"},
+		{name: "completes when the container isn't paused anymore", state: types.StateRunning, wantCompleted: true, wantSummary: "Container nginx is not paused anymore, the pause ended early"},
 		{name: "keeps running when the state can't be read", state: types.StateStopped, stateErr: errors.New("boom")},
 	}
 
@@ -53,11 +53,13 @@ func TestPauseStatus(t *testing.T) {
 
 			require.NoError(t, err)
 			assert.Equal(t, tt.wantCompleted, result.Completed)
-			if tt.wantError {
-				require.NotNil(t, result.Error)
-				assert.Equal(t, action_kit_api.Failed, *result.Error.Status)
+			assert.Nil(t, result.Error)
+			if tt.wantSummary != "" {
+				require.NotNil(t, result.Summary)
+				assert.Equal(t, action_kit_api.SummaryLevelWarning, result.Summary.Level)
+				assert.Equal(t, tt.wantSummary, result.Summary.Text)
 			} else {
-				assert.Nil(t, result.Error)
+				assert.Nil(t, result.Summary)
 			}
 		})
 	}
@@ -65,16 +67,16 @@ func TestPauseStatus(t *testing.T) {
 
 func TestPauseStop(t *testing.T) {
 	tests := []struct {
-		name         string
-		state        types.ContainerState
-		stateErr     error
-		wantUnpause  bool
-		wantMessage  string
-		wantErrorMsg bool
+		name        string
+		state       types.ContainerState
+		stateErr    error
+		wantUnpause bool
+		wantMessage string
+		wantSummary string
 	}{
 		{name: "unpauses a paused container", state: types.StatePaused, wantUnpause: true, wantMessage: "Unpaused container nginx"},
-		{name: "skips a container which is gone", state: types.StateStopped, wantMessage: "Container nginx is not running anymore"},
-		{name: "skips a container which isn't paused anymore", state: types.StateRunning, wantMessage: "Container nginx was not paused anymore, nothing to unpause"},
+		{name: "skips a container which is gone", state: types.StateStopped, wantMessage: "Container nginx is not running anymore", wantSummary: "Container nginx is not running anymore, the pause ended early"},
+		{name: "skips a container which isn't paused anymore", state: types.StateRunning, wantMessage: "Container nginx is not paused anymore", wantSummary: "Container nginx is not paused anymore, the pause ended early"},
 		{name: "unpauses when the state can't be read", state: types.StateStopped, stateErr: errors.New("boom"), wantUnpause: true, wantMessage: "Unpaused container nginx"},
 	}
 
@@ -90,6 +92,13 @@ func TestPauseStop(t *testing.T) {
 			require.NotNil(t, result.Messages)
 			require.Len(t, *result.Messages, 1)
 			assert.Equal(t, tt.wantMessage, (*result.Messages)[0].Message)
+			if tt.wantSummary != "" {
+				require.NotNil(t, result.Summary)
+				assert.Equal(t, action_kit_api.SummaryLevelWarning, result.Summary.Level)
+				assert.Equal(t, tt.wantSummary, result.Summary.Text)
+			} else {
+				assert.Nil(t, result.Summary)
+			}
 		})
 	}
 }
