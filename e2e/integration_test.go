@@ -2569,14 +2569,14 @@ func testNetworkDependencyFaultHTTPS(t *testing.T, m *e2e.Minikube, e *e2e.Exten
 	requireAllSidecarsCleanedUp(t, m, e)
 }
 
-// testMissingCapability reinstalls the extension without NET_ADMIN. The extension binary has file
-// capabilities without the effective bit, so it starts anyway (with the bit, exec fails with EPERM
-// and the pod crash-loops); the network attacks fail when prepared, naming the capability, and the
-// attacks that do not need it keep working.
+// testMissingCapability reinstalls the extension without BPF, which only the DNS error injection
+// needs. The extension binary has file capabilities without the effective bit, so it starts anyway
+// (with the bit, exec fails with EPERM and the pod crash-loops); the DNS error injection fails when
+// prepared, naming the capability, and the other attacks keep working.
 func testMissingCapability(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
-	withoutNetAdmin := "{NET_BIND_SERVICE,KILL,SYS_ADMIN,SYS_CHROOT,SYS_PTRACE,NET_RAW,BPF,DAC_OVERRIDE,SETUID,SETGID,AUDIT_WRITE,SETPCAP,MKNOD,SYS_RESOURCE}"
-	require.NoError(t, e.Reconfigure(map[string]string{"containerSecurityContext.capabilities.add": withoutNetAdmin}),
-		"the extension must become ready without NET_ADMIN")
+	withoutBPF := "{NET_BIND_SERVICE,KILL,SYS_ADMIN,SYS_CHROOT,SYS_PTRACE,NET_RAW,NET_ADMIN,DAC_OVERRIDE,SETUID,SETGID,AUDIT_WRITE,SETPCAP,MKNOD,SYS_RESOURCE}"
+	require.NoError(t, e.Reconfigure(map[string]string{"containerSecurityContext.capabilities.add": withoutBPF}),
+		"the extension must become ready without BPF")
 	defer func() { require.NoError(t, e.ResetConfig()) }()
 
 	nginx := e2e.Nginx{Minikube: m}
@@ -2585,19 +2585,18 @@ func testMissingCapability(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	target, err := nginx.Target()
 	require.NoError(t, err)
 
-	blackhole, err := e.RunAction(fmt.Sprintf("%s.network_blackhole", extcontainer.BaseActionID), target,
-		map[string]any{"duration": 10000, "port": []string{"80"}}, &action_kit_api.ExecutionContext{})
+	injection, err := e.RunAction(fmt.Sprintf("%s.network_dns_error_injection", extcontainer.BaseActionID), target,
+		map[string]any{"duration": 10000, "dnsErrorType": []string{"NXDOMAIN"}}, &action_kit_api.ExecutionContext{})
 	defer func() {
-		if blackhole != nil {
-			_ = blackhole.Cancel()
+		if injection != nil {
+			_ = injection.Cancel()
 		}
 	}()
-	require.ErrorContains(t, err, "Network attacks need the capabilities NET_ADMIN")
-	nginx.AssertIsReachable(t, true)
+	require.ErrorContains(t, err, "DNS error injections need the capabilities BPF")
 
 	stress, err := e.RunAction(fmt.Sprintf("%s.stress_cpu", extcontainer.BaseActionID), target,
 		map[string]any{"duration": 5000, "cpuLoad": 50, "workers": 0}, &action_kit_api.ExecutionContext{})
-	require.NoError(t, err, "attacks not needing NET_ADMIN still work")
+	require.NoError(t, err, "attacks not needing BPF still work")
 	defer func() { _ = stress.Cancel() }()
 	require.NoError(t, stress.Wait())
 	requireAllSidecarsCleanedUp(t, m, e)
