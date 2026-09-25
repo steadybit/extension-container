@@ -2569,14 +2569,16 @@ func testNetworkDependencyFaultHTTPS(t *testing.T, m *e2e.Minikube, e *e2e.Exten
 	requireAllSidecarsCleanedUp(t, m, e)
 }
 
-// testMissingCapability reinstalls the extension without BPF, which only the DNS error injection
-// needs. The extension binary has file capabilities without the effective bit, so it starts anyway
-// (with the bit, exec fails with EPERM and the pod crash-loops); the DNS error injection fails when
-// prepared, naming the capability, and the other attacks keep working.
+// testMissingCapability reinstalls the extension without SYS_RESOURCE and BPF.
+//   - SYS_RESOURCE is one of the binary's file capabilities: with the effective bit on them, exec fails
+//     with EPERM and the pod crash-loops. Without it, the extension starts and only loses its OOM
+//     protection.
+//   - BPF is only needed by the DNS error injection, which then fails when prepared, naming it,
+//     while the other attacks keep working.
 func testMissingCapability(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
-	withoutBPF := "{NET_BIND_SERVICE,KILL,SYS_ADMIN,SYS_CHROOT,SYS_PTRACE,NET_RAW,NET_ADMIN,DAC_OVERRIDE,SETUID,SETGID,AUDIT_WRITE,SETPCAP,MKNOD,SYS_RESOURCE}"
-	require.NoError(t, e.Reconfigure(map[string]string{"containerSecurityContext.capabilities.add": withoutBPF}),
-		"the extension must become ready without BPF")
+	withoutSysResourceAndBPF := "{NET_BIND_SERVICE,KILL,SYS_ADMIN,SYS_CHROOT,SYS_PTRACE,NET_RAW,NET_ADMIN,DAC_OVERRIDE,SETUID,SETGID,AUDIT_WRITE,SETPCAP,MKNOD}"
+	require.NoError(t, e.Reconfigure(map[string]string{"containerSecurityContext.capabilities.add": withoutSysResourceAndBPF}),
+		"the extension must become ready without SYS_RESOURCE and BPF")
 	defer func() { require.NoError(t, e.ResetConfig()) }()
 
 	nginx := e2e.Nginx{Minikube: m}
@@ -2596,7 +2598,7 @@ func testMissingCapability(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 
 	stress, err := e.RunAction(fmt.Sprintf("%s.stress_cpu", extcontainer.BaseActionID), target,
 		map[string]any{"duration": 5000, "cpuLoad": 50, "workers": 0}, &action_kit_api.ExecutionContext{})
-	require.NoError(t, err, "attacks not needing BPF still work")
+	require.NoError(t, err, "attacks not needing BPF still work, without SYS_RESOURCE too")
 	defer func() { _ = stress.Cancel() }()
 	require.NoError(t, stress.Wait())
 	requireAllSidecarsCleanedUp(t, m, e)
