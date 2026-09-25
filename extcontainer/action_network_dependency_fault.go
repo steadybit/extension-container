@@ -286,6 +286,9 @@ func (a *dependencyFaultAction) hint() *action_kit_api.ActionHint {
 }
 
 func (a *dependencyFaultAction) Prepare(ctx context.Context, state *DependencyFaultState, request action_kit_api.PrepareActionRequestBody) (*action_kit_api.PrepareResult, error) {
+	if err := requireCapabilities("Network attacks", networkCapabilities); err != nil {
+		return nil, err
+	}
 	opts, err := a.parseOpts(request)
 	if err != nil {
 		return nil, err
