@@ -17,12 +17,13 @@ import (
 // granted all of them; the actions needing a missing one fail in prepare instead of at run time.
 var (
 	// sidecarCapabilities are needed by every action that runs a sidecar container next to the
-	// target: runc/crun runs as root and enters the target's namespaces and cgroups.
-	sidecarCapabilities = []string{"SETUID", "SETGID", "SYS_ADMIN", "SYS_CHROOT", "SYS_PTRACE", "DAC_OVERRIDE"}
+	// target: runc/crun runs as root, enters the target's namespaces and cgroups, and brings up the
+	// loopback interface of the sidecar's network namespace (NET_ADMIN).
+	sidecarCapabilities = []string{"SETUID", "SETGID", "SYS_ADMIN", "SYS_CHROOT", "SYS_PTRACE", "DAC_OVERRIDE", "NET_ADMIN"}
 	// networkCapabilities are needed by the network faults (tc, iptables, ip).
-	networkCapabilities = slices.Concat(sidecarCapabilities, []string{"NET_ADMIN", "NET_RAW"})
+	networkCapabilities = slices.Concat(sidecarCapabilities, []string{"NET_RAW"})
 	// dnsInjectionCapabilities are needed by the DNS error injection (an eBPF program).
-	dnsInjectionCapabilities = slices.Concat(sidecarCapabilities, []string{"NET_ADMIN", "BPF"})
+	dnsInjectionCapabilities = slices.Concat(sidecarCapabilities, []string{"BPF"})
 
 	// ExpectedCapabilities are all the capabilities the actions use; the missing ones are logged at
 	// startup. SYS_RESOURCE is optional: without it, the sidecars are not protected from the OOM killer.
