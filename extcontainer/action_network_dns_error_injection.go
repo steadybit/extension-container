@@ -81,6 +81,9 @@ func (a *dnsErrorInjectionAction) Describe() action_kit_api.ActionDescription {
 }
 
 func (a *dnsErrorInjectionAction) Prepare(ctx context.Context, state *DNSErrorInjectionState, request action_kit_api.PrepareActionRequestBody) (*action_kit_api.PrepareResult, error) {
+	if err := requireCapabilities("DNS error injections", dnsInjectionCapabilities); err != nil {
+		return nil, err
+	}
 	container, _, err := getContainerTarget(ctx, a.client, *request.Target)
 	if err != nil {
 		return nil, err

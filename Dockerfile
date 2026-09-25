@@ -24,8 +24,11 @@ RUN echo 'deb [trusted=yes] https://repo.goreleaser.com/apt/ /' > /etc/apt/sourc
 COPY . .
 
 #Ambient set of capabilities are not really working, therefore we set the capabilities on the binary directly. More on this: https://github.com/kubernetes/kubernetes/issues/56374
+#They are permitted but not effective (+ip, no "e"): with the effective bit, exec fails as soon as the container is not granted
+#one of them, and the extension crash-loops. The extension makes them effective at startup (extruntime.RaiseCapabilities), and
+#the actions needing a capability the container does not grant fail when prepared.
 RUN --mount=type=cache,target="/root/.cache/go-build" GOCACHE=/root/.cache/go-build GOOS=$TARGETOS GOARCH=$TARGETARCH goreleaser build --snapshot="${BUILD_SNAPSHOT}" --single-target -o extension \
-    && setcap "cap_setuid,cap_sys_chroot,cap_setgid,cap_net_admin,cap_sys_admin,cap_dac_override,cap_sys_ptrace,cap_sys_resource+eip" ./extension
+    && setcap "cap_setuid,cap_sys_chroot,cap_setgid,cap_net_admin,cap_sys_admin,cap_dac_override,cap_sys_ptrace,cap_sys_resource+ip" ./extension
 
 # As of today the runc binary from debian is built using golang 1.19.8 and will be flagged by CVE scanners as vulnerable to several CVEs.
 # We are dowonloading the runc binary from the official github release page and will use it instead of the one from the debian package.

@@ -154,6 +154,9 @@ func fillMemoryOpts(request action_kit_api.PrepareActionRequestBody) (memfill.Op
 }
 
 func (a *fillMemoryAction) Prepare(ctx context.Context, state *FillMemoryActionState, request action_kit_api.PrepareActionRequestBody) (*action_kit_api.PrepareResult, error) {
+	if err := requireCapabilities("Fill memory attacks", sidecarCapabilities); err != nil {
+		return nil, err
+	}
 	container, label, err := getContainerTarget(ctx, a.client, *request.Target)
 	if err != nil {
 		return nil, extension_kit.ToError("Failed to get target container", err)
