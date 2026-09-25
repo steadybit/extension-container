@@ -28,7 +28,7 @@ require (
 	github.com/steadybit/discovery-kit/go/discovery_kit_commons v0.3.2
 	github.com/steadybit/discovery-kit/go/discovery_kit_sdk v1.4.2
 	github.com/steadybit/discovery-kit/go/discovery_kit_test v1.2.2
-	github.com/steadybit/extension-kit v1.12.2-0.20260925113126-cc7dbb92ece0
+	github.com/steadybit/extension-kit v1.12.2-0.20260925114250-9b6215bdb227
 	github.com/stretchr/testify v1.12.1
 	golang.org/x/sync v0.23.0
 	google.golang.org/grpc v1.84.0

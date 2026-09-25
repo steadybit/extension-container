@@ -5,6 +5,7 @@ package extcontainer
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	extension_kit "github.com/steadybit/extension-kit"
@@ -19,13 +20,13 @@ var (
 	// target: runc/crun runs as root and enters the target's namespaces and cgroups.
 	sidecarCapabilities = []string{"SETUID", "SETGID", "SYS_ADMIN", "SYS_CHROOT", "SYS_PTRACE", "DAC_OVERRIDE"}
 	// networkCapabilities are needed by the network faults (tc, iptables, ip).
-	networkCapabilities = append(append([]string{}, sidecarCapabilities...), "NET_ADMIN", "NET_RAW")
+	networkCapabilities = slices.Concat(sidecarCapabilities, []string{"NET_ADMIN", "NET_RAW"})
 	// dnsInjectionCapabilities are needed by the DNS error injection (an eBPF program).
-	dnsInjectionCapabilities = append(append([]string{}, sidecarCapabilities...), "NET_ADMIN", "BPF")
+	dnsInjectionCapabilities = slices.Concat(sidecarCapabilities, []string{"NET_ADMIN", "BPF"})
 
 	// ExpectedCapabilities are all the capabilities the actions use; the missing ones are logged at
 	// startup. SYS_RESOURCE is optional: without it, the sidecars are not protected from the OOM killer.
-	ExpectedCapabilities = append(append([]string{}, networkCapabilities...), "BPF", "SYS_RESOURCE")
+	ExpectedCapabilities = slices.Concat(networkCapabilities, []string{"BPF", "SYS_RESOURCE"})
 )
 
 // missingCapabilities is replaced in tests.
