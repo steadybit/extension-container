@@ -154,6 +154,9 @@ func tcpResetParameters() []action_kit_api.ActionParameter {
 }
 
 func (a *networkTcpResetAction) Prepare(ctx context.Context, state *NetworkTcpResetState, request action_kit_api.PrepareActionRequestBody) (*action_kit_api.PrepareResult, error) {
+	if err := requireCapabilities("Network attacks", networkCapabilities); err != nil {
+		return nil, err
+	}
 	state.L7 = extutil.ToBool(request.Config["l7"])
 	if !state.L7 {
 		return a.tcp.Prepare(ctx, &state.NetworkActionState, request)

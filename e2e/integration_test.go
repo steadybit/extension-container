@@ -91,6 +91,10 @@ func TestWithMinikube(t *testing.T) {
 			Test: testStopContainer,
 		},
 		{
+			Name: "starts without a capability and fails fast for the attacks needing it",
+			Test: testMissingCapability,
+		},
+		{
 			Name: "pause container",
 			Test: testPauseContainer,
 		},
@@ -2562,5 +2566,39 @@ func testNetworkDependencyFaultHTTPS(t *testing.T, m *e2e.Minikube, e *e2e.Exten
 	// The TLS-interception teardown path is the newest here, so assert it like
 	// every other network test: a leaked proxy sidecar would otherwise go
 	// unnoticed and poison whichever test runs next.
+	requireAllSidecarsCleanedUp(t, m, e)
+}
+
+// testMissingCapability reinstalls the extension without NET_ADMIN. The extension binary has file
+// capabilities without the effective bit, so it starts anyway (with the bit, exec fails with EPERM
+// and the pod crash-loops); the network attacks fail when prepared, naming the capability, and the
+// attacks that do not need it keep working.
+func testMissingCapability(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
+	withoutNetAdmin := "{NET_BIND_SERVICE,KILL,SYS_ADMIN,SYS_CHROOT,SYS_PTRACE,NET_RAW,BPF,DAC_OVERRIDE,SETUID,SETGID,AUDIT_WRITE,SETPCAP,MKNOD,SYS_RESOURCE}"
+	require.NoError(t, e.Reconfigure(map[string]string{"containerSecurityContext.capabilities.add": withoutNetAdmin}),
+		"the extension must become ready without NET_ADMIN")
+	defer func() { require.NoError(t, e.ResetConfig()) }()
+
+	nginx := e2e.Nginx{Minikube: m}
+	require.NoError(t, nginx.Deploy("nginx-missing-capability"))
+	defer func() { _ = nginx.Delete() }()
+	target, err := nginx.Target()
+	require.NoError(t, err)
+
+	blackhole, err := e.RunAction(fmt.Sprintf("%s.network_blackhole", extcontainer.BaseActionID), target,
+		map[string]any{"duration": 10000, "port": []string{"80"}}, &action_kit_api.ExecutionContext{})
+	defer func() {
+		if blackhole != nil {
+			_ = blackhole.Cancel()
+		}
+	}()
+	require.ErrorContains(t, err, "Network attacks need the capabilities NET_ADMIN")
+	nginx.AssertIsReachable(t, true)
+
+	stress, err := e.RunAction(fmt.Sprintf("%s.stress_cpu", extcontainer.BaseActionID), target,
+		map[string]any{"duration": 5000, "cpuLoad": 50, "workers": 0}, &action_kit_api.ExecutionContext{})
+	require.NoError(t, err, "attacks not needing NET_ADMIN still work")
+	defer func() { _ = stress.Cancel() }()
+	require.NoError(t, stress.Wait())
 	requireAllSidecarsCleanedUp(t, m, e)
 }
