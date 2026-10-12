@@ -132,3 +132,18 @@ vulnerabilities:
   - id: CVE-2026-88806
     statement: Waiting for debian upstream fix
     expired_at: 2027-02-01
+  - id: CVE-2026-78667
+    statement: waiting for runc release built with go >= 1.26.9
+    expired_at: 2026-12-01
+    paths:
+      - usr/sbin/runc
+  - id: CVE-2026-78669
+    statement: waiting for runc release built with go >= 1.26.9
+    expired_at: 2026-12-01
+    paths:
+      - usr/sbin/runc
+  - id: CVE-2026-97031
+    statement: waiting for runc release built with go >= 1.26.9
+    expired_at: 2026-12-01
+    paths:
+      - usr/sbin/runc
