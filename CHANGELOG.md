@@ -1,7 +1,20 @@
 # Changelog
 
-## Unreleased
+## v1.8.3
 
+- build(deps): bump github.com/containerd/containerd from 1.7.35 to 1.7.36
+- build(deps): bump github.com/moby/moby/api from 1.56.0 to 1.56.1
+- build(deps): bump github.com/moby/moby/client from 0.6.0 to 0.6.1
+- build(deps): bump github.com/steadybit/action-kit/go/action_kit_test
+- build(deps): bump google.golang.org/grpc from 1.83.2 to 1.84.0
+- build(deps): bump k8s.io/client-go from 0.37.0 to 0.37.1
+- build(deps): bump k8s.io/cri-api from 0.37.0 to 0.37.1
+- chore(deps): bump dns-inject to v0.2.10 and transparent-proxy to v1.1.1
+- chore(deps): bump golang.org/x/net to v0.61.0
+- chore: add go stdlib CVEs to trivyignore for runc
+- chore: ignore unfixed debian libexpat1 CVE-2026-77214
+- fix: pause attack completes early with a warning summary when the container is no longer paused
+- fix: pause attack detects when the container is no longer paused
 - fix: pause attack detects when the container is no longer paused instead of failing the rollback. The attack then completes early with a warning summary.
 
 ## v1.8.2
