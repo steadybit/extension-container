@@ -16,7 +16,7 @@ require (
 	github.com/kataras/iris/v12 v12.2.11
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/moby/moby/api v1.56.1
-	github.com/moby/moby/client v0.6.1
+	github.com/moby/moby/client v0.6.2
 	github.com/novln/docker-parser v1.0.0
 	github.com/opencontainers/runtime-spec v1.3.0
 	github.com/rs/zerolog v1.35.1
@@ -58,7 +58,7 @@ require (
 	github.com/cyphar/filepath-securejoin v0.7.0 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/distribution/reference v0.6.0 // indirect
-	github.com/docker/go-connections v0.8.1 // indirect
+	github.com/docker/go-connections v0.8.2 // indirect
 	github.com/docker/go-events v0.0.0-20260713150650-1ee7122bc07b // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/elastic/go-sysinfo v1.15.5 // indirect
