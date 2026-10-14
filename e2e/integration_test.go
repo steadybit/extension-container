@@ -119,6 +119,10 @@ func TestWithMinikube(t *testing.T) {
 			Test: testNetworkBlackhole3Containers,
 		},
 		{
+			Name: "network blackhole localhost",
+			Test: testNetworkBlackholeLocalhost,
+		},
+		{
 			Name: "network tcp reset",
 			Test: testNetworkTcpReset,
 		},
@@ -802,6 +806,91 @@ func assertNginxCanPing(t *testing.T, nginx *e2e.Nginx, host string, expected bo
 			_, _ = fmt.Fprintf(r.Log, "expected %s not to be pingable from nginx, but was", host)
 		}
 	})
+}
+
+func testNetworkBlackholeLocalhost(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
+	if m.Runtime == "cri-o" && m.Driver == "docker" {
+		t.Skip("Due to https://github.com/kubernetes/minikube/issues/16371 this test is skipped for cri-o")
+	}
+
+	nginx := e2e.Nginx{Minikube: m}
+	err := nginx.Deploy("nginx-network-blackhole-localhost")
+	require.NoError(t, err, "failed to create pod")
+	defer func() { _ = nginx.Delete() }()
+
+	target, err := nginx.Target()
+	require.NoError(t, err)
+
+	// nginx listens on port 80 on all interfaces, including the container's loopback
+	localhostUrl := "http://127.0.0.1:80/"
+
+	tests := []struct {
+		name                     string
+		blockLocalhost           bool
+		excludeIp                []string
+		wantedLocalhostReachable bool
+	}{
+		{
+			name:                     "should not blackhole localhost traffic by default",
+			blockLocalhost:           false,
+			wantedLocalhostReachable: true,
+		},
+		{
+			name:                     "should blackhole localhost traffic when enabled",
+			blockLocalhost:           true,
+			wantedLocalhostReachable: false,
+		},
+		{
+			name:                     "should not blackhole excluded localhost traffic",
+			blockLocalhost:           true,
+			excludeIp:                []string{"127.0.0.1"},
+			wantedLocalhostReachable: true,
+		},
+	}
+
+	for _, tt := range tests {
+		config := map[string]any{
+			"duration":       10000,
+			"port":           []string{"80"},
+			"excludeIp":      tt.excludeIp,
+			"blockLocalhost": tt.blockLocalhost,
+		}
+
+		t.Run(tt.name, func(t *testing.T) {
+			nginx.AssertCanReach(t, localhostUrl, true)
+			nginx.AssertCanReach(t, "https://steadybit.com", true)
+
+			action, err := e.RunAction(fmt.Sprintf("%s.network_blackhole", extcontainer.BaseActionID), target, config, &action_kit_api.ExecutionContext{})
+			defer func() { _ = action.Cancel() }()
+			require.NoError(t, err)
+
+			nginx.AssertCanReach(t, localhostUrl, tt.wantedLocalhostReachable)
+			// non-matching traffic must stay untouched
+			nginx.AssertCanReach(t, "https://steadybit.com", true)
+
+			require.NoError(t, action.Cancel())
+			nginx.AssertCanReach(t, localhostUrl, true)
+			assertContainerHasDefaultLocalRule(t, m, &nginx)
+		})
+	}
+	requireAllSidecarsCleanedUp(t, m, e)
+}
+
+// assertContainerHasDefaultLocalRule checks the container's routing rules are
+// back to the kernel default after the attack was reverted: exactly one local
+// table lookup, the `0: from all lookup local` rule.
+func assertContainerHasDefaultLocalRule(t *testing.T, m *e2e.Minikube, nginx *e2e.Nginx) {
+	t.Helper()
+	out, err := m.PodExec(nginx.Pod, "nginx", "ip", "rule", "show")
+	require.NoError(t, err, out)
+
+	var localRules []string
+	for _, line := range strings.Split(out, "\n") {
+		if strings.Contains(line, "lookup local") {
+			localRules = append(localRules, strings.Join(strings.Fields(line), " "))
+		}
+	}
+	assert.Equal(t, []string{"0: from all lookup local"}, localRules, "ip rules not restored:\n%s", out)
 }
 
 func testNetworkBlackhole3Containers(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
