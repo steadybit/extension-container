@@ -67,7 +67,9 @@ func blackhole(r ociruntime.OciRuntime) networkOptsProvider {
 		}
 
 		blockLocalhost := extutil.ToBool(request.Config["blockLocalhost"])
-		if blockLocalhost {
+		// the extension's ports are only on the target's loopback when it shares the
+		// host network; otherwise they would spare the target's own traffic on them
+		if blockLocalhost && isUsingHostNetwork(sidecar.TargetProcess.Namespaces) {
 			filter.Exclude = append(filter.Exclude, localhostExcludesForOwnPorts()...)
 		}
 
@@ -86,9 +88,8 @@ func blackholeDecode(data json.RawMessage) (netfault.Opts, error) {
 }
 
 // localhostExcludesForOwnPorts keeps the extension reachable via localhost when the
-// target container shares the extension's network namespace (host network). The
-// own-IP excludes leave out loopback addresses, which only matters once localhost
-// traffic is blocked.
+// target container shares the host network. The own-IP excludes leave out loopback
+// addresses, which only matters once localhost traffic is blocked.
 func localhostExcludesForOwnPorts() []network.NetWithPortRange {
 	loopback := []net.IPNet{
 		{IP: net.IPv4(127, 0, 0, 0), Mask: net.CIDRMask(8, 32)},
