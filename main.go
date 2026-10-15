@@ -39,8 +39,15 @@ func main() {
 	// see the extension-kit README for the full set of variables.
 	extotel.InitOpenTelemetry()
 
+	// The binary's file capabilities have no effective bit, so that it starts even when the container
+	// is not granted all of them: make the granted ones effective, and report the missing ones.
+	if err := extruntime.RaiseCapabilities(); err != nil {
+		log.Warn().Err(err).Msg("Failed to raise the capabilities")
+	}
+
 	extbuild.PrintBuildInformation()
 	extruntime.LogRuntimeInformation(zerolog.InfoLevel)
+	extruntime.LogMissingCapabilities(extcontainer.ExpectedCapabilities...)
 	extruntime.AdjustOOMScoreAdj()
 
 	config.ParseConfiguration()
