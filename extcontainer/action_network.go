@@ -335,23 +335,6 @@ func (a *networkAction) Stop(_ context.Context, state *NetworkActionState) (*act
 		return nil, extension_kit.ToError("Failed to deserialize network settings.", err)
 	}
 
-	// Skip the rollback if the target network namespace is not present anymore and hence don't need to be reverted.
-	if nsExistsErr := ociruntime.NamespacesExists(ctx, state.Sidecar.TargetProcess.Namespaces, specs.NetworkNamespace); nsExistsErr != nil {
-		log.Info().
-			Err(nsExistsErr).
-			Str("containerId", state.ContainerID).
-			Msg("target network namespace does not exist anymore, no revert necessary")
-
-		return &action_kit_api.StopResult{
-			Messages: &[]action_kit_api.Message{
-				{
-					Level:   extutil.Ptr(action_kit_api.Info),
-					Message: fmt.Sprintf("Ingoring errors from revert network config. Target container %s exited? %s", state.TargetLabel, nsExistsErr),
-				},
-			},
-		}, nil
-	}
-
 	if err := netfault.Revert(ctx, netfault.NewRuncRunner(a.ociRuntime, state.Sidecar), opts, state.QdiscSnapshot); err != nil {
 		return nil, extension_kit.ToError("Failed to revert network settings.", err)
 	}

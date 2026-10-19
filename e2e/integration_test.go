@@ -187,6 +187,10 @@ func TestWithMinikube(t *testing.T) {
 			Test: testNetworkDelayAndBandwidthOnSameContainer,
 		},
 		{
+			Name: "network delay on a container that exits",
+			Test: testNetworkDelayOnExitedContainer,
+		},
+		{
 			Name: "fill disk",
 			Test: testFillDisk,
 		},
@@ -2284,6 +2288,61 @@ func testNetworkDelayAndBandwidthOnSameContainer(t *testing.T, m *e2e.Minikube, 
 	actionLimit, err2 := e.RunAction(fmt.Sprintf("%s.network_bandwidth", extcontainer.BaseActionID), target, configLimit, &action_kit_api.ExecutionContext{})
 	defer func() { _ = actionLimit.Cancel() }()
 	require.ErrorContains(t, err2, "running multiple network attacks at the same time on the same network namespace is not supported")
+
+	requireAllSidecarsCleanedUp(t, m, e)
+}
+
+// The stop of an attack whose container exited must reach netfault.Revert, which
+// stops tracking the attack as active: the kernel may reuse the namespace id for
+// another pod, whose first attack would otherwise be rejected.
+func testNetworkDelayOnExitedContainer(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
+	if m.Runtime == "cri-o" && m.Driver == "docker" {
+		t.Skip("Due to https://github.com/kubernetes/minikube/issues/16371 this test is skipped for cri-o")
+	}
+
+	config := map[string]any{
+		"duration":     60000,
+		"networkDelay": 200,
+	}
+
+	nginx := e2e.Nginx{Minikube: m}
+	require.NoError(t, nginx.Deploy("nginx-net-exited"), "failed to create pod")
+	netNs, err := m.PodExec(nginx.Pod, "nginx", "readlink", "/proc/self/ns/net")
+	require.NoError(t, err)
+	target, err := nginx.Target()
+	require.NoError(t, err)
+
+	action, err := e.RunAction(fmt.Sprintf("%s.network_delay", extcontainer.BaseActionID), target, config, &action_kit_api.ExecutionContext{})
+	defer func() { _ = action.Cancel() }()
+	require.NoError(t, err)
+
+	require.NoError(t, nginx.Delete())
+	require.Eventually(t, func() bool {
+		_, err := m.GetClient().CoreV1().Pods(nginx.Pod.GetNamespace()).Get(context.Background(), nginx.Pod.GetName(), metav1.GetOptions{})
+		return errors.IsNotFound(err)
+	}, 30*time.Second, 500*time.Millisecond, "pod was not deleted")
+	// the pod object is gone before its containers, wait for the network namespace to be released
+	require.Eventually(t, func() bool {
+		cmd := m.SshExec("sudo sh -c 'for p in /proc/[0-9]*; do readlink $p/ns/net; done 2>/dev/null; true'")
+		// SshExec presets stdout/stderr, which Output refuses to overwrite
+		cmd.Stdout, cmd.Stderr = nil, nil
+		out, err := cmd.Output()
+		return err == nil && strings.Contains(string(out), "net:[") && !strings.Contains(string(out), strings.TrimSpace(netNs))
+	}, 60*time.Second, time.Second, "network namespace was not released")
+
+	require.NoError(t, action.Cancel(), "stop must succeed when the network namespace is gone")
+	e2e.AssertLogContains(t, m, e.Pod, "skipping revert of a network attack, its network namespace is gone")
+
+	next := e2e.Nginx{Minikube: m}
+	require.NoError(t, next.Deploy("nginx-net-exited"), "failed to create pod")
+	defer func() { _ = next.Delete() }()
+	target, err = next.Target()
+	require.NoError(t, err)
+
+	nextAction, err := e.RunAction(fmt.Sprintf("%s.network_delay", extcontainer.BaseActionID), target, config, &action_kit_api.ExecutionContext{})
+	defer func() { _ = nextAction.Cancel() }()
+	require.NoError(t, err)
+	require.NoError(t, nextAction.Cancel())
 
 	requireAllSidecarsCleanedUp(t, m, e)
 }
