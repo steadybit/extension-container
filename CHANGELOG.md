@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.9.0
+
+- build(deps): bump github.com/moby/moby/client from 0.6.1 to 0.6.2
+- chore(deps): bump action_kit_commons to v1.14.0 (#533)
+- feat: block localhost traffic option for Block Traffic attack (#535)
+- fix: always revert network attacks through netfault (#536)
+
 ## v1.8.3
 
 - build(deps): bump github.com/containerd/containerd from 1.7.35 to 1.7.36
