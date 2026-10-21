@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.9.1
+
+- chore(deps): bump dns-inject to v0.2.11 and transparent-proxy to v1.1.2 (CVE-2026-111943)
+
 ## v1.9.0
 
 - build(deps): bump github.com/moby/moby/client from 0.6.1 to 0.6.2
