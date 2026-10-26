@@ -6,7 +6,7 @@ go 1.26.0
 replace github.com/opencontainers/runtime-spec => github.com/opencontainers/runtime-spec v1.2.1
 
 require (
-	github.com/KimMachineGun/automemlimit v1.0.0
+	github.com/KimMachineGun/automemlimit v1.0.1
 	github.com/containerd/containerd v1.7.36
 	github.com/containerd/containerd/api v1.11.1
 	github.com/containerd/errdefs v1.0.0
