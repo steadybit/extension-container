@@ -375,6 +375,23 @@ func Test_dependency_defaultPorts(t *testing.T) {
 	require.Equal(t, "80,443", portDefault(&dependencyFaultAction{spec: latencyFaultSpec}))
 }
 
+// prepare rejects an empty port list, so the platform must reject it in the editor already.
+func Test_dependency_portIsRequired(t *testing.T) {
+	for _, spec := range []dependencyFaultSpec{latencyFaultSpec, resetFaultSpec, httpAbortFaultSpec} {
+		var port *action_kit_api.ActionParameter
+		for _, p := range (&dependencyFaultAction{spec: spec}).Describe().Parameters {
+			if p.Name == "port" {
+				port = &p
+			}
+		}
+		require.NotNil(t, port, spec.id)
+		require.True(t, *port.Required, spec.id)
+	}
+
+	_, err := parsePortsList(" , ")
+	require.EqualError(t, err, "at least one intercept port is required")
+}
+
 func Test_dependencyFault_hint(t *testing.T) {
 	// The HTTP-abort action carries an action-level (global) hint warning that the
 	// synthesized status/body applies to cleartext HTTP only.
