@@ -361,7 +361,7 @@ func (a *dependencyFaultAction) Prepare(ctx context.Context, state *DependencyFa
 
 // interceptScope describes which destination ports the proxy captures.
 func interceptScope(opts proxyfault.Opts) string {
-	if opts.AllPorts {
+	if len(opts.Ports) == 0 {
 		return "all TCP ports (except loopback)"
 	}
 	parts := make([]string, len(opts.Ports))
@@ -380,7 +380,7 @@ func interceptionMessages(opts proxyfault.Opts, cleartextHTTPOnly bool) action_k
 		Message: fmt.Sprintf("Intercepting %s of the target. Only connections to %s are faulted; everything else is forwarded untouched.",
 			interceptScope(opts), strings.Join(opts.Fault.Hosts, ", ")),
 	}}
-	if !opts.AllPorts {
+	if len(opts.Ports) > 0 {
 		return msgs
 	}
 	httpsFaulted := !cleartextHTTPOnly || opts.TLSInterceptCA != nil
@@ -632,11 +632,10 @@ func (a *dependencyFaultAction) parseOpts(request action_kit_api.PrepareActionRe
 		NoFlush:               !resetExisting,
 		IncludeCIDRs:          includeCIDRs,
 		ExcludeCIDRs:          excludeCIDRs,
-		Ports:                 ports,
-		// No ports means every port: the proxy finds HTTP(S) by its SNI/Host
-		// wherever it runs.
-		AllPorts: len(ports) == 0,
-		Fault:    fault,
+		// No ports means every port: the proxy then captures all of them and
+		// finds HTTP(S) by its SNI/Host wherever it runs.
+		Ports: ports,
+		Fault: fault,
 		// nil unless a CA is configured, so HTTPS stays untouched by default.
 		TLSInterceptCA: interceptCA,
 	}, nil
