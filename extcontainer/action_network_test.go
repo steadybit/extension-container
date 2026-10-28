@@ -587,13 +587,56 @@ func Test_formatDependencyStatsMarkdown_rejected(t *testing.T) {
 		ConnectionsMatched:   2,
 		ConnectionsFaulted:   0,
 		TLSInterceptRejected: 2,
-	})
+	}, proxyfault.Opts{Ports: []uint16{443}})
 	require.Contains(t, md, "rejected the injected certificate")
 	require.Contains(t, md, "trust the configured CA")
 
 	// Nothing rejected: no scary note.
-	md = formatDependencyStatsMarkdown(proxyfault.Snapshot{ConnectionsMatched: 1, ConnectionsFaulted: 1})
+	md = formatDependencyStatsMarkdown(proxyfault.Snapshot{ConnectionsMatched: 1, ConnectionsFaulted: 1}, proxyfault.Opts{Ports: []uint16{443}})
 	require.NotContains(t, md, "rejected the injected certificate")
+}
+
+func Test_formatDependencyStatsMarkdown_scope(t *testing.T) {
+	snap := proxyfault.Snapshot{
+		ConnectionsMatched: 10,
+		ConnectionsFaulted: 2,
+		PerHost:            map[string]proxyfault.HostStat{"api.example.com": {Matched: 3, Faulted: 2}},
+	}
+	md := formatDependencyStatsMarkdown(snap, proxyfault.Opts{AllPorts: true})
+	require.Contains(t, md, "- **Intercepting:** all TCP ports (except loopback)")
+	require.Contains(t, md, "- **Connections intercepted:** 10")
+	require.Contains(t, md, "- **To a dependency hostname:** 3")
+
+	md = formatDependencyStatsMarkdown(snap, proxyfault.Opts{Ports: []uint16{80, 443}})
+	require.Contains(t, md, "- **Intercepting:** ports 80, 443")
+
+	// Traffic flows but nothing reaches the named dependencies: point at the
+	// hostnames, not at the interception.
+	md = formatDependencyStatsMarkdown(proxyfault.Snapshot{ConnectionsMatched: 5}, proxyfault.Opts{AllPorts: true})
+	require.Contains(t, md, "none to the dependency hostnames yet")
+}
+
+func Test_interceptionMessages(t *testing.T) {
+	hosts := proxyfault.Fault{Hosts: []string{"api.example.com"}}
+
+	msgs := interceptionMessages(proxyfault.Opts{Ports: []uint16{80, 443}, Fault: hosts}, false)
+	require.Len(t, msgs, 1)
+	require.Equal(t, "Intercepting ports 80, 443 of the target. Only connections to api.example.com are faulted; everything else is forwarded untouched.", msgs[0].Message)
+
+	msgs = interceptionMessages(proxyfault.Opts{AllPorts: true, Fault: hosts}, false)
+	require.Len(t, msgs, 2)
+	require.Contains(t, msgs[0].Message, "all TCP ports (except loopback)")
+	require.Contains(t, msgs[1].Message, "other protocols over TLS")
+
+	// HTTP response injection without a CA: HTTPS on any port is untouched.
+	msgs = interceptionMessages(proxyfault.Opts{AllPorts: true, Fault: hosts}, true)
+	require.Len(t, msgs, 2)
+	require.Equal(t, action_kit_api.Warn, *msgs[1].Level)
+	require.Contains(t, msgs[1].Message, "HTTPS is forwarded untouched")
+
+	// With a CA, HTTPS is faulted too.
+	msgs = interceptionMessages(proxyfault.Opts{AllPorts: true, Fault: hosts, TLSInterceptCA: &proxyfault.TLSInterceptCA{}}, true)
+	require.Contains(t, msgs[1].Message, "other protocols over TLS")
 }
 
 // A CA that is configured but unreadable must fail loudly. Falling back to
