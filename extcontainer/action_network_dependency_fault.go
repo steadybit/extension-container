@@ -341,9 +341,10 @@ func (a *dependencyFaultAction) Prepare(ctx context.Context, state *DependencyFa
 			Status: extutil.Ptr(action_kit_api.Failed),
 		}}, nil
 	}
+	messages := interceptionMessages(opts, a.spec.cleartextHTTPOnly)
 	if !reserved {
 		// A reservation/handle for this execution already exists — idempotent.
-		return &action_kit_api.PrepareResult{}, nil
+		return &action_kit_api.PrepareResult{Messages: &messages}, nil
 	}
 
 	sidecarId := fmt.Sprintf("%s-%s", request.ExecutionId.String()[24:], containerId[:min(8, len(containerId))])
@@ -355,7 +356,49 @@ func (a *dependencyFaultAction) Prepare(ctx context.Context, state *DependencyFa
 
 	storeDependencyFaultHandle(state.ExecutionId, &proxyHandle{proxy: proxy, opts: opts, sidecar: processInfo, id: sidecarId})
 
-	return &action_kit_api.PrepareResult{}, nil
+	return &action_kit_api.PrepareResult{Messages: &messages}, nil
+}
+
+// interceptScope describes which destination ports the proxy captures.
+func interceptScope(opts proxyfault.Opts) string {
+	if opts.AllPorts {
+		return "all TCP ports (except loopback)"
+	}
+	parts := make([]string, len(opts.Ports))
+	for i, p := range opts.Ports {
+		parts[i] = strconv.Itoa(int(p))
+	}
+	return "ports " + strings.Join(parts, ", ")
+}
+
+// interceptionMessages tells the execution log what the attack captures and
+// what it can fault, so a run explains itself — especially when every port is
+// captured, where the scope is no longer visible in the configuration.
+func interceptionMessages(opts proxyfault.Opts, cleartextHTTPOnly bool) action_kit_api.Messages {
+	msgs := action_kit_api.Messages{{
+		Level: extutil.Ptr(action_kit_api.Info),
+		Message: fmt.Sprintf("Intercepting %s of the target. Only connections to %s are faulted; everything else is forwarded untouched.",
+			interceptScope(opts), strings.Join(opts.Fault.Hosts, ", ")),
+	}}
+	if !opts.AllPorts {
+		return msgs
+	}
+	httpsFaulted := !cleartextHTTPOnly || opts.TLSInterceptCA != nil
+	if httpsFaulted {
+		msgs = append(msgs, action_kit_api.Message{
+			Level: extutil.Ptr(action_kit_api.Info),
+			Message: "Every outgoing TCP connection of the target passes through the proxy during the attack. HTTP is recognised on any port by its Host header, TLS by its SNI — " +
+				"so other protocols over TLS whose SNI matches a dependency hostname (e.g. Kafka or Redis over TLS) are faulted too. " +
+				"Protocols that switch to TLS mid-connection (Postgres, MySQL, SMTP STARTTLS) are not recognised and are forwarded untouched.",
+		})
+	} else {
+		msgs = append(msgs, action_kit_api.Message{
+			Level: extutil.Ptr(action_kit_api.Warn),
+			Message: "Every outgoing TCP connection of the target passes through the proxy during the attack, but only cleartext HTTP (recognised on any port by its Host header) is faulted. " +
+				"HTTPS is forwarded untouched on every port: no TLS interception CA is configured.",
+		})
+	}
+	return msgs
 }
 
 func (a *dependencyFaultAction) Start(ctx context.Context, state *DependencyFaultState) (*action_kit_api.StartResult, error) {
@@ -399,29 +442,38 @@ func (a *dependencyFaultAction) Status(ctx context.Context, state *DependencyFau
 	}
 	return &action_kit_api.StatusResult{
 		Completed: false,
-		Messages:  dependencyStatsMessages(handle.proxy),
+		Messages:  dependencyStatsMessages(handle.proxy, handle.opts),
 	}, nil
 }
 
 // dependencyStatsMessages renders the proxy's latest metrics snapshot as the
 // Markdown-widget message. Returns nil (no update) until the first snapshot
 // arrives.
-func dependencyStatsMessages(proxy proxyfault.Proxy) *action_kit_api.Messages {
+func dependencyStatsMessages(proxy proxyfault.Proxy, opts proxyfault.Opts) *action_kit_api.Messages {
 	snap, ok := proxy.Metrics()
 	if !ok {
 		return nil
 	}
 	return extutil.Ptr(action_kit_api.Messages{{
-		Message:   formatDependencyStatsMarkdown(snap),
+		Message:   formatDependencyStatsMarkdown(snap, opts),
 		Timestamp: extutil.Ptr(time.Now()),
 		Type:      extutil.Ptr(dependencyStatsMessageType),
 	}})
 }
 
-func formatDependencyStatsMarkdown(s proxyfault.Snapshot) string {
+func formatDependencyStatsMarkdown(s proxyfault.Snapshot, opts proxyfault.Opts) string {
+	// The proxy counts every connection the interception delivered to it as
+	// "matched"; the ones that matched a dependency hostname are the per-host
+	// counts. With all ports captured the difference is large, so show both.
+	var toDependencies int64
+	for _, st := range s.PerHost {
+		toDependencies += st.Matched
+	}
 	var b strings.Builder
 	b.WriteString("### Interception\n")
-	fmt.Fprintf(&b, "- **Connections matched:** %d\n", s.ConnectionsMatched)
+	fmt.Fprintf(&b, "- **Intercepting:** %s\n", interceptScope(opts))
+	fmt.Fprintf(&b, "- **Connections intercepted:** %d\n", s.ConnectionsMatched)
+	fmt.Fprintf(&b, "- **To a dependency hostname:** %d\n", toDependencies)
 	fmt.Fprintf(&b, "- **Connections faulted:** %d\n", s.ConnectionsFaulted)
 	b.WriteString("\n### What was done\n")
 	fmt.Fprintf(&b, "- **Latency applied:** %d\n", s.LatencyApplied)
@@ -442,8 +494,11 @@ func formatDependencyStatsMarkdown(s proxyfault.Snapshot) string {
 	if s.TLSInterceptRejected > 0 {
 		fmt.Fprintf(&b, "\n_**%d HTTPS connection(s) rejected the injected certificate.** The target's workload must trust the configured CA — and it usually reads its truststore at startup, so it may need restarting after the CA was installed. Certificate pinning and mutual TLS cannot be intercepted._\n", s.TLSInterceptRejected)
 	}
-	if s.ConnectionsMatched == 0 {
-		b.WriteString("\n_No matching connections intercepted yet. If this stays at zero, check the hostname, ports, and that traffic actually flows through this network namespace._")
+	switch {
+	case s.ConnectionsMatched == 0:
+		b.WriteString("\n_No connections intercepted yet. If this stays at zero, check the ports and that traffic actually flows through this network namespace._")
+	case toDependencies == 0:
+		b.WriteString("\n_Connections are intercepted, but none to the dependency hostnames yet. If this stays at zero, check the hostnames (matched against the TLS SNI or HTTP Host header)._")
 	}
 	return b.String()
 }
