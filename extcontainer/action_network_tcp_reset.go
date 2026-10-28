@@ -135,7 +135,7 @@ func tcpResetParameters() []action_kit_api.ActionParameter {
 			Type: action_kit_api.ActionParameterTypeStringArray, Required: extutil.Ptr(false), Advanced: extutil.Ptr(true), Order: extutil.Ptr(102),
 		},
 		{
-			Name: "port", Label: "Include Ports", Description: extutil.Ptr("Restrict to/from which ports the traffic is affected. In L7 mode an empty value defaults to 80,443."),
+			Name: "port", Label: "Include Ports", Description: extutil.Ptr("Restrict to/from which ports the traffic is affected. Empty affects all ports. In L7 mode that means every outgoing TCP connection of the target passes through the proxy, which still resets only connections to the hostnames."),
 			Type: action_kit_api.ActionParameterTypeStringArray, Required: extutil.Ptr(false), Advanced: extutil.Ptr(true), Order: extutil.Ptr(103),
 		},
 		{
@@ -167,22 +167,23 @@ func (a *networkTcpResetAction) Prepare(ctx context.Context, state *NetworkTcpRe
 			Status: extutil.Ptr(action_kit_api.Failed),
 		}}, nil
 	}
-	// The proxy requires an explicit port list; the shared 'port' param is a string
-	// array (empty = "all" in packet-level mode), so normalise it to the
-	// comma-separated string the dependency engine expects, defaulting to 80,443.
-	// Copy the config first — mutating the caller's request.Config in place would
-	// be a hidden side-effect on the shared map.
-	ports := extutil.ToStringArray(request.Config["port"])
-	if len(ports) == 0 {
-		ports = []string{"80", "443"}
-	}
 	l7Request := request
-	l7Request.Config = make(map[string]interface{}, len(request.Config)+1)
-	for k, v := range request.Config {
-		l7Request.Config[k] = v
-	}
-	l7Request.Config["port"] = strings.Join(ports, ",")
+	l7Request.Config = l7ResetConfig(request.Config)
 	return a.l7.Prepare(ctx, &state.Dependency, l7Request)
+}
+
+// l7ResetConfig adapts the reset action's config to the dependency engine. The
+// shared 'port' param is a string array, while the engine expects a
+// comma-separated string; both read empty as "all ports", so it carries over
+// unchanged. It returns a copy — mutating the caller's request.Config in place
+// would be a hidden side-effect on the shared map.
+func l7ResetConfig(cfg map[string]interface{}) map[string]interface{} {
+	out := make(map[string]interface{}, len(cfg)+1)
+	for k, v := range cfg {
+		out[k] = v
+	}
+	out["port"] = strings.Join(extutil.ToStringArray(cfg["port"]), ",")
+	return out
 }
 
 func (a *networkTcpResetAction) Start(ctx context.Context, state *NetworkTcpResetState) (*action_kit_api.StartResult, error) {

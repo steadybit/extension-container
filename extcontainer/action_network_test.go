@@ -393,6 +393,23 @@ func mustCIDR(t *testing.T, s string) net.IPNet {
 	return *n
 }
 
+func Test_l7ResetConfig(t *testing.T) {
+	in := map[string]interface{}{"port": []interface{}{"80", "8080"}, "hostname": []interface{}{"api.example.com"}}
+	out := l7ResetConfig(in)
+	require.Equal(t, "80,8080", out["port"])
+	require.Equal(t, in["hostname"], out["hostname"])
+	require.Equal(t, []interface{}{"80", "8080"}, in["port"], "the caller's config must not be mutated")
+
+	// Empty means all ports, as in packet-level mode — not a hidden 80,443.
+	for _, ports := range []interface{}{nil, []interface{}{}} {
+		got := l7ResetConfig(map[string]interface{}{"port": ports})["port"]
+		require.Equal(t, "", got)
+		parsed, err := parsePortsList(got.(string))
+		require.NoError(t, err)
+		require.Empty(t, parsed)
+	}
+}
+
 func Test_scopesOverlap(t *testing.T) {
 	all := []net.IPNet{mustCIDR(t, "0.0.0.0/0")}
 	ten := []net.IPNet{mustCIDR(t, "10.0.0.0/8")}

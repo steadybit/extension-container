@@ -1158,6 +1158,21 @@ func testNetworkDependencyFault(t *testing.T, m *e2e.Minikube, e *e2e.Extension)
 		nginx.AssertCanReach(t, "https://"+host, true)
 	})
 
+	t.Run("L7 reset with no ports intercepts every port", func(t *testing.T) {
+		nginx.AssertCanReach(t, "https://"+host, true)
+		config := map[string]any{
+			"duration": 60000, "l7": true, "hostname": []string{host},
+			"percentage": 100, "port": []string{},
+		}
+		action, err := e.RunAction(fmt.Sprintf("%s.network_tcp_reset", extcontainer.BaseActionID), target, config, &action_kit_api.ExecutionContext{})
+		require.NoError(t, err)
+		defer func() { _ = action.Cancel() }()
+
+		nginx.AssertCanReach(t, "https://"+host, false)
+		require.NoError(t, action.Cancel())
+		nginx.AssertCanReach(t, "https://"+host, true)
+	})
+
 	t.Run("intercept returns a synthesized status for cleartext HTTP", func(t *testing.T) {
 		config := map[string]any{
 			"duration": 60000, "hostname": []string{host},
