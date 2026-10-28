@@ -400,6 +400,10 @@ func Test_scopesOverlap(t *testing.T) {
 
 	require.True(t, portsOverlap([]uint16{80, 443}, []uint16{443}))
 	require.False(t, portsOverlap([]uint16{80}, []uint16{443}))
+	// No ports means every port, which overlaps anything.
+	require.True(t, portsOverlap(nil, []uint16{443}))
+	require.True(t, portsOverlap([]uint16{8080}, nil))
+	require.True(t, portsOverlap(nil, nil))
 	require.True(t, cidrsOverlap(all, ten))
 	require.True(t, cidrsOverlap(ten, all))
 	require.False(t, cidrsOverlap(ten, priv))
@@ -617,6 +621,29 @@ func Test_dependencyFault_tlsInterceptCA_notNeededForCleartextPorts(t *testing.T
 	ca, err := (&dependencyFaultAction{spec: httpAbortFaultSpec}).tlsInterceptCA([]uint16{80})
 	require.NoError(t, err)
 	require.Nil(t, ca, "port 80 only must not require the CA")
+}
+
+// Capturing every port includes HTTPS on any port, so the CA is needed.
+func Test_dependencyFault_tlsInterceptCA_neededForAllPorts(t *testing.T) {
+	withInterceptCA(t)
+	ca, err := (&dependencyFaultAction{spec: httpAbortFaultSpec}).tlsInterceptCA(nil)
+	require.NoError(t, err)
+	require.NotNil(t, ca, "all ports must load the CA")
+}
+
+func Test_parsePortsList(t *testing.T) {
+	ports, err := parsePortsList(" 80, 443 ,")
+	require.NoError(t, err)
+	require.Equal(t, []uint16{80, 443}, ports)
+
+	ports, err = parsePortsList("")
+	require.NoError(t, err)
+	require.Empty(t, ports, "empty means every port")
+
+	_, err = parsePortsList("80,http")
+	require.Error(t, err)
+	_, err = parsePortsList("70000")
+	require.Error(t, err)
 }
 
 // An empty CA half is dropped silently further down the chain, which would

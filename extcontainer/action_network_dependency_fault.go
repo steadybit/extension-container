@@ -227,9 +227,10 @@ func (a *dependencyFaultAction) tlsInterceptCA(ports []uint16) (*proxyfault.TLSI
 	if !a.spec.cleartextHTTPOnly || !config.Config.TLSInterceptEnabled() {
 		return nil, nil
 	}
-	// Only needed to decrypt 443. Reading it for a cleartext-only scope would let
-	// a broken CA mount break port-80 attacks that never wanted interception.
-	if !slices.Contains(ports, uint16(443)) {
+	// Only needed to decrypt 443 (or HTTPS on any port, when every port is
+	// captured). Reading it for a cleartext-only scope would let a broken CA
+	// mount break port-80 attacks that never wanted interception.
+	if len(ports) > 0 && !slices.Contains(ports, uint16(443)) {
 		return nil, nil
 	}
 	// Read at attack time rather than cached at startup, so replacing the Secret
@@ -497,7 +498,7 @@ func commonDependencyParameters(portsDefault string) []action_kit_api.ActionPara
 			Type: action_kit_api.ActionParameterTypeStringArray, Required: extutil.Ptr(false), Order: extutil.Ptr(11), Advanced: extutil.Ptr(true),
 		},
 		{
-			Name: "port", Label: "Dependency Ports", Description: extutil.Ptr("Comma-separated destination ports to intercept."),
+			Name: "port", Label: "Dependency Ports", Description: extutil.Ptr("Comma-separated destination ports to intercept. Leave empty to intercept every port: the fault still applies only to HTTP(S) connections to the dependency hostnames, all other traffic is forwarded untouched, but every outgoing TCP connection of the target then passes through the proxy."),
 			Type: action_kit_api.ActionParameterTypeString, DefaultValue: extutil.Ptr(portsDefault), Required: extutil.Ptr(false), Order: extutil.Ptr(12), Advanced: extutil.Ptr(true),
 		},
 		{
@@ -577,7 +578,10 @@ func (a *dependencyFaultAction) parseOpts(request action_kit_api.PrepareActionRe
 		IncludeCIDRs:          includeCIDRs,
 		ExcludeCIDRs:          excludeCIDRs,
 		Ports:                 ports,
-		Fault:                 fault,
+		// No ports means every port: the proxy finds HTTP(S) by its SNI/Host
+		// wherever it runs.
+		AllPorts: len(ports) == 0,
+		Fault:    fault,
 		// nil unless a CA is configured, so HTTPS stays untouched by default.
 		TLSInterceptCA: interceptCA,
 	}, nil
@@ -653,6 +657,8 @@ func (a *dependencyFaultAction) buildExcludes(request action_kit_api.PrepareActi
 	return out, nil
 }
 
+// parsePortsList parses the intercept ports. An empty list is valid and means
+// every port.
 func parsePortsList(s string) ([]uint16, error) {
 	var out []uint16
 	for _, p := range strings.Split(s, ",") {
@@ -665,9 +671,6 @@ func parsePortsList(s string) ([]uint16, error) {
 			return nil, fmt.Errorf("invalid port %q: %w", p, err)
 		}
 		out = append(out, uint16(n))
-	}
-	if len(out) == 0 {
-		return nil, fmt.Errorf("at least one intercept port is required")
 	}
 	return out, nil
 }
@@ -766,12 +769,16 @@ func networkNamespaceInode(info ociruntime.LinuxProcessInfo) uint64 {
 }
 
 // scopesOverlap reports whether two interception scopes can catch the same
-// traffic: their port sets and CIDR sets both intersect.
+// traffic: their port sets and CIDR sets both intersect. An empty port set
+// means every port.
 func scopesOverlap(existing proxyfault.Opts, cidrs []net.IPNet, ports []uint16) bool {
 	return portsOverlap(existing.Ports, ports) && cidrsOverlap(existing.IncludeCIDRs, cidrs)
 }
 
 func portsOverlap(a, b []uint16) bool {
+	if len(a) == 0 || len(b) == 0 {
+		return true
+	}
 	for _, x := range a {
 		if slices.Contains(b, x) {
 			return true
