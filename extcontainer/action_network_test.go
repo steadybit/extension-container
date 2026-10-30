@@ -642,7 +642,7 @@ func Test_interceptionMessages(t *testing.T) {
 
 	msgs = interceptionMessages(proxyfault.Opts{Fault: hosts}, false)
 	require.Len(t, msgs, 2)
-	require.Contains(t, msgs[0].Message, "Intercepting all ports")
+	require.Contains(t, msgs[0].Message, "Intercepting all TCP ports (except loopback)")
 	require.Contains(t, msgs[1].Message, "non-HTTP protocols")
 
 	// HTTP response injection without a CA: HTTPS on any port is untouched.

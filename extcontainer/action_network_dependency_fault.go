@@ -375,13 +375,9 @@ func interceptScope(opts proxyfault.Opts) string {
 // what it can fault, so a run explains itself — especially when every port is
 // captured, where the scope is no longer visible in the configuration.
 func interceptionMessages(opts proxyfault.Opts, cleartextHTTPOnly bool) action_kit_api.Messages {
-	scope := "all ports"
-	if len(opts.Ports) > 0 {
-		scope = interceptScope(opts)
-	}
 	msgs := action_kit_api.Messages{{
 		Level:   extutil.Ptr(action_kit_api.Info),
-		Message: fmt.Sprintf("Intercepting %s of the target; only connections to %s are faulted.", scope, strings.Join(opts.Fault.Hosts, ", ")),
+		Message: fmt.Sprintf("Intercepting %s of the target; only connections to %s are faulted.", interceptScope(opts), strings.Join(opts.Fault.Hosts, ", ")),
 	}}
 	if len(opts.Ports) > 0 {
 		return msgs
