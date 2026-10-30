@@ -638,22 +638,22 @@ func Test_interceptionMessages(t *testing.T) {
 
 	msgs := interceptionMessages(proxyfault.Opts{Ports: []uint16{80, 443}, Fault: hosts}, false)
 	require.Len(t, msgs, 1)
-	require.Equal(t, "Intercepting ports 80, 443 of the target. Only connections to api.example.com are faulted; everything else is forwarded untouched.", msgs[0].Message)
+	require.Equal(t, "Intercepting ports 80, 443 of the target; only connections to api.example.com are faulted.", msgs[0].Message)
 
 	msgs = interceptionMessages(proxyfault.Opts{Fault: hosts}, false)
 	require.Len(t, msgs, 2)
-	require.Contains(t, msgs[0].Message, "all TCP ports (except loopback)")
-	require.Contains(t, msgs[1].Message, "other protocols over TLS")
+	require.Contains(t, msgs[0].Message, "Intercepting all ports")
+	require.Contains(t, msgs[1].Message, "non-HTTP protocols")
 
 	// HTTP response injection without a CA: HTTPS on any port is untouched.
 	msgs = interceptionMessages(proxyfault.Opts{Fault: hosts}, true)
 	require.Len(t, msgs, 2)
 	require.Equal(t, action_kit_api.Warn, *msgs[1].Level)
-	require.Contains(t, msgs[1].Message, "HTTPS is forwarded untouched")
+	require.Contains(t, msgs[1].Message, "HTTPS passes through untouched")
 
 	// With a CA, HTTPS is faulted too.
 	msgs = interceptionMessages(proxyfault.Opts{Fault: hosts, TLSInterceptCA: &proxyfault.TLSInterceptCA{}}, true)
-	require.Contains(t, msgs[1].Message, "other protocols over TLS")
+	require.Contains(t, msgs[1].Message, "non-HTTP protocols")
 }
 
 // A CA that is configured but unreadable must fail loudly. Falling back to
