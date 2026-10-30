@@ -375,27 +375,26 @@ func interceptScope(opts proxyfault.Opts) string {
 // what it can fault, so a run explains itself — especially when every port is
 // captured, where the scope is no longer visible in the configuration.
 func interceptionMessages(opts proxyfault.Opts, cleartextHTTPOnly bool) action_kit_api.Messages {
+	scope := "all ports"
+	if len(opts.Ports) > 0 {
+		scope = interceptScope(opts)
+	}
 	msgs := action_kit_api.Messages{{
-		Level: extutil.Ptr(action_kit_api.Info),
-		Message: fmt.Sprintf("Intercepting %s of the target. Only connections to %s are faulted; everything else is forwarded untouched.",
-			interceptScope(opts), strings.Join(opts.Fault.Hosts, ", ")),
+		Level:   extutil.Ptr(action_kit_api.Info),
+		Message: fmt.Sprintf("Intercepting %s of the target; only connections to %s are faulted.", scope, strings.Join(opts.Fault.Hosts, ", ")),
 	}}
 	if len(opts.Ports) > 0 {
 		return msgs
 	}
-	httpsFaulted := !cleartextHTTPOnly || opts.TLSInterceptCA != nil
-	if httpsFaulted {
+	if cleartextHTTPOnly && opts.TLSInterceptCA == nil {
 		msgs = append(msgs, action_kit_api.Message{
-			Level: extutil.Ptr(action_kit_api.Info),
-			Message: "Every outgoing TCP connection of the target passes through the proxy during the attack. HTTP is recognised on any port by its Host header, TLS by its SNI — " +
-				"so other protocols over TLS whose SNI matches a dependency hostname (e.g. Kafka or Redis over TLS) are faulted too. " +
-				"Protocols that switch to TLS mid-connection (Postgres, MySQL, SMTP STARTTLS) are not recognised and are forwarded untouched.",
+			Level:   extutil.Ptr(action_kit_api.Warn),
+			Message: "Only cleartext HTTP is faulted; HTTPS passes through untouched because no TLS interception CA is configured.",
 		})
 	} else {
 		msgs = append(msgs, action_kit_api.Message{
-			Level: extutil.Ptr(action_kit_api.Warn),
-			Message: "Every outgoing TCP connection of the target passes through the proxy during the attack, but only cleartext HTTP (recognised on any port by its Host header) is faulted. " +
-				"HTTPS is forwarded untouched on every port: no TLS interception CA is configured.",
+			Level:   extutil.Ptr(action_kit_api.Info),
+			Message: "All outgoing TCP traffic passes through the proxy. TLS to these hostnames is faulted on any port, including non-HTTP protocols such as Kafka over TLS.",
 		})
 	}
 	return msgs
@@ -553,7 +552,7 @@ func commonDependencyParameters(portsDefault string) []action_kit_api.ActionPara
 			Type: action_kit_api.ActionParameterTypeStringArray, Required: extutil.Ptr(false), Order: extutil.Ptr(11), Advanced: extutil.Ptr(true),
 		},
 		{
-			Name: "port", Label: "Dependency Ports", Description: extutil.Ptr("Comma-separated destination ports to intercept. Leave empty to intercept every port: the fault still applies only to HTTP(S) connections to the dependency hostnames, all other traffic is forwarded untouched, but every outgoing TCP connection of the target then passes through the proxy."),
+			Name: "port", Label: "Dependency Ports", Description: extutil.Ptr("Comma-separated destination ports to intercept. Empty intercepts all ports."),
 			Type: action_kit_api.ActionParameterTypeString, DefaultValue: extutil.Ptr(portsDefault), Required: extutil.Ptr(false), Order: extutil.Ptr(12), Advanced: extutil.Ptr(true),
 		},
 		{

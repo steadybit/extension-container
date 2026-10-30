@@ -135,7 +135,7 @@ func tcpResetParameters() []action_kit_api.ActionParameter {
 			Type: action_kit_api.ActionParameterTypeStringArray, Required: extutil.Ptr(false), Advanced: extutil.Ptr(true), Order: extutil.Ptr(102),
 		},
 		{
-			Name: "port", Label: "Include Ports", Description: extutil.Ptr("Restrict to/from which ports the traffic is affected. Empty affects all ports. In L7 mode that means every outgoing TCP connection of the target passes through the proxy, which still resets only connections to the hostnames."),
+			Name: "port", Label: "Include Ports", Description: extutil.Ptr("Restrict to/from which ports the traffic is affected. Empty affects all ports."),
 			Type: action_kit_api.ActionParameterTypeStringArray, Required: extutil.Ptr(false), Advanced: extutil.Ptr(true), Order: extutil.Ptr(103),
 		},
 		{
