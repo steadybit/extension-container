@@ -5,6 +5,7 @@
 - feat: dependency fault attacks intercept every port when Dependency Ports is empty; only HTTP(S) connections to the dependency hostnames are faulted, all other traffic is forwarded untouched
 - feat: dependency fault attacks report the intercepted ports in the execution log and the statistics widget
 - **Behaviour change:** Reset TCP Connection in L7 mode with an empty Include Ports now intercepts every port instead of defaulting to 80,443. Resets still apply only to connections to the hostnames, but every outgoing TCP connection of the target passes through the proxy. Set Include Ports to `80,443` to keep the previous scope.
+- chore(deps): bump transparent-proxy to v1.2.0
 
 ## v1.9.2
 
