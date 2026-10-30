@@ -824,12 +824,15 @@ func scopesOverlap(existing proxyfault.Opts, cidrs []net.IPNet, ports []uint16) 
 	return portsOverlap(existing.Ports, ports) && cidrsOverlap(existing.IncludeCIDRs, cidrs)
 }
 
-func portsOverlap(a, b []uint16) bool {
-	if len(a) == 0 || len(b) == 0 {
+// portsOverlap compares the ports of a running dependency fault with those of a
+// requested one; it is only called when a fault already runs in the same netns.
+// An empty list means every port, so it overlaps any other list.
+func portsOverlap(running, requested []uint16) bool {
+	if len(running) == 0 || len(requested) == 0 {
 		return true
 	}
-	for _, x := range a {
-		if slices.Contains(b, x) {
+	for _, p := range running {
+		if slices.Contains(requested, p) {
 			return true
 		}
 	}
