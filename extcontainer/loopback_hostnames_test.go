@@ -23,16 +23,15 @@ func Test_loopbackHostname(t *testing.T) {
 	cases := []struct {
 		hostname string
 		want     bool
-		reason   string
 	}{
-		{hostname: "localhost", want: true, reason: "a localhost name"},
-		{hostname: "Api.LOCALHOST.", want: true, reason: "a localhost name"},
-		{hostname: "127.0.0.1", want: true, reason: "a loopback address"},
+		{hostname: "localhost", want: true},
+		{hostname: "Api.LOCALHOST.", want: true},
+		{hostname: "127.0.0.1", want: true},
 		{hostname: "10.0.0.1"},
-		{hostname: "toys", want: true, reason: "mapped to 127.0.0.1 in the target's /etc/hosts"},
-		{hostname: "TOYS.internal", want: true, reason: "mapped to 127.0.0.1 in the target's /etc/hosts"},
+		{hostname: "toys", want: true},
+		{hostname: "TOYS.internal", want: true},
 		// The selector matches subdomains, so a subdomain entry counts.
-		{hostname: "shop.test", want: true, reason: "mapped to 127.0.1.1 in the target's /etc/hosts"},
+		{hostname: "shop.test", want: true},
 		// Also routable: some connections can still be faulted.
 		{hostname: "both"},
 		// IPv6 loopback is never intercepted anyway.
@@ -44,16 +43,12 @@ func Test_loopbackHostname(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.hostname, func(t *testing.T) {
-			reason, ok := loopbackHostname(tc.hostname, etcHosts)
-			assert.Equal(t, tc.want, ok)
-			assert.Equal(t, tc.reason, reason)
+			assert.Equal(t, tc.want, loopbackHostname(tc.hostname, etcHosts))
 		})
 	}
 }
 
 func Test_loopbackHostname_noEtcHosts(t *testing.T) {
-	_, ok := loopbackHostname("toys", nil)
-	assert.False(t, ok)
-	_, ok = loopbackHostname("localhost", nil)
-	assert.True(t, ok)
+	assert.False(t, loopbackHostname("toys", nil))
+	assert.True(t, loopbackHostname("localhost", nil))
 }

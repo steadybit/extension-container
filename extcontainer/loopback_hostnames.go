@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"net/netip"
 	"path/filepath"
-	"slices"
 	"strconv"
 	"strings"
 
@@ -33,40 +32,36 @@ func loopbackHostnameMessages(ctx context.Context, pid int, hostnames []string) 
 		log.Debug().Err(err).Int("pid", pid).Msg("could not read the target's /etc/hosts; skipping the localhost hostname check")
 	}
 
-	var msgs action_kit_api.Messages
+	var matched []string
 	for _, hostname := range hostnames {
-		reason, ok := loopbackHostname(hostname, hosts)
-		if !ok {
-			continue
+		if loopbackHostname(hostname, hosts) {
+			matched = append(matched, hostname)
 		}
-		log.Warn().Str("hostname", hostname).Str("reason", reason).Msg("dependency hostname seems to belong to localhost, which is not intercepted")
-		msgs = append(msgs, action_kit_api.Message{
-			Level: extutil.Ptr(action_kit_api.Warn),
-			Message: fmt.Sprintf("Hostname '%s' seems to belong to localhost (%s). Localhost traffic isn't intercepted, so it is probably not affected. Enable 'Attack Localhost Traffic' to include it.",
-				hostname, reason),
-		})
 	}
-	return msgs
+	if len(matched) == 0 {
+		return nil
+	}
+	log.Warn().Strs("hostnames", matched).Msg("dependency hostnames seem to belong to localhost, which is not intercepted")
+	return action_kit_api.Messages{{
+		Level:   extutil.Ptr(action_kit_api.Warn),
+		Message: fmt.Sprintf("Localhost traffic isn't intercepted. Enable 'Attack Localhost Traffic' to include %s.", strings.Join(matched, ", ")),
+	}}
 }
 
 // loopbackHostname reports whether a dependency hostname seems to point at
-// localhost, and why.
-func loopbackHostname(hostname string, etcHosts []byte) (string, bool) {
+// localhost.
+func loopbackHostname(hostname string, etcHosts []byte) bool {
 	name := strings.ToLower(strings.TrimSuffix(strings.TrimSpace(hostname), "."))
 	if name == "localhost" || strings.HasSuffix(name, ".localhost") {
-		return "a localhost name", true
+		return true
 	}
 	if addr, err := netip.ParseAddr(name); err == nil {
-		if addr.Unmap().IsLoopback() {
-			return "a loopback address", true
-		}
-		return "", false
+		return addr.Unmap().IsLoopback()
 	}
 
 	// The selector also matches subdomains, so an /etc/hosts entry for
 	// api.example.com counts for the hostname example.com.
-	var loopback []string
-	routable := false
+	loopback, routable := false, false
 	for entry, addrs := range parseEtcHosts(etcHosts) {
 		if entry != name && !strings.HasSuffix(entry, "."+name) {
 			continue
@@ -74,17 +69,13 @@ func loopbackHostname(hostname string, etcHosts []byte) (string, bool) {
 		for _, addr := range addrs {
 			switch {
 			case addr.Is4() && addr.IsLoopback():
-				loopback = append(loopback, addr.String())
+				loopback = true
 			case addr.Is4():
 				routable = true
 			}
 		}
 	}
-	if len(loopback) == 0 || routable {
-		return "", false
-	}
-	slices.Sort(loopback)
-	return "mapped to " + strings.Join(slices.Compact(loopback), ", ") + " in the target's /etc/hosts", true
+	return loopback && !routable
 }
 
 // parseEtcHosts returns every name in an /etc/hosts file with its addresses.
