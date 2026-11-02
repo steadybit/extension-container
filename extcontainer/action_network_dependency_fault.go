@@ -593,10 +593,10 @@ func commonDependencyParameters() []action_kit_api.ActionParameter {
 // otherwise leaves alone whether or not ports are given.
 func attackLocalhostParameter(order int) action_kit_api.ActionParameter {
 	return action_kit_api.ActionParameter{
-		Name:  "attackLocalhost",
-		Label: "Attack Localhost Traffic",
+		Name:        "attackLocalhost",
+		Label:       "Attack Localhost Traffic",
 		Description: extutil.Ptr("Also intercept localhost (127.0.0.0/8), e.g. sidecars. Its connections may be reset when the attack starts and ends."),
-		Type: action_kit_api.ActionParameterTypeBoolean, DefaultValue: extutil.Ptr("false"), Required: extutil.Ptr(false), Order: extutil.Ptr(order), Advanced: extutil.Ptr(true),
+		Type:        action_kit_api.ActionParameterTypeBoolean, DefaultValue: extutil.Ptr("false"), Required: extutil.Ptr(false), Order: extutil.Ptr(order), Advanced: extutil.Ptr(true),
 	}
 }
 
