@@ -356,23 +356,21 @@ func (m mockedContainer) Labels() map[string]string {
 	return m.labels
 }
 
-func Test_dependency_defaultPorts(t *testing.T) {
-	require.Equal(t, "80,443", (&dependencyFaultAction{spec: latencyFaultSpec}).defaultPorts())
-	require.Equal(t, "80,443", (&dependencyFaultAction{spec: resetFaultSpec}).defaultPorts())
-	// HTTP abort is cleartext-only, so 443 is dropped from the default.
-	require.Equal(t, "80", (&dependencyFaultAction{spec: httpAbortFaultSpec}).defaultPorts())
-
-	// The Describe()d port parameter default reflects it.
-	portDefault := func(a *dependencyFaultAction) string {
-		for _, p := range a.Describe().Parameters {
-			if p.Name == "port" {
-				return *p.DefaultValue
+func Test_dependency_portsHaveNoDefault(t *testing.T) {
+	// No default, so an attack intercepts every port unless the user narrows it.
+	// Holds with and without a TLS interception CA.
+	assertNoDefault := func(t *testing.T) {
+		for _, spec := range []dependencyFaultSpec{latencyFaultSpec, httpAbortFaultSpec, resetFaultSpec} {
+			for _, p := range (&dependencyFaultAction{spec: spec}).Describe().Parameters {
+				if p.Name == "port" {
+					require.Nil(t, p.DefaultValue, "%s: Dependency Ports must have no default", spec.id)
+				}
 			}
 		}
-		return ""
 	}
-	require.Equal(t, "80", portDefault(&dependencyFaultAction{spec: httpAbortFaultSpec}))
-	require.Equal(t, "80,443", portDefault(&dependencyFaultAction{spec: latencyFaultSpec}))
+	assertNoDefault(t)
+	withInterceptCA(t)
+	assertNoDefault(t)
 }
 
 func Test_dependencyFault_hint(t *testing.T) {
@@ -564,7 +562,6 @@ func Test_dependencyFault_tlsInterceptCA(t *testing.T) {
 	ca, err := httpAbort.tlsInterceptCA([]uint16{443})
 	require.NoError(t, err)
 	require.Nil(t, ca)
-	require.Equal(t, "80", httpAbort.defaultPorts())
 
 	withInterceptCA(t)
 
@@ -573,14 +570,11 @@ func Test_dependencyFault_tlsInterceptCA(t *testing.T) {
 	require.NotNil(t, ca)
 	require.Contains(t, string(ca.CertPEM), "BEGIN CERTIFICATE")
 	require.Contains(t, string(ca.KeyPEM), "PRIVATE KEY")
-	// 443 becomes a sensible default once the proxy can terminate it.
-	require.Equal(t, "80,443", httpAbort.defaultPorts())
 
 	// Latency already works over HTTPS at L4, so it never asks to decrypt.
 	lca, err := latency.tlsInterceptCA([]uint16{443})
 	require.NoError(t, err)
 	require.Nil(t, lca)
-	require.Equal(t, "80,443", latency.defaultPorts())
 }
 
 func Test_dependencyFault_hint_withInterceptCA(t *testing.T) {
