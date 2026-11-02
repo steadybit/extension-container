@@ -16,6 +16,7 @@ import (
 	"net"
 	"os"
 
+	"github.com/google/uuid"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
 	"github.com/steadybit/action-kit/go/action_kit_commons/network"
@@ -30,6 +31,7 @@ import (
 	"hash/fnv"
 	"math/rand/v2"
 	"os/exec"
+	"slices"
 	"syscall"
 	"testing"
 	"time"
@@ -614,12 +616,15 @@ func Test_formatDependencyStatsMarkdown_scope(t *testing.T) {
 		PerHost:            map[string]proxyfault.HostStat{"api.example.com": {Matched: 3, Faulted: 2}},
 	}
 	md := formatDependencyStatsMarkdown(snap, proxyfault.Opts{})
-	require.Contains(t, md, "- **Intercepting:** all TCP ports (except loopback)")
+	require.Contains(t, md, "- **Intercepting:** all TCP ports (localhost excluded)")
 	require.Contains(t, md, "- **Connections intercepted:** 10")
 	require.Contains(t, md, "- **To a dependency hostname:** 3")
 
 	md = formatDependencyStatsMarkdown(snap, proxyfault.Opts{Ports: []uint16{80, 443}})
-	require.Contains(t, md, "- **Intercepting:** ports 80, 443")
+	require.Contains(t, md, "- **Intercepting:** ports 80, 443 (localhost excluded)")
+
+	md = formatDependencyStatsMarkdown(snap, proxyfault.Opts{Ports: []uint16{80, 443}, InterceptLoopback: true})
+	require.Contains(t, md, "- **Intercepting:** ports 80, 443 (localhost included)")
 
 	// Traffic flows but nothing reaches the named dependencies: point at the
 	// hostnames, not at the interception.
@@ -632,11 +637,11 @@ func Test_interceptionMessages(t *testing.T) {
 
 	msgs := interceptionMessages(proxyfault.Opts{Ports: []uint16{80, 443}, Fault: hosts}, false)
 	require.Len(t, msgs, 1)
-	require.Equal(t, "Intercepting ports 80, 443 of the target; only connections to api.example.com are faulted.", msgs[0].Message)
+	require.Equal(t, "Intercepting ports 80, 443 (localhost excluded) of the target; only connections to api.example.com are faulted.", msgs[0].Message)
 
 	msgs = interceptionMessages(proxyfault.Opts{Fault: hosts}, false)
 	require.Len(t, msgs, 2)
-	require.Contains(t, msgs[0].Message, "Intercepting all TCP ports (except loopback)")
+	require.Contains(t, msgs[0].Message, "Intercepting all TCP ports (localhost excluded)")
 	require.Contains(t, msgs[1].Message, "non-HTTP protocols")
 
 	// HTTP response injection without a CA: HTTPS on any port is untouched.
@@ -648,6 +653,67 @@ func Test_interceptionMessages(t *testing.T) {
 	// With a CA, HTTPS is faulted too.
 	msgs = interceptionMessages(proxyfault.Opts{Fault: hosts, TLSInterceptCA: &proxyfault.TLSInterceptCA{}}, true)
 	require.Contains(t, msgs[1].Message, "non-HTTP protocols")
+}
+
+func Test_interceptionMessages_localhost(t *testing.T) {
+	hosts := proxyfault.Fault{Hosts: []string{"api.example.com"}}
+	// Same localhost handling with and without ports.
+	for _, ports := range [][]uint16{nil, {80, 443}} {
+		msgs := interceptionMessages(proxyfault.Opts{Ports: ports, Fault: hosts, InterceptLoopback: true}, false)
+		require.Contains(t, msgs[0].Message, "(localhost included)")
+		require.Equal(t, action_kit_api.Warn, *msgs[1].Level)
+		require.Contains(t, msgs[1].Message, "existing localhost connections may be reset")
+	}
+}
+
+func Test_dependency_attackLocalhostParameter(t *testing.T) {
+	// Off by default, with a warning about the side effects, on every dependency
+	// fault — and on the TCP reset, for its L7 mode.
+	params := map[string][]action_kit_api.ActionParameter{
+		"tcp reset": NewNetworkTcpResetContainerAction(nil, nil).Describe().Parameters,
+	}
+	for _, spec := range []dependencyFaultSpec{latencyFaultSpec, httpAbortFaultSpec} {
+		params[spec.id] = (&dependencyFaultAction{spec: spec}).Describe().Parameters
+	}
+	for name, ps := range params {
+		i := slices.IndexFunc(ps, func(p action_kit_api.ActionParameter) bool { return p.Name == "attackLocalhost" })
+		require.NotEqual(t, -1, i, "%s: attackLocalhost missing", name)
+		p := ps[i]
+		require.Equal(t, "false", *p.DefaultValue, name)
+		require.True(t, *p.Advanced, name)
+		require.Contains(t, *p.Description, "127.0.0.0/8", name)
+		require.Contains(t, *p.Description, "may be reset when the attack starts", name)
+	}
+}
+
+func Test_dependencyFault_parseOpts_attackLocalhost(t *testing.T) {
+	a := &dependencyFaultAction{spec: latencyFaultSpec}
+	request := func(cfg map[string]interface{}) action_kit_api.PrepareActionRequestBody {
+		cfg["hostname"] = []interface{}{"api.example.com"}
+		cfg["delay"] = 500
+		cfg["duration"] = 30000
+		return action_kit_api.PrepareActionRequestBody{ExecutionId: uuid.New(), Config: cfg}
+	}
+
+	for _, ports := range []string{"", "80,443"} {
+		opts, err := a.parseOpts(request(map[string]interface{}{"port": ports}))
+		require.NoError(t, err)
+		require.False(t, opts.InterceptLoopback, "ports %q: localhost is excluded by default", ports)
+
+		opts, err = a.parseOpts(request(map[string]interface{}{"port": ports, "attackLocalhost": true}))
+		require.NoError(t, err)
+		require.True(t, opts.InterceptLoopback, "ports %q", ports)
+	}
+}
+
+func Test_ownPorts(t *testing.T) {
+	prevPort, prevHealth := config.Config.Port, config.Config.HealthPort
+	t.Cleanup(func() { config.Config.Port, config.Config.HealthPort = prevPort, prevHealth })
+
+	config.Config.Port, config.Config.HealthPort = 8086, 8082
+	require.Equal(t, []uint16{8086, 8082}, ownPorts())
+	config.Config.HealthPort = 8086
+	require.Equal(t, []uint16{8086}, ownPorts())
 }
 
 // A CA that is configured but unreadable must fail loudly. Falling back to

@@ -150,7 +150,17 @@ func tcpResetParameters() []action_kit_api.ActionParameter {
 			Name: "networkInterface", Label: "Network Interface", Description: extutil.Ptr("Packet-level mode only: target network interface(s). All if none specified."),
 			Type: action_kit_api.ActionParameterTypeStringArray, Required: extutil.Ptr(false), Advanced: extutil.Ptr(true), Order: extutil.Ptr(106),
 		},
+		l7AttackLocalhostParameter(),
 	}
+}
+
+// l7AttackLocalhostParameter is the dependency faults' localhost opt-in; it
+// only applies to the proxy, i.e. L7 mode.
+func l7AttackLocalhostParameter() action_kit_api.ActionParameter {
+	p := attackLocalhostParameter(107)
+	p.Label = "Attack Localhost Traffic (L7 mode)"
+	p.Description = extutil.Ptr("L7 mode only: " + *p.Description)
+	return p
 }
 
 func (a *networkTcpResetAction) Prepare(ctx context.Context, state *NetworkTcpResetState, request action_kit_api.PrepareActionRequestBody) (*action_kit_api.PrepareResult, error) {
