@@ -249,8 +249,6 @@ github.com/moby/moby/client v0.6.2 h1:ekSPlMccrZGcw6Scb8T9D39qE0mB+XupU/yS0zNw9N
 github.com/moby/moby/client v0.6.2/go.mod h1:DGcnO7qmPJrqobx/ggQgQ/AUk+2wgVdQv7uxB0/mEsc=
 github.com/moby/spdystream v0.5.1 h1:9sNYeYZUcci9R6/w7KDaFWEWeV4LStVG78Mpyq/Zm/Y=
 github.com/moby/spdystream v0.5.1/go.mod h1:xBAYlnt/ay+11ShkdFKNAG7LsyK/tmNBVvVOwrfMgdI=
-github.com/moby/sys/capability v0.4.0 h1:4D4mI6KlNtWMCM1Z/K0i7RV1FkX+DBDHKVJpCndZoHk=
-github.com/moby/sys/capability v0.4.0/go.mod h1:4g9IK291rVkms3LKCDOoYlnV8xKwoDTpIrNEE35Wq0I=
 github.com/moby/sys/capability v0.5.0 h1:Bm4oD9xGCtZguPnaoQy1/jvKTSwZHMvM0FrnxNYtGYU=
 github.com/moby/sys/capability v0.5.0/go.mod h1:i+0cXvNSriGrL3C6sxnmlmGL5HVU0OdxocizXdC8A+g=
 github.com/moby/sys/mountinfo v0.7.2 h1:1shs6aH5s4o5H2zQLn796ADW1wMrIwHsyJ2v9KouLrg=
@@ -319,14 +317,10 @@ github.com/smartystreets/goconvey v1.8.0/go.mod h1:EdX8jtrTIj26jmjCOVNMVSIYAtgex
 github.com/spf13/pflag v1.0.10 h1:4EBh2KAYBwaONj6b2Ye1GiHfwjqyROoF4RwYO+vPwFk=
 github.com/spf13/pflag v1.0.10/go.mod h1:McXfInJRrz4CZXVZOBLb0bTZqETkiAhM9Iw0y3An2Bg=
 github.com/spkg/bom v0.0.0-20160624110644-59b7046e48ad/go.mod h1:qLr4V1qq6nMqFKkMo8ZTx3f+BZEkzsRUY10Xsm2mwU0=
-github.com/steadybit/action-kit v0.0.0-20261026212703-90ec287a09bb/go.mod h1:HQFOfOWjqCxG+e/AR+c3h3RxCk4iraqdoViZeXiwubU=
-github.com/steadybit/action-kit v0.0.0-20261102103332-b5a6ab05b00b h1:QMNY3P3kK+2yu9ZBhDgAn2fzXnLimiexRDBQCJdse7c=
 github.com/steadybit/action-kit/go/action_kit_api/v2 v2.10.6 h1:PjPcteEQ3z5YhovA0zW55wRxHr9OA1xhzdv72mHXm3Y=
 github.com/steadybit/action-kit/go/action_kit_api/v2 v2.10.6/go.mod h1:1vug8c1rvRslMVxEvXaadCZODZ7wgivlkoIZSykZ0YI=
-github.com/steadybit/action-kit/go/action_kit_commons v1.14.2 h1:IaXBwF1a5hnJ0LintdGCbQQ4LWMs/UQhAnv1btxV9uE=
-github.com/steadybit/action-kit/go/action_kit_commons v1.14.2/go.mod h1:QN4XrK/sTHgkvIozNsTiv/0KG9ZFkczLr9tbMbiXMjk=
-github.com/steadybit/action-kit/go/action_kit_commons v1.14.3-0.20261102103332-b5a6ab05b00b h1:Ggl6ZTKIL9fqho0pAuAUcvkZG0Vp7EVE/GIkfOjaZDU=
-github.com/steadybit/action-kit/go/action_kit_commons v1.14.3-0.20261102103332-b5a6ab05b00b/go.mod h1:IIq84umjtugLFwKuZmCe/Im7REZ3ky9Kv1gD1tu4HlE=
+github.com/steadybit/action-kit/go/action_kit_commons v1.15.0 h1:lyzJtAP/+Iv6dQnJ0yQyDlbtu0BPqKwF5do4g9mMYzA=
+github.com/steadybit/action-kit/go/action_kit_commons v1.15.0/go.mod h1:IIq84umjtugLFwKuZmCe/Im7REZ3ky9Kv1gD1tu4HlE=
 github.com/steadybit/action-kit/go/action_kit_sdk v1.4.1 h1:fKgOjkC64Au6RWX/ANWmq0Y1LjMElURde0RPc6lEDCo=
 github.com/steadybit/action-kit/go/action_kit_sdk v1.4.1/go.mod h1:1mLrjwlZkcz8xN3kIRa5zy4LavmZsdNBd6v+Ao5DNe8=
 github.com/steadybit/action-kit/go/action_kit_test v1.4.13 h1:1AP3Gufm41MTWLhXGiJQDnTx7hLSCy7pycdL/HChXEU=
