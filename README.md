@@ -11,7 +11,7 @@ our [Reliability Hub](https://hub.steadybit.com/extension/com.steadybit.extensio
 
 | Environment Variable                                | Helm value                                                   | Meaning                                                                                                                    | Required | Default |
 |-----------------------------------------------------|--------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------|----------|---------|
-| `STEADYBIT_EXTENSION_CONTAINER_RUNTIME`             | `container.engine`                                           | The container runtime to user either `docker`, `containerd` or `cri-o`. Will be automatically configured if not specified. | yes      | (auto)  |
+| `STEADYBIT_EXTENSION_CONTAINER_RUNTIME`             | `container.engine`                                           | The container runtime to use: `docker`, `containerd`, `cri-o` or `podman`. Will be automatically configured if not specified. | yes      | (auto)  |
 | `STEADYBIT_EXTENSION_CONTAINER_SOCKET`              | `containerEngines.(docker/containerd/cri-o).socket`          | The socket used to connect to the container runtime. Will be automatically configured if not specified.                    | yes      | (auto)  |
 | `STEADYBIT_EXTENSION_OCIRUNTIME_PATH`               | `containerEngines.(docker/containerd/cri-o).ociruntime.path` | The OCI runtime to use (`runc` or `crun`).                                                                                 | yes      | (auto)  |
 | `STEADYBIT_EXTENSION_OCIRUNTIME_ROOT`               | `containerEngines.(docker/containerd/cri-o).ociruntime.root` | The OCI runtime root to use.                                                                                               | yes      | (auto)  |
@@ -178,6 +178,29 @@ sudo mount -o remount,rw,nosuid,nodev,noexec,relatime -t cgroup2 none /sys/fs/cg
 For OpenShift >= 4.18 the extension needs to be configured to use `crun` as the OCI runtime.
 By setting the helm value `containerEngines.cri-o.ociRuntime.path=crun` or for non-Kubernetes the environment variable
 `STEADYBIT_EXTENSION_OCIRUNTIME_PATH=crun`
+
+## Podman (Linux package)
+
+Podman serves a Docker-compatible API, which the extension uses for discovery, stop and pause. The socket isn't active
+by default, enable it before installing the extension:
+
+```sh
+sudo systemctl enable --now podman.socket
+```
+
+The extension then detects `/run/podman/podman.sock` (also when `/var/run/docker.sock` is a link to it, as installed by
+`podman-docker`) and asks podman which OCI runtime it uses (`crun` on RHEL 9, `runc` on RHEL 8), so the attacks find the
+target containers with the same binary and state directory. `STEADYBIT_EXTENSION_OCIRUNTIME_PATH` and
+`STEADYBIT_EXTENSION_OCIRUNTIME_ROOT` still override the detected values. Pod infra containers aren't discovered.
+
+Rootless podman is supported with limitations:
+
+- One extension watches one user's containers. Point it at that user's socket and runtime state directory, e.g.
+  `STEADYBIT_EXTENSION_CONTAINER_SOCKET=/run/user/1000/podman/podman.sock` (the state directory, `/run/user/1000/crun`,
+  is derived from the socket).
+- Rootless containers get an `fq_codel` root qdisc on `eth0`. Network attacks refuse to replace it unless
+  `STEADYBIT_EXTENSION_NETWORK_STRICT_ROOT_QDISC=false`, which restores it after the attack.
+- Fill disk and stress IO fail on rootless containers.
 
 ## Hardened nodes (`nosuid` root filesystem)
 

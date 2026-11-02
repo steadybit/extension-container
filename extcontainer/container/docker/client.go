@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	cerrdefs "github.com/containerd/errdefs"
+	typecontainer "github.com/moby/moby/api/types/container"
 	dclient "github.com/moby/moby/client"
 	"github.com/steadybit/extension-container/extcontainer"
 	"github.com/steadybit/extension-container/extcontainer/container/types"
@@ -14,7 +15,12 @@ import (
 )
 
 type client struct {
-	docker *dclient.Client
+	docker  *dclient.Client
+	runtime types.Runtime
+	// listStatuses are the container states requested when listing containers.
+	listStatuses []string
+	// skipContainer drops containers from the list which aren't workloads (e.g. podman pod infra containers).
+	skipContainer func(c typecontainer.Summary) bool
 }
 
 func (c *client) Socket() string {
@@ -22,10 +28,22 @@ func (c *client) Socket() string {
 }
 
 func (c *client) Runtime() types.Runtime {
-	return types.RuntimeDocker
+	return c.runtime
 }
 
 func New(address string) (types.Client, error) {
+	dockerClient, err := newAPIClient(address)
+	if err != nil {
+		return nil, err
+	}
+	return &client{
+		docker:       dockerClient,
+		runtime:      types.RuntimeDocker,
+		listStatuses: []string{"restarting", "running", "paused"},
+	}, nil
+}
+
+func newAPIClient(address string) (*dclient.Client, error) {
 	if !strings.Contains(address, "://") {
 		address = "unix://" + address
 	}
@@ -33,12 +51,12 @@ func New(address string) (types.Client, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Docker dclient: %w", err)
 	}
-	return &client{dockerClient}, nil
+	return dockerClient, nil
 }
 
 func (c *client) List(ctx context.Context) ([]types.Container, error) {
 	listFilters := make(dclient.Filters)
-	listFilters.Add("status", "restarting", "running", "paused")
+	listFilters.Add("status", c.listStatuses...)
 
 	listResult, err := c.docker.ContainerList(ctx, dclient.ContainerListOptions{Filters: listFilters})
 	if err != nil {
@@ -47,6 +65,9 @@ func (c *client) List(ctx context.Context) ([]types.Container, error) {
 
 	result := make([]types.Container, 0, len(listResult.Items))
 	for _, container := range listResult.Items {
+		if c.skipContainer != nil && c.skipContainer(container) {
+			continue
+		}
 		result = append(result, newContainer(container))
 	}
 	return result, nil

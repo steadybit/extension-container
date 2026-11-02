@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- feat: support Podman as container runtime (`podman`): detects `/run/podman/podman.sock` (also behind a `podman-docker` link), uses the OCI runtime podman reports (crun/runc and its state directory) and skips pod infra containers
+- fix: discovery failed on Podman because it rejects listing containers in the `restarting` state
 - feat: dependency fault attacks intercept every port when Dependency Ports is empty; only HTTP(S) connections to the dependency hostnames are faulted, all other traffic is forwarded untouched
 - feat: dependency fault attacks report the intercepted ports in the execution log and the statistics widget
 - feat: Dependency Ports has no default anymore, so new dependency fault attacks intercept every port. Existing experiments keep the ports they were saved with.

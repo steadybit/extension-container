@@ -77,10 +77,8 @@ func main() {
 		Str("socket", client.Socket()).
 		Msg("Container runtime client initialized.")
 
-	ociRuntimeCfg := ociruntime.ConfigFromEnvironment()
-	if ociRuntimeCfg.Root == "" {
-		ociRuntimeCfg.Root = client.Runtime().DefaultRuncRoot()
-	}
+	ociRuntimeCfg := container.ResolveOciRuntimeConfig(context.Background(), ociruntime.ConfigFromEnvironment(), client)
+	log.Info().Any("config", ociRuntimeCfg).Msg("OCI runtime for target containers.")
 	r := ociruntime.NewOciRuntimeWithCrunForSidecars(ociRuntimeCfg)
 
 	discovery_kit_sdk.Register(extcontainer.NewContainerDiscovery(client))
