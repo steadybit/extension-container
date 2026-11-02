@@ -24,10 +24,14 @@ const (
 	RuntimeCrio               Runtime = "cri-o"
 	DefaultSocketCrio                 = "/var/run/crio/crio.sock"
 	DefaultRuncRootCrio               = "/run/runc"
+	RuntimePodman             Runtime = "podman"
+	DefaultSocketPodman               = "/run/podman/podman.sock"
+	// DefaultRuncRootPodman is only a fallback: the podman client reports the OCI runtime and its root it actually uses.
+	DefaultRuncRootPodman = "/run/runc"
 )
 
 var (
-	AllRuntimes = []Runtime{RuntimeDocker, RuntimeContainerd, RuntimeCrio}
+	AllRuntimes = []Runtime{RuntimeDocker, RuntimeContainerd, RuntimeCrio, RuntimePodman}
 )
 
 type Runtime string
@@ -68,6 +72,20 @@ type Client interface {
 	Socket() string
 }
 
+// OciRuntimeInfo describes the OCI runtime a container engine uses to run its containers.
+type OciRuntimeInfo struct {
+	// Path is the OCI runtime binary, e.g. /usr/bin/crun
+	Path string
+	// Root is the state directory of the OCI runtime, e.g. /run/crun
+	Root string
+}
+
+// OciRuntimeInfoProvider is implemented by clients which can tell which OCI runtime the engine uses. The extension
+// needs it to look up the target containers with the very same OCI runtime and root.
+type OciRuntimeInfoProvider interface {
+	OciRuntimeInfo(ctx context.Context) (OciRuntimeInfo, error)
+}
+
 func (runtime Runtime) DefaultSocket() string {
 	switch runtime {
 	case RuntimeDocker:
@@ -76,6 +94,8 @@ func (runtime Runtime) DefaultSocket() string {
 		return DefaultSocketContainerd
 	case RuntimeCrio:
 		return DefaultSocketCrio
+	case RuntimePodman:
+		return DefaultSocketPodman
 	}
 	return ""
 }
@@ -88,6 +108,8 @@ func (runtime Runtime) DefaultRuncRoot() string {
 		return DefaultRuncRootContainerd
 	case RuntimeCrio:
 		return DefaultRuncRootCrio
+	case RuntimePodman:
+		return DefaultRuncRootPodman
 	}
 	return ""
 }
