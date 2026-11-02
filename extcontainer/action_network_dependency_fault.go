@@ -344,6 +344,9 @@ func (a *dependencyFaultAction) Prepare(ctx context.Context, state *DependencyFa
 		}}, nil
 	}
 	messages := interceptionMessages(opts, a.spec.cleartextHTTPOnly)
+	if !opts.InterceptLoopback {
+		messages = append(messages, loopbackHostnameMessages(ctx, processInfo.Pid, opts.Fault.Hosts)...)
+	}
 	if !reserved {
 		// A reservation/handle for this execution already exists — idempotent.
 		return &action_kit_api.PrepareResult{Messages: &messages}, nil
