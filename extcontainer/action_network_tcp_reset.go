@@ -94,7 +94,8 @@ func (a *networkTcpResetAction) Describe() action_kit_api.ActionDescription {
 				Append:      false,
 			},
 		}),
-		Parameters: tcpResetParameters(),
+		ParameterGroups: new([]action_kit_api.ParameterGroup{trafficFilterGroup}),
+		Parameters:      tcpResetParameters(),
 	}
 }
 
@@ -132,23 +133,23 @@ func tcpResetParameters() []action_kit_api.ActionParameter {
 		},
 		{
 			Name: "ip", Label: "Include IPs/CIDRs", Description: extutil.Ptr("Restrict to/from which IP addresses or blocks the traffic is affected. In L7 mode: interception is IPv4 only."),
-			Type: action_kit_api.ActionParameterTypeStringArray, Required: extutil.Ptr(false), Advanced: extutil.Ptr(true), Order: extutil.Ptr(102),
+			Type: action_kit_api.ActionParameterTypeStringArray, Required: extutil.Ptr(false), Advanced: extutil.Ptr(true), Group: extutil.Ptr(groupTrafficFilter), Order: extutil.Ptr(102),
 		},
 		{
 			Name: "port", Label: "Include Ports", Description: extutil.Ptr("Restrict to/from which ports the traffic is affected. Empty affects all ports."),
-			Type: action_kit_api.ActionParameterTypeStringArray, Required: extutil.Ptr(false), Advanced: extutil.Ptr(true), Order: extutil.Ptr(103),
+			Type: action_kit_api.ActionParameterTypeStringArray, Required: extutil.Ptr(false), Advanced: extutil.Ptr(true), Group: extutil.Ptr(groupTrafficFilter), Order: extutil.Ptr(103),
 		},
 		{
 			Name: "excludeHostname", Label: "Exclude Hostnames", Description: extutil.Ptr("Packet-level mode only: exclude traffic to/from these hosts. Excludes take precedence over includes."),
-			Type: action_kit_api.ActionParameterTypeStringArray, Required: extutil.Ptr(false), Advanced: extutil.Ptr(true), Order: extutil.Ptr(104),
+			Type: action_kit_api.ActionParameterTypeStringArray, Required: extutil.Ptr(false), Advanced: extutil.Ptr(true), Group: extutil.Ptr(groupTrafficFilter), Order: extutil.Ptr(104),
 		},
 		{
 			Name: "excludeIp", Label: "Exclude IPs/CIDRs", Description: extutil.Ptr("Exclude traffic to/from these IP addresses or CIDR blocks. Excludes take precedence over includes."),
-			Type: action_kit_api.ActionParameterTypeStringArray, Required: extutil.Ptr(false), Advanced: extutil.Ptr(true), Order: extutil.Ptr(105),
+			Type: action_kit_api.ActionParameterTypeStringArray, Required: extutil.Ptr(false), Advanced: extutil.Ptr(true), Group: extutil.Ptr(groupTrafficFilter), Order: extutil.Ptr(105),
 		},
 		{
 			Name: "networkInterface", Label: "Network Interface", Description: extutil.Ptr("Packet-level mode only: target network interface(s). All if none specified."),
-			Type: action_kit_api.ActionParameterTypeStringArray, Required: extutil.Ptr(false), Advanced: extutil.Ptr(true), Order: extutil.Ptr(106),
+			Type: action_kit_api.ActionParameterTypeStringArray, Required: extutil.Ptr(false), Advanced: extutil.Ptr(true), Group: extutil.Ptr(groupTrafficFilter), Order: extutil.Ptr(106),
 		},
 		l7AttackLocalhostParameter(),
 	}

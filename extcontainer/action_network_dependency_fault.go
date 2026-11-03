@@ -199,7 +199,8 @@ func (a *dependencyFaultAction) Describe() action_kit_api.ActionDescription {
 				Append:      false,
 			},
 		}),
-		Parameters: append(commonDependencyParameters(), a.spec.extraParams...),
+		ParameterGroups: new([]action_kit_api.ParameterGroup{dependencyTrafficFilterGroup}),
+		Parameters:      append(commonDependencyParameters(), a.spec.extraParams...),
 	}
 }
 
@@ -570,16 +571,16 @@ func commonDependencyParameters() []action_kit_api.ActionParameter {
 		},
 		{
 			Name: "ip", Label: "Dependency CIDRs", Description: extutil.Ptr("Intercept traffic destined for these IP CIDRs. Defaults to all destinations. Note: interception is currently IPv4 only."),
-			Type: action_kit_api.ActionParameterTypeStringArray, Required: extutil.Ptr(false), Order: extutil.Ptr(11), Advanced: extutil.Ptr(true),
+			Type: action_kit_api.ActionParameterTypeStringArray, Required: extutil.Ptr(false), Order: extutil.Ptr(11), Advanced: extutil.Ptr(true), Group: extutil.Ptr(groupTrafficFilter),
 		},
 		{
 			Name: "port", Label: "Dependency Ports", Description: extutil.Ptr("Comma-separated destination ports to intercept. Empty intercepts all ports."),
 			// No default: an attack intercepts every port unless the user narrows it.
-			Type: action_kit_api.ActionParameterTypeString, Required: extutil.Ptr(false), Order: extutil.Ptr(12), Advanced: extutil.Ptr(true),
+			Type: action_kit_api.ActionParameterTypeString, Required: extutil.Ptr(false), Order: extutil.Ptr(12), Advanced: extutil.Ptr(true), Group: extutil.Ptr(groupTrafficFilter),
 		},
 		{
 			Name: "excludeIp", Label: "Exclude CIDRs", Description: extutil.Ptr("Never intercept traffic to these CIDRs (in addition to the automatically protected agent/extension endpoints)."),
-			Type: action_kit_api.ActionParameterTypeStringArray, Required: extutil.Ptr(false), Order: extutil.Ptr(13), Advanced: extutil.Ptr(true),
+			Type: action_kit_api.ActionParameterTypeStringArray, Required: extutil.Ptr(false), Order: extutil.Ptr(13), Advanced: extutil.Ptr(true), Group: extutil.Ptr(groupTrafficFilter),
 		},
 		{
 			Name: "failOnHostNetwork", Label: "Fail on Host Network", Description: extutil.Ptr("Fail if the target container uses the host network."),
@@ -596,7 +597,7 @@ func attackLocalhostParameter(order int) action_kit_api.ActionParameter {
 		Name:        "attackLocalhost",
 		Label:       "Attack Localhost Traffic",
 		Description: extutil.Ptr("Also intercept localhost (127.0.0.0/8), e.g. sidecars. Its connections may be reset when the attack starts and ends."),
-		Type:        action_kit_api.ActionParameterTypeBoolean, DefaultValue: extutil.Ptr("false"), Required: extutil.Ptr(false), Order: extutil.Ptr(order), Advanced: extutil.Ptr(true),
+		Type:        action_kit_api.ActionParameterTypeBoolean, DefaultValue: extutil.Ptr("false"), Required: extutil.Ptr(false), Order: extutil.Ptr(order), Advanced: extutil.Ptr(true), Group: extutil.Ptr(groupTrafficFilter),
 	}
 }
 
