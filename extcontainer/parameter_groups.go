@@ -6,8 +6,9 @@ package extcontainer
 import "github.com/steadybit/action-kit/go/action_kit_api/v2"
 
 const (
-	groupTrafficFilter = "Traffic Filter"
-	groupFillBehavior  = "Fill Behavior"
+	groupTrafficFilter   = "Traffic Filter"
+	groupFillBehavior    = "Fill Behavior"
+	groupResponseDetails = "Response Details"
 )
 
 var (

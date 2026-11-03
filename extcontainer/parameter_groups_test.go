@@ -55,7 +55,10 @@ func TestParameterGroups(t *testing.T) {
 		{"dependencyDelay", NewNetworkDelayDependencyAction(nil, nil).Describe(),
 			map[string][]string{groupTrafficFilter: dependencyFilter}, []string{groupTrafficFilter}},
 		{"dependencyHttpAbort", NewNetworkHttpAbortDependencyAction(nil, nil).Describe(),
-			map[string][]string{groupTrafficFilter: dependencyFilter}, []string{groupTrafficFilter}},
+			map[string][]string{
+				groupResponseDetails: {"responseHeaders", "responseBody", "responseDelay"},
+				groupTrafficFilter:   dependencyFilter,
+			}, []string{groupTrafficFilter}},
 		{"fillDisk", NewFillDiskContainerAction(nil, nil).Describe(),
 			map[string][]string{groupFillBehavior: {"method", "blocksize", "failOnOomKill"}}, nil},
 	}
@@ -66,9 +69,14 @@ func TestParameterGroups(t *testing.T) {
 
 			for _, p := range tt.desc.Parameters {
 				advanced := p.Advanced != nil && *p.Advanced
-				// Platforms without groups keep these in "Additional Settings", so a grouped parameter stays advanced
-				// and no advanced parameter is left alone in "Additional Settings" on platforms with groups.
-				assert.Equal(t, advanced, p.Group != nil, "parameter %s", p.Name)
+				// No advanced parameter is left alone in "Additional Settings" on platforms with groups.
+				if advanced {
+					assert.NotNil(t, p.Group, "parameter %s", p.Name)
+				}
+				// Platforms without groups keep showing the filters in "Additional Settings".
+				if p.Group != nil && *p.Group == groupTrafficFilter {
+					assert.True(t, advanced, "parameter %s", p.Name)
+				}
 			}
 		})
 	}
