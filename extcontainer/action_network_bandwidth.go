@@ -37,10 +37,11 @@ func getNetworkLimitBandwidthDescription() action_kit_api.ActionDescription {
 			TargetType:         targetID,
 			SelectionTemplates: &targetSelectionTemplates,
 		},
-		Technology:  new("Container"),
-		Category:    new("Network"),
-		Kind:        action_kit_api.Attack,
-		TimeControl: action_kit_api.TimeControlExternal,
+		Technology:      new("Container"),
+		Category:        new("Network"),
+		Kind:            action_kit_api.Attack,
+		TimeControl:     action_kit_api.TimeControlExternal,
+		ParameterGroups: new([]action_kit_api.ParameterGroup{trafficFilterGroup}),
 		Parameters: append(
 			commonNetworkParameters,
 			action_kit_api.ActionParameter{
@@ -59,6 +60,7 @@ func getNetworkLimitBandwidthDescription() action_kit_api.ActionDescription {
 				Type:        action_kit_api.ActionParameterTypeStringArray,
 				Required:    new(false),
 				Advanced:    new(true),
+				Group:       new(groupTrafficFilter),
 				Order:       new(106),
 			},
 		),
