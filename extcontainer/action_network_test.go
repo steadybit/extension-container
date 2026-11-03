@@ -632,6 +632,33 @@ func Test_formatDependencyStatsMarkdown_scope(t *testing.T) {
 	require.Contains(t, md, "none to the dependency hostnames yet")
 }
 
+func Test_formatDependencyStatsMarkdown_requests(t *testing.T) {
+	// One keep-alive connection carrying 10 cleartext HTTP requests, 4 faulted:
+	// the connection counters say 1/1, only the request counters show 40%.
+	md := formatDependencyStatsMarkdown(proxyfault.Snapshot{
+		ConnectionsMatched: 1,
+		ConnectionsFaulted: 1,
+		RequestsMatched:    10,
+		RequestsFaulted:    4,
+		PerHost: map[string]proxyfault.HostStat{
+			"api.example.com": {Matched: 1, Faulted: 1, RequestsMatched: 10, RequestsFaulted: 4},
+		},
+	}, proxyfault.Opts{})
+	require.Contains(t, md, "- **Requests to a dependency hostname:** 10")
+	require.Contains(t, md, "- **Requests faulted:** 4 (40.0%)")
+	require.Contains(t, md, "| api.example.com | 1 | 1 | 10 | 4 |")
+
+	// No cleartext HTTP requests (HTTPS or other TCP only): no request section
+	// and the table keeps its connection columns.
+	md = formatDependencyStatsMarkdown(proxyfault.Snapshot{
+		ConnectionsMatched: 1,
+		ConnectionsFaulted: 1,
+		PerHost:            map[string]proxyfault.HostStat{"api.example.com": {Matched: 1, Faulted: 1}},
+	}, proxyfault.Opts{})
+	require.NotContains(t, md, "Requests")
+	require.Contains(t, md, "| api.example.com | 1 | 1 |\n")
+}
+
 func Test_interceptionMessages(t *testing.T) {
 	hosts := proxyfault.Fault{Hosts: []string{"api.example.com"}}
 
