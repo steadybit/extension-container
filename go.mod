@@ -20,7 +20,7 @@ require (
 	github.com/novln/docker-parser v1.0.0
 	github.com/opencontainers/runtime-spec v1.3.0
 	github.com/rs/zerolog v1.35.1
-	github.com/steadybit/action-kit/go/action_kit_api/v2 v2.10.6
+	github.com/steadybit/action-kit/go/action_kit_api/v2 v2.11.0
 	github.com/steadybit/action-kit/go/action_kit_commons v1.15.0
 	github.com/steadybit/action-kit/go/action_kit_sdk v1.4.1
 	github.com/steadybit/action-kit/go/action_kit_test v1.4.13
@@ -67,7 +67,7 @@ require (
 	github.com/felixge/httpsnoop v1.1.0 // indirect
 	github.com/florianl/go-tc v0.4.8 // indirect
 	github.com/fxamacker/cbor/v2 v2.9.1 // indirect
-	github.com/getkin/kin-openapi v0.151.0 // indirect
+	github.com/getkin/kin-openapi v0.152.0 // indirect
 	github.com/go-logr/logr v1.4.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-openapi/jsonpointer v1.0.1 // indirect
@@ -109,7 +109,7 @@ require (
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.3-0.20250322232337-35a7c28c31ee // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
-	github.com/oapi-codegen/runtime v1.7.0 // indirect
+	github.com/oapi-codegen/runtime v1.8.0 // indirect
 	github.com/oasdiff/yaml v0.1.1 // indirect
 	github.com/oasdiff/yaml3 v0.0.14 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
