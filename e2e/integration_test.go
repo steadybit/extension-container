@@ -131,6 +131,10 @@ func TestWithMinikube(t *testing.T) {
 			Test: testNetworkDependencyFault,
 		},
 		{
+			Name: "network dependency fault attack localhost",
+			Test: testNetworkDependencyFaultAttackLocalhost,
+		},
+		{
 			Name: "network dependency fault over HTTPS (proxy: TLS interception)",
 			Test: testNetworkDependencyFaultHTTPS,
 		},
@@ -1218,6 +1222,91 @@ func testNetworkDependencyFault(t *testing.T, m *e2e.Minikube, e *e2e.Extension)
 	})
 
 	requireAllSidecarsCleanedUp(t, m, e)
+}
+
+// testNetworkDependencyFaultAttackLocalhost checks that localhost traffic is
+// only intercepted with Attack Localhost Traffic enabled. The localhost call
+// mimics a sidecar proxying to its app: it goes to 127.0.0.1 with a Host
+// header naming the dependency. The call to steadybit.com shows the proxy is
+// active in every case.
+func testNetworkDependencyFaultAttackLocalhost(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
+	if m.Runtime == "cri-o" && m.Driver == "docker" {
+		t.Skip("Due to https://github.com/kubernetes/minikube/issues/16371 this test is skipped for cri-o")
+	}
+
+	nginx := e2e.Nginx{Minikube: m}
+	require.NoError(t, nginx.Deploy("nginx-dependency-fault-localhost"), "failed to create pod")
+	defer func() { _ = nginx.Delete() }()
+	target, err := nginx.Target()
+	require.NoError(t, err)
+
+	const localDependency = "local-dependency"
+	const remoteDependency = "steadybit.com"
+	// nginx listens on port 80 on all interfaces, including the container's loopback
+	localhostCall := []string{"-H", "Host: " + localDependency, "http://127.0.0.1:80/"}
+	remoteCall := []string{"http://" + remoteDependency}
+
+	tests := []struct {
+		name            string
+		attackLocalhost bool
+		port            []string
+		wantedLocalCode string
+	}{
+		{
+			name:            "should not intercept localhost traffic by default",
+			attackLocalhost: false,
+			port:            []string{"80"},
+			wantedLocalCode: "200",
+		},
+		{
+			name:            "should intercept localhost traffic when enabled",
+			attackLocalhost: true,
+			port:            []string{"80"},
+			wantedLocalCode: "503",
+		},
+		{
+			name:            "should intercept localhost traffic on all ports when enabled",
+			attackLocalhost: true,
+			port:            []string{},
+			wantedLocalCode: "503",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assertHttpCode(t, m, &nginx, localhostCall, "200")
+
+			config := map[string]any{
+				"duration": 60000, "hostname": []string{localDependency, remoteDependency},
+				"percentage": 100, "port": tt.port, "httpStatus": 503,
+				"attackLocalhost": tt.attackLocalhost,
+			}
+			action, err := e.RunAction(fmt.Sprintf("%s.network_dependency_http_response", extcontainer.BaseActionID), target, config, &action_kit_api.ExecutionContext{})
+			require.NoError(t, err)
+			defer func() { _ = action.Cancel() }()
+
+			assertHttpCode(t, m, &nginx, remoteCall, "503")
+			assertHttpCode(t, m, &nginx, localhostCall, tt.wantedLocalCode)
+
+			require.NoError(t, action.Cancel())
+			assertHttpCode(t, m, &nginx, localhostCall, "200")
+		})
+	}
+	requireAllSidecarsCleanedUp(t, m, e)
+}
+
+// assertHttpCode retries a curl from the nginx container until it returns the
+// wanted status code.
+func assertHttpCode(t *testing.T, m *e2e.Minikube, nginx *e2e.Nginx, curlArgs []string, wanted string) {
+	t.Helper()
+	args := append([]string{"curl", "--max-time", "5", "-s", "-o", "/dev/null", "-w", "%{http_code}"}, curlArgs...)
+	e2e.Retry(t, 10, 500*time.Millisecond, func(r *e2e.R) {
+		out, _ := m.PodExec(nginx.Pod, "nginx", args...)
+		if code := strings.TrimSpace(out); code != wanted {
+			r.Failed = true
+			_, _ = fmt.Fprintf(r.Log, "%v: expected %s, got %q", curlArgs, wanted, code)
+		}
+	})
 }
 
 func testNetworkTcpResetOnTwoContainers(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
