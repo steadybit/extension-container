@@ -130,6 +130,7 @@ func (a *fillDiskAction) Describe() action_kit_api.ActionDescription {
 				DefaultValue: new("AT_ONCE"),
 				Type:         action_kit_api.ActionParameterTypeString,
 				Advanced:     new(true),
+				Group:        new(groupFillBehavior),
 				Options: new([]action_kit_api.ParameterOption{
 					action_kit_api.ExplicitParameterOption{
 						Label: "At once (fallocate)",
@@ -152,6 +153,7 @@ func (a *fillDiskAction) Describe() action_kit_api.ActionDescription {
 				MinValue:     new(1),
 				MaxValue:     new(1024),
 				Advanced:     new(true),
+				Group:        new(groupFillBehavior),
 			},
 			{
 				Name:         "failOnOomKill",
@@ -161,6 +163,7 @@ func (a *fillDiskAction) Describe() action_kit_api.ActionDescription {
 				DefaultValue: new("true"),
 				Required:     new(false),
 				Advanced:     new(true),
+				Group:        new(groupFillBehavior),
 			},
 		},
 	}
