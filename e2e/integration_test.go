@@ -1196,6 +1196,34 @@ func testNetworkDependencyFault(t *testing.T, m *e2e.Minikube, e *e2e.Extension)
 		require.NoError(t, action.Cancel())
 	})
 
+	t.Run("intercept applies the percentage per request on a keep-alive connection", func(t *testing.T) {
+		config := map[string]any{
+			"duration": 60000, "hostname": []string{host},
+			"percentage": 50, "port": "80", "httpStatus": 503,
+		}
+		action, err := e.RunAction(fmt.Sprintf("%s.network_dependency_http_response", extcontainer.BaseActionID), target, config, &action_kit_api.ExecutionContext{})
+		require.NoError(t, err)
+		defer func() { _ = action.Cancel() }()
+
+		// 100 requests over one curl connection. A per-connection roll would fault
+		// all or none of them; per request, about half are faulted. 30..70 is
+		// about 4 standard deviations at n=100.
+		const requests = 100
+		e2e.Retry(t, 10, 1*time.Second, func(r *e2e.R) {
+			faulted, connects, err := curlKeepAlive(m, nginx.Pod, "http://"+host, requests)
+			if err != nil {
+				r.Failed = true
+				_, _ = fmt.Fprintf(r.Log, "requests failed: %v", err)
+				return
+			}
+			if faulted < 30 || faulted > 70 || connects > 5 {
+				r.Failed = true
+				_, _ = fmt.Fprintf(r.Log, "expected about half of %d requests faulted over one connection, got %d faulted over %d connections", requests, faulted, connects)
+			}
+		})
+		require.NoError(t, action.Cancel())
+	})
+
 	t.Run("slow dependency adds latency to the container's calls", func(t *testing.T) {
 		config := map[string]any{
 			"duration": 60000, "hostname": []string{host},
@@ -1297,6 +1325,29 @@ func testNetworkDependencyFaultAttackLocalhost(t *testing.T, m *e2e.Minikube, e 
 
 // assertHttpCode retries a curl from the nginx container until it returns the
 // wanted status code.
+// curlKeepAlive sends n GET requests to url in a single curl call, which keeps
+// one connection open for all of them, and returns how many were answered with
+// 503 and how many connections curl had to open.
+func curlKeepAlive(m *e2e.Minikube, pod metav1.Object, url string, n int) (faulted, connects int, err error) {
+	args := []string{"curl", "--max-time", "30", "-s", "-w", "%{http_code} %{num_connects}\n"}
+	for range n {
+		args = append(args, "-o", "/dev/null", url)
+	}
+	out, err := m.PodExec(pod, "nginx", args...)
+	if err != nil {
+		return 0, 0, err
+	}
+	for _, line := range strings.Split(strings.TrimSpace(out), "\n") {
+		code, conns, _ := strings.Cut(line, " ")
+		if code == "503" {
+			faulted++
+		}
+		c, _ := strconv.Atoi(conns)
+		connects += c
+	}
+	return faulted, connects, nil
+}
+
 func assertHttpCode(t *testing.T, m *e2e.Minikube, nginx *e2e.Nginx, curlArgs []string, wanted string) {
 	t.Helper()
 	args := append([]string{"curl", "--max-time", "5", "-s", "-o", "/dev/null", "-w", "%{http_code}"}, curlArgs...)
