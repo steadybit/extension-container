@@ -90,3 +90,12 @@ vulnerabilities:
     expired_at: 2027-02-01
     paths:
       - usr/sbin/runc
+  - id: CVE-2026-117610
+    statement: Waiting for debian upstream fix
+    expired_at: 2027-02-01
+  - id: CVE-2026-118370
+    statement: Waiting for debian upstream fix
+    expired_at: 2027-02-01
+  - id: CVE-2026-119373
+    statement: Waiting for debian upstream fix
+    expired_at: 2027-02-01
