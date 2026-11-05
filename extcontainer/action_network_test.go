@@ -579,6 +579,20 @@ func Test_dependencyFault_tlsInterceptCA(t *testing.T) {
 	require.Nil(t, lca)
 }
 
+func Test_dependencyFault_percentageDescription(t *testing.T) {
+	httpAbort := &dependencyFaultAction{spec: httpAbortFaultSpec}
+	latency := &dependencyFaultAction{spec: latencyFaultSpec}
+
+	require.NotContains(t, httpAbort.percentageDescription(), "HTTPS")
+	require.Contains(t, latency.percentageDescription(), "per connection for HTTPS")
+
+	// With the CA, the HTTP response attack reads HTTPS requests too, so they
+	// are decided per request; latency still acts on HTTPS connections.
+	withInterceptCA(t)
+	require.Contains(t, httpAbort.percentageDescription(), "HTTPS through the configured interception CA")
+	require.Contains(t, latency.percentageDescription(), "per connection for HTTPS")
+}
+
 func Test_dependencyFault_hint_withInterceptCA(t *testing.T) {
 	withInterceptCA(t)
 
