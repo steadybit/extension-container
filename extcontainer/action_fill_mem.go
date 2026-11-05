@@ -121,7 +121,7 @@ func (a *fillMemoryAction) Describe() action_kit_api.ActionDescription {
 				Order:        new(4),
 				Options: new([]action_kit_api.ParameterOption{
 					action_kit_api.ExplicitParameterOption{
-						Label: "Megabytes",
+						Label: "MiB",
 						Value: string(memfill.UnitMegabyte),
 					},
 					action_kit_api.ExplicitParameterOption{
