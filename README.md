@@ -207,8 +207,12 @@ The version and revision of the extension:
 `Intercept HTTP Request` normally synthesizes a response for **cleartext HTTP**
 only. Supplying a certificate authority lets it do the same for an **HTTPS**
 dependency: the proxy terminates the matched TLS connection with a certificate
-it mints for that hostname, and answers the request itself. The real dependency
-is never contacted.
+it mints for that hostname and handles it request by request, over HTTP/1.1 or
+HTTP/2. **Percentage** applies to each request, as on cleartext HTTP: a selected
+request is answered by the proxy, the others are forwarded to the real
+dependency over the proxy's own TLS connection, with the dependency's
+certificate verified against the system roots (a dependency that cannot be
+verified gets a `502` instead).
 
 ```bash
 kubectl -n <ns> create secret generic intercept-ca \
@@ -218,10 +222,15 @@ helm upgrade ... --set tlsIntercept.existingSecret=intercept-ca
 ```
 
 **The CA is yours.** You generate it, choose how long it lives, and install it in
-the truststores of the workloads you want to fault — a workload that does not
-trust it fails the connection instead of receiving the synthesized response, and
-that is reported in the attack's statistics rather than silently doing nothing.
-Certificate pinning and mutual TLS cannot be intercepted.
+the truststores of the workloads you want to fault. Every matched HTTPS
+connection is decrypted, whatever the **Percentage**, so a workload that does
+not trust the CA, or pins certificates, fails **all** its requests to the
+dependency, not only the selected share. That is reported in the attack's
+statistics rather than silently doing nothing.
+
+**Mutual TLS cannot be intercepted.** The proxy forwards without the workload's
+client certificate, so a dependency that requires one rejects the forwarded
+requests. Do not target such dependencies with HTTPS interception.
 
 > ⚠️ The private key can impersonate **any** HTTPS endpoint to anything that
 > trusts it. Keep this to test environments, and treat the Secret accordingly.
