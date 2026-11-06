@@ -232,5 +232,31 @@ statistics rather than silently doing nothing.
 client certificate, so a dependency that requires one rejects the forwarded
 requests. Do not target such dependencies with HTTPS interception.
 
+**Dependencies with a private CA.** A forwarded request reaches the dependency
+only if the proxy can verify its certificate. Public CAs are built in. For a
+dependency whose certificate comes from your own CA, trust that CA the same way
+as in every Steadybit extension: mount it and point `SSL_CERT_DIR` at it.
+
+```shell
+kubectl create configmap -n steadybit-agent company-ca --from-file=./company-ca.crt
+```
+
+```yaml
+extraVolumeMounts:
+  - name: extra-certs
+    mountPath: /etc/ssl/extra-certs
+    readOnly: true
+extraVolumes:
+  - name: extra-certs
+    configMap:
+      name: company-ca
+extraEnv:
+  - name: SSL_CERT_DIR
+    value: /etc/ssl/extra-certs:/etc/ssl/certs
+```
+
+For test environments, `STEADYBIT_EXTENSION_INSECURE_SKIP_VERIFY=true` (via
+`extraEnv`) forwards without verifying the dependency at all.
+
 > ⚠️ The private key can impersonate **any** HTTPS endpoint to anything that
 > trusts it. Keep this to test environments, and treat the Secret accordingly.
