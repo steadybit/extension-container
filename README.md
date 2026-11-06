@@ -210,9 +210,11 @@ dependency: the proxy terminates the matched TLS connection with a certificate
 it mints for that hostname and handles it request by request, over HTTP/1.1 or
 HTTP/2. **Percentage** applies to each request, as on cleartext HTTP: a selected
 request is answered by the proxy, the others are forwarded to the real
-dependency over the proxy's own TLS connection, with the dependency's
-certificate verified against the system roots (a dependency that cannot be
-verified gets a `502` instead).
+dependency over the proxy's own TLS connection, once the proxy has verified
+the dependency's certificate (see *Dependencies with a private CA* below). If
+it cannot, the request gets a `502` from the proxy itself: the TLS handshake to
+the dependency is aborted, so the dependency never sees the request, and it is
+not counted as a fault.
 
 ```bash
 kubectl -n <ns> create secret generic intercept-ca \
@@ -230,12 +232,15 @@ statistics rather than silently doing nothing.
 
 **Mutual TLS cannot be intercepted.** The proxy forwards without the workload's
 client certificate, so a dependency that requires one rejects the forwarded
-requests. Do not target such dependencies with HTTPS interception.
+requests, and the workload gets a `502` for them. Do not target such
+dependencies with HTTPS interception.
 
 **Dependencies with a private CA.** A forwarded request reaches the dependency
 only if the proxy can verify its certificate. Public CAs are built in. For a
 dependency whose certificate comes from your own CA, trust that CA the same way
 as in every Steadybit extension: mount it and point `SSL_CERT_DIR` at it.
+Without it, or with a CA that did not sign the dependency's certificate, the
+requests that are not selected get a `502` instead of reaching the dependency.
 
 ```shell
 kubectl create configmap -n steadybit-agent company-ca --from-file=./company-ca.crt
