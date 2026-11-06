@@ -133,6 +133,9 @@ spec:
               readOnly: true
             {{- end }}
             {{- include "extensionlib.deployment.volumeMounts" (list .) | nindent 12 }}
+            {{- with .Values.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
           livenessProbe:
             initialDelaySeconds: {{ .Values.probes.liveness.initialDelaySeconds }}
             periodSeconds: {{ .Values.probes.liveness.periodSeconds }}
@@ -159,6 +162,9 @@ spec:
             {{- . | nindent 12 }}
             {{- end }}
       volumes:
+        {{- with .Values.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
         {{- with .Values.tlsIntercept.existingSecret }}
         - name: tls-intercept-ca
           secret:

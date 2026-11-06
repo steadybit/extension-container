@@ -27,6 +27,7 @@ import (
 	"github.com/steadybit/extension-container/config"
 	"github.com/steadybit/extension-container/extcontainer/container/types"
 	"github.com/steadybit/extension-kit/extbuild"
+	"github.com/steadybit/extension-kit/exttls"
 	"github.com/steadybit/extension-kit/extutil"
 )
 
@@ -673,6 +674,9 @@ func (a *dependencyFaultAction) parseOpts(request action_kit_api.PrepareActionRe
 		Fault: fault,
 		// nil unless a CA is configured, so HTTPS stays untouched by default.
 		TLSInterceptCA: interceptCA,
+		// The exttls convention every extension follows; the custom CA half of it
+		// (SSL_CERT_DIR / SSL_CERT_FILE) reaches the proxy through action-kit.
+		UpstreamInsecureSkipVerify: exttls.IsInsecureSkipVerify(),
 	}, nil
 }
 
