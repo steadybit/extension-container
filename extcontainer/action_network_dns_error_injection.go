@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2026 Steadybit GmbH
+// Author: Tom Handal <thandal@roblox.com>
+// Author: Johannes Edmeier <johannes.edmeier@steadybit.com>
 
 package extcontainer
 
