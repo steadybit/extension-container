@@ -207,8 +207,14 @@ The version and revision of the extension:
 `Intercept HTTP Request` normally synthesizes a response for **cleartext HTTP**
 only. Supplying a certificate authority lets it do the same for an **HTTPS**
 dependency: the proxy terminates the matched TLS connection with a certificate
-it mints for that hostname, and answers the request itself. The real dependency
-is never contacted.
+it mints for that hostname and handles it request by request, over HTTP/1.1 or
+HTTP/2. **Percentage** applies to each request, as on cleartext HTTP: a selected
+request is answered by the proxy, the others are forwarded to the real
+dependency over the proxy's own TLS connection, once the proxy has verified
+the dependency's certificate (see *Dependencies with a private CA* below). If
+it cannot, the request gets a `502` from the proxy itself: the TLS handshake to
+the dependency is aborted, so the dependency never sees the request, and it is
+not counted as a fault.
 
 ```bash
 kubectl -n <ns> create secret generic intercept-ca \
@@ -218,10 +224,44 @@ helm upgrade ... --set tlsIntercept.existingSecret=intercept-ca
 ```
 
 **The CA is yours.** You generate it, choose how long it lives, and install it in
-the truststores of the workloads you want to fault — a workload that does not
-trust it fails the connection instead of receiving the synthesized response, and
-that is reported in the attack's statistics rather than silently doing nothing.
-Certificate pinning and mutual TLS cannot be intercepted.
+the truststores of the workloads you want to fault. Every matched HTTPS
+connection is decrypted, whatever the **Percentage**, so a workload that does
+not trust the CA, or pins certificates, fails **all** its requests to the
+dependency, not only the selected share. That is reported in the attack's
+statistics rather than silently doing nothing.
+
+**Mutual TLS cannot be intercepted.** The proxy forwards without the workload's
+client certificate, so a dependency that requires one rejects the forwarded
+requests, and the workload gets a `502` for them. Do not target such
+dependencies with HTTPS interception.
+
+**Dependencies with a private CA.** A forwarded request reaches the dependency
+only if the proxy can verify its certificate. Public CAs are built in. For a
+dependency whose certificate comes from your own CA, trust that CA the same way
+as in every Steadybit extension: mount it and point `SSL_CERT_DIR` at it.
+Without it, or with a CA that did not sign the dependency's certificate, the
+requests that are not selected get a `502` instead of reaching the dependency.
+
+```shell
+kubectl create configmap -n steadybit-agent company-ca --from-file=./company-ca.crt
+```
+
+```yaml
+extraVolumeMounts:
+  - name: extra-certs
+    mountPath: /etc/ssl/extra-certs
+    readOnly: true
+extraVolumes:
+  - name: extra-certs
+    configMap:
+      name: company-ca
+extraEnv:
+  - name: SSL_CERT_DIR
+    value: /etc/ssl/extra-certs:/etc/ssl/certs
+```
+
+For test environments, `STEADYBIT_EXTENSION_INSECURE_SKIP_VERIFY=true` (via
+`extraEnv`) forwards without verifying the dependency at all.
 
 > ⚠️ The private key can impersonate **any** HTTPS endpoint to anything that
 > trusts it. Keep this to test environments, and treat the Secret accordingly.

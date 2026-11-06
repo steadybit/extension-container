@@ -200,7 +200,7 @@ func (a *dependencyFaultAction) Describe() action_kit_api.ActionDescription {
 			},
 		}),
 		ParameterGroups: new([]action_kit_api.ParameterGroup{dependencyTrafficFilterGroup}),
-		Parameters:      append(commonDependencyParameters(), a.spec.extraParams...),
+		Parameters:      append(commonDependencyParameters(a.percentageDescription()), a.spec.extraParams...),
 	}
 }
 
@@ -266,13 +266,27 @@ func (a *dependencyFaultAction) description() string {
 	return a.spec.description
 }
 
+// percentageDescription says what Percentage counts. The proxy decides per
+// request wherever it reads the requests — cleartext HTTP, and HTTPS when it
+// decrypts it with the interception CA — and per connection otherwise.
+func (a *dependencyFaultAction) percentageDescription() string {
+	switch {
+	case a.spec.cleartextHTTPOnly && config.Config.TLSInterceptEnabled():
+		return "Percentage of matching requests the fault is applied to. Each request is decided on its own, also on keep-alive connections, for cleartext HTTP and for HTTPS through the configured interception CA."
+	case a.spec.cleartextHTTPOnly:
+		return "Percentage of matching requests the fault is applied to. Each request is decided on its own, also on keep-alive connections."
+	default:
+		return "Percentage of matching requests the fault is applied to: per request for cleartext HTTP, per connection for HTTPS and other TCP traffic."
+	}
+}
+
 // hint adapts the action-level hint to whether HTTPS interception is available,
 // so the UI never warns about a limitation that no longer applies.
 func (a *dependencyFaultAction) hint() *action_kit_api.ActionHint {
 	if a.spec.cleartextHTTPOnly && config.Config.TLSInterceptEnabled() {
 		return &action_kit_api.ActionHint{
 			Type:    action_kit_api.HintInfo,
-			Content: "HTTPS interception is enabled — the target's workloads must trust the configured CA, or their connections fail instead of receiving the response.",
+			Content: "HTTPS interception is enabled — every matched HTTPS connection is decrypted, so the target's workloads must trust the configured CA, or all their requests to the dependency fail, not only the selected percentage. Dependencies that require mutual TLS cannot be reached.",
 		}
 	}
 	return a.spec.hint
@@ -496,6 +510,14 @@ func formatDependencyStatsMarkdown(s proxyfault.Snapshot, opts proxyfault.Opts) 
 	fmt.Fprintf(&b, "- **Connections intercepted:** %d\n", s.ConnectionsMatched)
 	fmt.Fprintf(&b, "- **To a dependency hostname:** %d\n", toDependencies)
 	fmt.Fprintf(&b, "- **Connections faulted:** %d\n", s.ConnectionsFaulted)
+	// Cleartext HTTP is rolled per request, so a keep-alive connection carrying
+	// many requests is one faulted connection; only the request counters show
+	// the share of requests that was faulted.
+	if s.RequestsMatched > 0 {
+		b.WriteString("\n### Requests (cleartext HTTP)\n")
+		fmt.Fprintf(&b, "- **Requests to a dependency hostname:** %d\n", s.RequestsMatched)
+		fmt.Fprintf(&b, "- **Requests faulted:** %d (%s)\n", s.RequestsFaulted, percentOf(s.RequestsFaulted, s.RequestsMatched))
+	}
 	b.WriteString("\n### What was done\n")
 	fmt.Fprintf(&b, "- **Latency applied:** %d\n", s.LatencyApplied)
 	fmt.Fprintf(&b, "- **HTTP responses injected:** %d\n", s.HTTPResponsesInjected)
@@ -503,10 +525,18 @@ func formatDependencyStatsMarkdown(s proxyfault.Snapshot, opts proxyfault.Opts) 
 	fmt.Fprintf(&b, "- **Forwarded untouched:** %d\n", s.ConnectionsProxied)
 	if len(s.PerHost) > 0 {
 		b.WriteString("\n### By dependency\n")
-		b.WriteString("| Hostname | Matched | Faulted |\n|---|---|---|\n")
+		if s.RequestsMatched > 0 {
+			b.WriteString("| Hostname | Connections | Faulted | Requests | Requests faulted |\n|---|---|---|---|---|\n")
+		} else {
+			b.WriteString("| Hostname | Matched | Faulted |\n|---|---|---|\n")
+		}
 		for _, h := range s.SortedHosts() {
 			st := s.PerHost[h]
-			fmt.Fprintf(&b, "| %s | %d | %d |\n", h, st.Matched, st.Faulted)
+			if s.RequestsMatched > 0 {
+				fmt.Fprintf(&b, "| %s | %d | %d | %d | %d |\n", h, st.Matched, st.Faulted, st.RequestsMatched, st.RequestsFaulted)
+			} else {
+				fmt.Fprintf(&b, "| %s | %d | %d |\n", h, st.Matched, st.Faulted)
+			}
 		}
 	}
 	// A rejection means the client refused the certificate we minted for it, so
@@ -522,6 +552,11 @@ func formatDependencyStatsMarkdown(s proxyfault.Snapshot, opts proxyfault.Opts) 
 		b.WriteString("\n_Connections are intercepted, but none to the dependency hostnames yet. If this stays at zero, check the hostnames (matched against the TLS SNI or HTTP Host header)._")
 	}
 	return b.String()
+}
+
+// percentOf formats part as a percentage of total, with one decimal.
+func percentOf(part, total int64) string {
+	return fmt.Sprintf("%.1f%%", float64(part)*100/float64(total))
 }
 
 func (a *dependencyFaultAction) Stop(ctx context.Context, state *DependencyFaultState) (*action_kit_api.StopResult, error) {
@@ -554,7 +589,7 @@ func (a *dependencyFaultAction) teardown(ctx context.Context, handle *proxyHandl
 
 // --- parameters & parsing ---
 
-func commonDependencyParameters() []action_kit_api.ActionParameter {
+func commonDependencyParameters(percentageDescription string) []action_kit_api.ActionParameter {
 	return []action_kit_api.ActionParameter{
 		{
 			Name: "hostname", Label: "Dependency Hostnames", Description: extutil.Ptr("Apply the fault to connections to these hosts (TLS SNI or HTTP Host, subdomain match)."),
@@ -565,7 +600,7 @@ func commonDependencyParameters() []action_kit_api.ActionParameter {
 			Type: action_kit_api.ActionParameterTypeDuration, DefaultValue: extutil.Ptr("30s"), Required: extutil.Ptr(true), Order: extutil.Ptr(1),
 		},
 		{
-			Name: "percentage", Label: "Percentage", Description: extutil.Ptr("Percentage of matching connections the fault is applied to."),
+			Name: "percentage", Label: "Percentage", Description: extutil.Ptr(percentageDescription),
 			Type: action_kit_api.ActionParameterTypePercentage, DefaultValue: extutil.Ptr("50"), Required: extutil.Ptr(true), Order: extutil.Ptr(2),
 			MinValue: extutil.Ptr(0), MaxValue: extutil.Ptr(100),
 		},

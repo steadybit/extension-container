@@ -123,7 +123,7 @@ func tcpResetParameters() []action_kit_api.ActionParameter {
 			Type: action_kit_api.ActionParameterTypeStringArray, Required: extutil.Ptr(false), Order: extutil.Ptr(2),
 		},
 		{
-			Name: "percentage", Label: "Percentage (L7 mode)", Description: extutil.Ptr("L7 mode only: percentage of matching connections to reset. Ignored in packet-level mode."),
+			Name: "percentage", Label: "Percentage (L7 mode)", Description: extutil.Ptr("L7 mode only: percentage of matching requests to reset: per request for cleartext HTTP, per connection for HTTPS and other TCP traffic. Ignored in packet-level mode."),
 			Type: action_kit_api.ActionParameterTypePercentage, DefaultValue: extutil.Ptr("100"), Required: extutil.Ptr(false), Order: extutil.Ptr(3),
 			MinValue: extutil.Ptr(0), MaxValue: extutil.Ptr(100),
 		},
