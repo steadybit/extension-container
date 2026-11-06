@@ -175,6 +175,12 @@ extraEnv: []
 #    name: env-secrets
 extraEnvFrom: []
 
+# extraVolumes -- Additional volumes to which the container will be mounted.
+extraVolumes: []
+
+# extraVolumeMounts -- Additional volumeMounts to which the container will be mounted.
+extraVolumeMounts: []
+
 containerEngines:
   docker:
     socket: /var/run/docker.sock
