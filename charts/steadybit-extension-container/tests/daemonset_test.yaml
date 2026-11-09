@@ -219,3 +219,26 @@ tests:
           content:
             name: STEADYBIT_EXTENSION_TLS_INTERCEPT_CA_CERT
             value: /etc/steadybit/tls-intercept/ca.crt
+  - it: mounts extra volumes, e.g. a custom CA for SSL_CERT_DIR
+    set:
+      extraVolumes:
+        - name: extra-certs
+          configMap:
+            name: company-ca
+      extraVolumeMounts:
+        - name: extra-certs
+          mountPath: /etc/ssl/extra-certs
+          readOnly: true
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: extra-certs
+            configMap:
+              name: company-ca
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: extra-certs
+            mountPath: /etc/ssl/extra-certs
+            readOnly: true
