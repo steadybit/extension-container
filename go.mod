@@ -11,7 +11,7 @@ require (
 	github.com/containerd/containerd/api v1.11.1
 	github.com/containerd/errdefs v1.0.0
 	github.com/containerd/errdefs/pkg v0.3.0
-	github.com/gobwas/glob v1.0.0
+	github.com/gobwas/glob v1.1.0
 	github.com/google/uuid v1.6.0
 	github.com/kataras/iris/v12 v12.2.11
 	github.com/kelseyhightower/envconfig v1.4.0
@@ -20,7 +20,7 @@ require (
 	github.com/novln/docker-parser v1.0.0
 	github.com/opencontainers/runtime-spec v1.3.0
 	github.com/rs/zerolog v1.35.1
-	github.com/steadybit/action-kit/go/action_kit_api/v2 v2.11.0
+	github.com/steadybit/action-kit/go/action_kit_api/v2 v2.11.2
 	github.com/steadybit/action-kit/go/action_kit_commons v1.16.0
 	github.com/steadybit/action-kit/go/action_kit_sdk v1.4.1
 	github.com/steadybit/action-kit/go/action_kit_test v1.4.13
@@ -35,7 +35,7 @@ require (
 	k8s.io/api v0.37.2
 	k8s.io/apimachinery v0.37.2
 	k8s.io/client-go v0.37.2
-	k8s.io/cri-api v0.37.1
+	k8s.io/cri-api v0.37.2
 )
 
 require (
@@ -141,7 +141,7 @@ require (
 	go.yaml.in/yaml/v2 v2.4.4 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	golang.org/x/exp v0.0.0-20260908205506-85c1c2202aba // indirect
-	golang.org/x/net v0.61.0 // indirect
+	golang.org/x/net v0.62.0 // indirect
 	golang.org/x/oauth2 v0.36.0 // indirect
 	golang.org/x/sys v0.49.0 // indirect
 	golang.org/x/term v0.47.0 // indirect
