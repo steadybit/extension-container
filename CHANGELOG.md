@@ -12,6 +12,7 @@
 - feat: Percentage in the dependency fault attacks applies per request on cleartext HTTP, also on keep-alive connections, and per connection otherwise; the Dependency Fault Statistics widget shows the requests matched and faulted, with their share
 - feat: with an interception CA configured, Intercept Outgoing HTTP Request and Slow Outgoing HTTP(s) Dependency apply Percentage per request on HTTPS too. Every matched HTTPS connection is then decrypted, so a workload that doesn't trust the CA fails all its requests to the dependency, and dependencies requiring mutual TLS can't be reached
 - chore(deps): bump transparent-proxy to v1.3.0
+- feat: with an interception CA configured, Intercept Outgoing HTTP Request and Slow Outgoing HTTP(s) Dependency have a Skip Dependency Certificate Verification setting, so an experiment can forward intercepted HTTPS requests to a dependency whose certificate the proxy can't verify
 
 ## v1.9.2
 

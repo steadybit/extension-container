@@ -265,8 +265,10 @@ extraEnv:
     value: /etc/ssl/extra-certs:/etc/ssl/certs
 ```
 
-For test environments, `STEADYBIT_EXTENSION_INSECURE_SKIP_VERIFY=true` (via
-`extraEnv`) forwards without verifying the dependency at all.
+For test environments, an experiment can forward without verifying the
+dependency at all: enable **Skip Dependency Certificate Verification** in the
+attack's advanced settings. It applies to that experiment only;
+`STEADYBIT_EXTENSION_INSECURE_SKIP_VERIFY` does not affect the proxy.
 
 > ⚠️ The private key can impersonate **any** HTTPS endpoint to anything that
 > trusts it. Keep this to test environments, and treat the Secret accordingly.

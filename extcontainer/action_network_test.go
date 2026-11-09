@@ -883,3 +883,52 @@ func testCAPEM(t *testing.T) (certPEM, keyPEM []byte) {
 	return pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der}),
 		pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: keyDER})
 }
+
+func Test_dependencyFault_upstreamInsecureSkipVerifyParameter(t *testing.T) {
+	has := func(spec dependencyFaultSpec) bool {
+		return slices.ContainsFunc((&dependencyFaultAction{spec: spec}).Describe().Parameters, func(p action_kit_api.ActionParameter) bool {
+			return p.Name == "upstreamInsecureSkipVerify"
+		})
+	}
+	// Without a CA nothing is decrypted, so there is no upstream TLS to verify.
+	require.False(t, has(latencyFaultSpec))
+	require.False(t, has(httpAbortFaultSpec))
+
+	withInterceptCA(t)
+	require.True(t, has(latencyFaultSpec))
+	require.True(t, has(httpAbortFaultSpec))
+	require.False(t, has(resetFaultSpec))
+}
+
+func Test_dependencyFault_parseOpts_upstreamInsecureSkipVerify(t *testing.T) {
+	a := &dependencyFaultAction{spec: latencyFaultSpec}
+	request := func(cfg map[string]interface{}) action_kit_api.PrepareActionRequestBody {
+		cfg["hostname"] = []interface{}{"api.example.com"}
+		cfg["delay"] = 500
+		cfg["duration"] = 30000
+		return action_kit_api.PrepareActionRequestBody{ExecutionId: uuid.New(), Config: cfg}
+	}
+
+	// Without a CA the proxy never opens its own TLS connection.
+	opts, err := a.parseOpts(request(map[string]interface{}{"upstreamInsecureSkipVerify": true}))
+	require.NoError(t, err)
+	require.False(t, opts.UpstreamInsecureSkipVerify)
+
+	withInterceptCA(t)
+	opts, err = a.parseOpts(request(map[string]interface{}{}))
+	require.NoError(t, err)
+	require.False(t, opts.UpstreamInsecureSkipVerify, "verified by default")
+
+	opts, err = a.parseOpts(request(map[string]interface{}{"upstreamInsecureSkipVerify": true}))
+	require.NoError(t, err)
+	require.True(t, opts.UpstreamInsecureSkipVerify)
+
+	// Strictly per experiment: the extension-wide setting doesn't turn it on.
+	t.Setenv("STEADYBIT_EXTENSION_INSECURE_SKIP_VERIFY", "true")
+	unset, err := a.parseOpts(request(map[string]interface{}{}))
+	require.NoError(t, err)
+	require.False(t, unset.UpstreamInsecureSkipVerify)
+
+	msgs := interceptionMessages(opts, false)
+	require.Contains(t, msgs[len(msgs)-2].Message, "without verifying its certificate")
+}

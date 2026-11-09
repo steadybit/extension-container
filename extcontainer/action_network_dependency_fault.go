@@ -206,8 +206,18 @@ func (a *dependencyFaultAction) Describe() action_kit_api.ActionDescription {
 			},
 		}),
 		ParameterGroups: new([]action_kit_api.ParameterGroup{dependencyTrafficFilterGroup}),
-		Parameters:      append(commonDependencyParameters(a.percentageDescription()), a.spec.extraParams...),
+		Parameters:      a.parameters(),
 	}
+}
+
+func (a *dependencyFaultAction) parameters() []action_kit_api.ActionParameter {
+	params := append(commonDependencyParameters(a.percentageDescription()), a.spec.extraParams...)
+	// Only meaningful when the proxy decrypts HTTPS and so opens its own TLS
+	// connection to the dependency.
+	if a.spec.decryptsHTTPS && config.Config.TLSInterceptEnabled() {
+		params = append(params, upstreamInsecureSkipVerifyParameter(16))
+	}
+	return params
 }
 
 // dependencyStatsMessageType ties the Status messages to the Markdown widget.
@@ -422,6 +432,12 @@ func interceptionMessages(opts proxyfault.Opts, cleartextHTTPOnly bool) action_k
 		msgs = append(msgs, action_kit_api.Message{
 			Level:   extutil.Ptr(action_kit_api.Warn),
 			Message: "Localhost traffic passes through the proxy: existing localhost connections may be reset when the attack starts, and are closed when it ends.",
+		})
+	}
+	if opts.UpstreamInsecureSkipVerify {
+		msgs = append(msgs, action_kit_api.Message{
+			Level:   extutil.Ptr(action_kit_api.Warn),
+			Message: "Intercepted HTTPS requests are forwarded to the dependency without verifying its certificate.",
 		})
 	}
 	if len(opts.Ports) > 0 {
@@ -641,6 +657,17 @@ func attackLocalhostParameter(order int) action_kit_api.ActionParameter {
 	}
 }
 
+// upstreamInsecureSkipVerifyParameter lets an experiment forward intercepted
+// HTTPS requests to a dependency whose certificate the proxy cannot verify.
+func upstreamInsecureSkipVerifyParameter(order int) action_kit_api.ActionParameter {
+	return action_kit_api.ActionParameter{
+		Name:        "upstreamInsecureSkipVerify",
+		Label:       "Skip Dependency Certificate Verification",
+		Description: extutil.Ptr("Forward intercepted HTTPS requests to the dependency without verifying its certificate, e.g. for a dependency with a self-signed or private-CA certificate. Without it, unverifiable dependencies get a 502 from the proxy. Test environments only."),
+		Type:        action_kit_api.ActionParameterTypeBoolean, DefaultValue: extutil.Ptr("false"), Required: extutil.Ptr(false), Order: extutil.Ptr(order), Advanced: extutil.Ptr(true),
+	}
+}
+
 func (a *dependencyFaultAction) parseOpts(request action_kit_api.PrepareActionRequestBody) (proxyfault.Opts, error) {
 	cfg := request.Config
 
@@ -713,6 +740,8 @@ func (a *dependencyFaultAction) parseOpts(request action_kit_api.PrepareActionRe
 		Fault: fault,
 		// nil unless a CA is configured, so HTTPS stays untouched by default.
 		TLSInterceptCA: interceptCA,
+		// Only applies to decrypted HTTPS, and only when the experiment asks for it.
+		UpstreamInsecureSkipVerify: interceptCA != nil && extutil.ToBool(cfg["upstreamInsecureSkipVerify"]),
 	}, nil
 }
 
