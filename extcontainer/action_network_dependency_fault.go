@@ -45,6 +45,10 @@ type dependencyFaultSpec struct {
 	// makes Prepare reject an explicit 443, since HTTPS/TLS cannot be aborted
 	// without terminating TLS.
 	cleartextHTTPOnly bool
+	// decryptsHTTPS marks a fault that needs the requests inside TLS to apply
+	// per request: with an interception CA configured, the proxy decrypts
+	// matched HTTPS for it. A reset needs no decryption, so it never asks.
+	decryptsHTTPS bool
 	// hint, when set, is rendered as an action-level hint in the UI (spanning all
 	// parameters) — e.g. warning that the synthesized status/body is HTTP-only.
 	hint *action_kit_api.ActionHint
@@ -73,6 +77,7 @@ var latencyFaultSpec = dependencyFaultSpec{
 		}
 		return proxyfault.Fault{Latency: d}, nil
 	},
+	decryptsHTTPS: true,
 }
 
 var httpAbortFaultSpec = dependencyFaultSpec{
@@ -117,6 +122,7 @@ var httpAbortFaultSpec = dependencyFaultSpec{
 		return proxyfault.Fault{HTTPStatus: status, HTTPBody: extutil.ToString(cfg["responseBody"]), HTTPHeaders: headers, Latency: delay}, nil
 	},
 	cleartextHTTPOnly: true,
+	decryptsHTTPS:     true,
 	hint: &action_kit_api.ActionHint{
 		Type:    action_kit_api.HintWarning,
 		Content: "Response status and body apply to **cleartext HTTP only** — HTTPS (port 443) isn't supported.",
@@ -208,15 +214,14 @@ func (a *dependencyFaultAction) Describe() action_kit_api.ActionDescription {
 const dependencyStatsMessageType = "dependency_fault_stats_markdown"
 
 // tlsInterceptCA returns the CA to hand the proxy, or nil to leave HTTPS
-// untouched. Only a cleartext-only fault (the synthesized HTTP response) has
-// anything to gain from decrypting; latency and reset already work on HTTPS at
-// L4, so they never ask for it.
+// untouched. A synthesized response needs it to act on HTTPS at all, and a
+// latency to delay every request rather than once per connection.
 //
 // A CA that is configured but unreadable is an error rather than a silent
 // downgrade: quietly falling back would let HTTPS traffic flow untouched while
 // the operator believes it is being faulted.
 func (a *dependencyFaultAction) tlsInterceptCA(ports []uint16) (*proxyfault.TLSInterceptCA, error) {
-	if !a.spec.cleartextHTTPOnly || !config.Config.TLSInterceptEnabled() {
+	if !a.spec.decryptsHTTPS || !config.Config.TLSInterceptEnabled() {
 		return nil, nil
 	}
 	// Only needed to decrypt 443 (or HTTPS on any port, when every port is
@@ -271,7 +276,7 @@ func (a *dependencyFaultAction) description() string {
 // decrypts it with the interception CA — and per connection otherwise.
 func (a *dependencyFaultAction) percentageDescription() string {
 	switch {
-	case a.spec.cleartextHTTPOnly && config.Config.TLSInterceptEnabled():
+	case a.spec.decryptsHTTPS && config.Config.TLSInterceptEnabled():
 		return "Percentage of matching requests the fault is applied to. Each request is decided on its own, also on keep-alive connections, for cleartext HTTP and for HTTPS through the configured interception CA."
 	case a.spec.cleartextHTTPOnly:
 		return "Percentage of matching requests the fault is applied to. Each request is decided on its own, also on keep-alive connections."
@@ -283,7 +288,7 @@ func (a *dependencyFaultAction) percentageDescription() string {
 // hint adapts the action-level hint to whether HTTPS interception is available,
 // so the UI never warns about a limitation that no longer applies.
 func (a *dependencyFaultAction) hint() *action_kit_api.ActionHint {
-	if a.spec.cleartextHTTPOnly && config.Config.TLSInterceptEnabled() {
+	if a.spec.decryptsHTTPS && config.Config.TLSInterceptEnabled() {
 		return &action_kit_api.ActionHint{
 			Type:    action_kit_api.HintInfo,
 			Content: "HTTPS interception is enabled — every matched HTTPS connection is decrypted, so the target's workloads must trust the configured CA, or all their requests to the dependency fail, not only the selected percentage. Dependencies that require mutual TLS cannot be reached.",

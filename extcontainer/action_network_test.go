@@ -573,10 +573,15 @@ func Test_dependencyFault_tlsInterceptCA(t *testing.T) {
 	require.Contains(t, string(ca.CertPEM), "BEGIN CERTIFICATE")
 	require.Contains(t, string(ca.KeyPEM), "PRIVATE KEY")
 
-	// Latency already works over HTTPS at L4, so it never asks to decrypt.
+	// Latency decrypts too, to delay every HTTPS request.
 	lca, err := latency.tlsInterceptCA([]uint16{443})
 	require.NoError(t, err)
-	require.Nil(t, lca)
+	require.NotNil(t, lca)
+
+	// A reset needs no decryption.
+	rca, err := (&dependencyFaultAction{spec: resetFaultSpec}).tlsInterceptCA([]uint16{443})
+	require.NoError(t, err)
+	require.Nil(t, rca)
 }
 
 func Test_dependencyFault_percentageDescription(t *testing.T) {
@@ -586,11 +591,11 @@ func Test_dependencyFault_percentageDescription(t *testing.T) {
 	require.NotContains(t, httpAbort.percentageDescription(), "HTTPS")
 	require.Contains(t, latency.percentageDescription(), "per connection for HTTPS")
 
-	// With the CA, the HTTP response attack reads HTTPS requests too, so they
-	// are decided per request; latency still acts on HTTPS connections.
+	// With the CA, both attacks read HTTPS requests, so they are decided per
+	// request.
 	withInterceptCA(t)
 	require.Contains(t, httpAbort.percentageDescription(), "HTTPS through the configured interception CA")
-	require.Contains(t, latency.percentageDescription(), "per connection for HTTPS")
+	require.Contains(t, latency.percentageDescription(), "HTTPS through the configured interception CA")
 }
 
 func Test_dependencyFault_hint_withInterceptCA(t *testing.T) {
@@ -604,7 +609,8 @@ func Test_dependencyFault_hint_withInterceptCA(t *testing.T) {
 	require.Contains(t, hint.Content, "trust the configured CA")
 	require.NotContains(t, hint.Content, "cleartext HTTP only")
 
-	require.Nil(t, (&dependencyFaultAction{spec: latencyFaultSpec}).hint())
+	// Latency decrypts too, so the same constraint applies.
+	require.Equal(t, hint, (&dependencyFaultAction{spec: latencyFaultSpec}).hint())
 }
 
 func Test_formatDependencyStatsMarkdown_rejected(t *testing.T) {
