@@ -18,6 +18,7 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -209,6 +210,10 @@ func TestWithMinikube(t *testing.T) {
 		{
 			Name: "fill disk oom kill",
 			Test: testFillDiskOomKill,
+		},
+		{
+			Name: "fill disk is freed when the extension is killed",
+			Test: testFillDiskFreedWhenExtensionKilled,
 		},
 		{
 			Name: "fill memory",
@@ -1968,7 +1973,7 @@ func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 			require.NoError(t, err)
 
 			if testCase.wantedDelta >= 0 {
-				assertFileHasSize(t, m, nginx.Pod, "nginx", pathToFill+"/disk-fill", wantedFileSize, testCase.wantedDelta)
+				assertHeldFillSize(t, m, wantedFileSize, testCase.wantedDelta)
 			}
 
 			if testCase.wantedLog != nil {
@@ -1983,8 +1988,7 @@ func testFillDisk(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 				e2e.AssertProcessNOTRunningInContainer(t, m, nginx.Pod, "nginx", "fallocate")
 			}
 
-			out, _ := m.PodExec(nginx.Pod, "nginx", "ls", pathToFill+"/disk-fill")
-			assert.Contains(t, out, "No such file or directory")
+			requireNoHeldFill(t, m)
 		})
 	}
 	requireAllSidecarsCleanedUp(t, m, e)
@@ -2632,7 +2636,70 @@ func requireAllSidecarsCleanedUp(t *testing.T, m *e2e.Minikube, e *e2e.Extension
 	require.Empty(t, space, "no sidecar directories must be present")
 }
 
-func assertFileHasSize(t *testing.T, m *e2e.Minikube, pod metav1.Object, containername string, filepath string, wantedSizeInMb int, wantedDeltaInMb int) {
+func testFillDiskFreedWhenExtensionKilled(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
+	nginx := e2e.Nginx{Minikube: m}
+	require.NoError(t, nginx.Deploy("nginx-fill-disk-killed"), "failed to create pod")
+	defer func() { _ = nginx.Delete() }()
+
+	target, err := nginx.Target()
+	require.NoError(t, err)
+
+	config := map[string]any{
+		"duration":  600_000,
+		"path":      "/tmp",
+		"size":      512,
+		"mode":      string(diskfill.MBToFill),
+		"blocksize": 0,
+		"method":    string(diskfill.AtOnce),
+	}
+	action, err := e.RunAction(fmt.Sprintf("%s.fill_disk", extcontainer.BaseActionID), target, config, &action_kit_api.ExecutionContext{})
+	require.NoError(t, err)
+	defer func() {
+		require.NoError(t, e.ResetConfig())
+		_ = action.Cancel()
+	}()
+	assertHeldFillSize(t, m, 512, 0)
+
+	out, err := runInMinikube(m, "sudo pkill -9 -x extension")
+	require.NoError(t, err, string(out))
+
+	requireNoHeldFill(t, m)
+}
+
+func runInMinikube(m *e2e.Minikube, arg ...string) ([]byte, error) {
+	cmd := m.SshExec(arg...)
+	cmd.Stdout = nil
+	cmd.Stderr = nil
+	return cmd.CombinedOutput()
+}
+
+// heldFillSizes returns the sizes of the unlinked disk-fill files held open on the node.
+func heldFillSizes(m *e2e.Minikube) ([]int, error) {
+	out, err := runInMinikube(m, `sudo find /proc/[0-9]*/fd -lname "*/disk-fill (deleted)" -exec stat -L -c %s {} + 2>/dev/null; true`)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %s", err, out)
+	}
+	var sizes []int
+	for _, field := range strings.Fields(string(out)) {
+		size, err := strconv.Atoi(field)
+		if err != nil {
+			return nil, fmt.Errorf("unexpected output: %s", out)
+		}
+		sizes = append(sizes, size)
+	}
+	return sizes, nil
+}
+
+func requireNoHeldFill(t *testing.T, m *e2e.Minikube) {
+	t.Helper()
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
+		sizes, err := heldFillSizes(m)
+		require.NoError(c, err)
+		assert.Empty(c, sizes, "disk-fill file still held open")
+	}, 30*time.Second, 500*time.Millisecond)
+}
+
+func assertHeldFillSize(t *testing.T, m *e2e.Minikube, wantedSizeInMb int, wantedDeltaInMb int) {
 	t.Helper()
 	wantedSizeInBytes := wantedSizeInMb * 1024 * 1024
 	wantedDeltaInBytes := wantedDeltaInMb * 1024 * 1024
@@ -2648,21 +2715,18 @@ func assertFileHasSize(t *testing.T, m *e2e.Minikube, pod metav1.Object, contain
 			return
 
 		case <-time.After(200 * time.Millisecond):
-			out, err := m.PodExec(pod, containername, "stat", "-c", "%s", filepath)
-			if err != nil {
-				message = fmt.Sprintf("%s: %s", err.Error(), out)
-				continue
-			}
-
-			if fileSize, err := strconv.Atoi(strings.TrimSpace(out)); err == nil {
+			if sizes, err := heldFillSizes(m); err != nil {
+				message = err.Error()
+			} else if len(sizes) == 0 {
+				message = "no disk-fill file held open"
+			} else {
+				fileSize := slices.Max(sizes)
 				actualDelta := int(math.Abs(float64(fileSize - wantedSizeInBytes)))
 				if actualDelta <= wantedDeltaInBytes {
 					return
 				} else {
 					message = fmt.Sprintf("file size is %d, wanted %d, delta of %d exceeds allowed delta of %d", fileSize, wantedSizeInBytes, actualDelta, wantedDeltaInBytes)
 				}
-			} else {
-				message = fmt.Sprintf("cannot parse file size: %s", err.Error())
 			}
 		}
 	}
