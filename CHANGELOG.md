@@ -9,6 +9,9 @@
 - feat: Dependency Ports has no default anymore, so new dependency fault attacks intercept every port. Existing experiments keep the ports they were saved with.
 - **Behaviour change:** Reset TCP Connection in L7 mode with an empty Include Ports now intercepts every port instead of defaulting to 80,443. Resets still apply only to connections to the hostnames, but every outgoing TCP connection of the target passes through the proxy. Set Include Ports to `80,443` to keep the previous scope.
 - chore(deps): bump transparent-proxy to v1.3.0-beta.1 and action_kit_commons to v1.15.0
+- feat: Percentage in the dependency fault attacks applies per request on cleartext HTTP, also on keep-alive connections, and per connection otherwise; the Dependency Fault Statistics widget shows the requests matched and faulted, with their share
+- feat: with an interception CA configured, Intercept Outgoing HTTP Request and Slow Outgoing HTTP(s) Dependency apply Percentage per request on HTTPS too. Every matched HTTPS connection is then decrypted, so a workload that doesn't trust the CA fails all its requests to the dependency, and dependencies requiring mutual TLS can't be reached
+- chore(deps): bump transparent-proxy to v1.3.0
 
 ## v1.9.2
 
