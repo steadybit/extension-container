@@ -308,7 +308,7 @@ func (a *dependencyFaultAction) hint() *action_kit_api.ActionHint {
 	if a.spec.decryptsHTTPS && config.Config.TLSInterceptEnabled() {
 		return &action_kit_api.ActionHint{
 			Type:    action_kit_api.HintInfo,
-			Content: "HTTPS interception is enabled: matched HTTPS connections are decrypted, whatever the Percentage. The target's workloads must trust the configured CA, or all their requests to the dependency fail. Requests that aren't faulted reach the dependency only if the proxy can verify its certificate (public CAs, or a custom CA in SSL_CERT_DIR / SSL_CERT_FILE); otherwise they get a 502. Dependencies that require mutual TLS can't be reached.",
+			Content: "HTTPS interception is enabled: every matched HTTPS connection is decrypted, whatever the Percentage. Workloads that don't trust the configured CA fail all their requests to the dependency. Unfaulted requests get a 502 if the extension can't verify the dependency's certificate. Mutual TLS isn't supported.",
 		}
 	}
 	return a.spec.hint
