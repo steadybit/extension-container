@@ -32,7 +32,7 @@ func UpstreamSkipVerifyParameter(order int, group string) action_kit_api.ActionP
 		Name:        UpstreamSkipVerifyParameterName,
 		Label:       "Skip Dependency Certificate Verification",
 		Description: extutil.Ptr("Unsafe, test environments only: forward intercepted HTTPS requests to the dependency without verifying its certificate, e.g. a self-signed or private-CA one."),
-		Type:        action_kit_api.ActionParameterTypeBoolean, DefaultValue: extutil.Ptr("false"), Required: extutil.Ptr(false), Order: extutil.Ptr(order), Advanced: extutil.Ptr(true), Group: extutil.Ptr(group),
+		Type:        action_kit_api.ActionParameterTypeBoolean, DefaultValue: extutil.Ptr("false"), Required: extutil.Ptr(true), Order: extutil.Ptr(order), Advanced: extutil.Ptr(true), Group: extutil.Ptr(group),
 	}
 }
 

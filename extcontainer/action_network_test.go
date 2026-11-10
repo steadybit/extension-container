@@ -612,7 +612,7 @@ func Test_dependencyFault_hint_withInterceptCA(t *testing.T) {
 	require.NotContains(t, hint.Content, "cleartext HTTP only")
 	// Requests that aren't faulted are forwarded, so the dependency's certificate
 	// must verify too.
-	require.Contains(t, hint.Content, "only if the proxy can verify its certificate")
+	require.Contains(t, hint.Content, "can't verify the dependency's certificate")
 
 	// Latency decrypts too, so the same constraint applies.
 	require.Equal(t, hint, (&dependencyFaultAction{spec: latencyFaultSpec}).hint())
