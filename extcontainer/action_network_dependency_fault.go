@@ -27,7 +27,7 @@ import (
 	"github.com/steadybit/action-kit/go/action_kit_sdk"
 	"github.com/steadybit/extension-container/config"
 	"github.com/steadybit/extension-container/extcontainer/container/types"
-	"github.com/steadybit/extension-container/extcontainer/upstreamtls"
+	"github.com/steadybit/extension-container/extcontainer/flags"
 	"github.com/steadybit/extension-kit/extbuild"
 	"github.com/steadybit/extension-kit/extutil"
 )
@@ -222,7 +222,7 @@ func (a *dependencyFaultAction) parameters() []action_kit_api.ActionParameter {
 	// Only meaningful when the proxy decrypts HTTPS and so opens its own TLS
 	// connection to the dependency.
 	if a.spec.decryptsHTTPS && config.Config.TLSInterceptEnabled() {
-		params = append(params, upstreamtls.Parameter(16))
+		params = append(params, flags.UpstreamSkipVerifyParameter(16))
 	}
 	return params
 }
@@ -381,8 +381,8 @@ func (a *dependencyFaultAction) Prepare(ctx context.Context, state *DependencyFa
 		}}, nil
 	}
 	messages := interceptionMessages(opts, a.spec.cleartextHTTPOnly)
-	upstreamCAs, invalidUpstreamCAs := upstreamtls.CustomCAs()
-	messages = append(messages, upstreamtls.Messages(opts, upstreamCAs, invalidUpstreamCAs)...)
+	upstreamCAs, invalidUpstreamCAs := flags.UpstreamCustomCAs()
+	messages = append(messages, flags.UpstreamTLSMessages(opts, upstreamCAs, invalidUpstreamCAs)...)
 	if !opts.InterceptLoopback {
 		messages = append(messages, loopbackHostnameMessages(ctx, processInfo.Pid, opts.Fault.Hosts)...)
 	}
@@ -501,7 +501,7 @@ func (a *dependencyFaultAction) Status(ctx context.Context, state *DependencyFau
 	}
 	messages := dependencyStatsMessages(handle.proxy, handle.opts)
 	if snap, ok := handle.proxy.Metrics(); ok {
-		if tip := upstreamtls.ErrorTip(handle.opts, handle.upstreamCAs, snap.UpstreamErrors); tip != nil && handle.upstreamTipLogged.CompareAndSwap(false, true) {
+		if tip := flags.UpstreamErrorTip(handle.opts, handle.upstreamCAs, snap.UpstreamErrors); tip != nil && handle.upstreamTipLogged.CompareAndSwap(false, true) {
 			if messages == nil {
 				messages = &action_kit_api.Messages{}
 			}
@@ -578,7 +578,7 @@ func formatDependencyStatsMarkdown(s proxyfault.Snapshot, opts proxyfault.Opts) 
 	// operator seeing "the CA isn't trusted" and seeing an unexplained no-op.
 	if s.UpstreamErrors > 0 {
 		cause := "couldn't connect to the destination"
-		if upstreamtls.Verifies(opts) {
+		if flags.VerifiesUpstream(opts) {
 			cause += ", or couldn't verify the dependency's certificate"
 		}
 		fmt.Fprintf(&b, "\n_**Forwarding failed %d time(s).** The proxy %s._\n", s.UpstreamErrors, cause)
@@ -750,7 +750,7 @@ func (a *dependencyFaultAction) parseOpts(request action_kit_api.PrepareActionRe
 		// nil unless a CA is configured, so HTTPS stays untouched by default.
 		TLSInterceptCA: interceptCA,
 		// Only applies to decrypted HTTPS, and only when the experiment asks for it.
-		UpstreamInsecureSkipVerify: upstreamtls.SkipVerify(cfg, interceptCA),
+		UpstreamInsecureSkipVerify: flags.UpstreamSkipVerify(cfg, interceptCA),
 	}, nil
 }
 

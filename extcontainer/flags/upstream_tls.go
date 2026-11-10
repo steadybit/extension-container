@@ -1,11 +1,14 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2026 Steadybit GmbH
 
-// Package upstreamtls covers the proxy's TLS connection to the dependency when
-// it forwards a decrypted HTTPS request: the experiment setting to skip
-// verifying the dependency's certificate, the custom CAs it is verified
-// against, and the warnings for when that is unsafe or can fail.
-package upstreamtls
+// Package flags holds the action parameters that change what an attack does,
+// with the logic and the execution-log output that depend on them.
+package flags
+
+// The proxy's TLS connection to the dependency when it forwards a decrypted
+// HTTPS request: the experiment setting to skip verifying the dependency's
+// certificate, the custom CAs it is verified against, and the warnings for
+// when that is unsafe or can fail.
 
 import (
 	"crypto/x509"
@@ -19,35 +22,35 @@ import (
 	"github.com/steadybit/extension-kit/extutil"
 )
 
-const ParameterName = "upstreamInsecureSkipVerify"
+const UpstreamSkipVerifyParameterName = "upstreamInsecureSkipVerify"
 
-// Parameter lets an experiment forward intercepted HTTPS requests to a
-// dependency whose certificate the proxy cannot verify.
-func Parameter(order int) action_kit_api.ActionParameter {
+// UpstreamSkipVerifyParameter lets an experiment forward intercepted HTTPS
+// requests to a dependency whose certificate the proxy cannot verify.
+func UpstreamSkipVerifyParameter(order int) action_kit_api.ActionParameter {
 	return action_kit_api.ActionParameter{
-		Name:        ParameterName,
+		Name:        UpstreamSkipVerifyParameterName,
 		Label:       "Skip Dependency Certificate Verification",
 		Description: extutil.Ptr("Unsafe: forward intercepted HTTPS requests to the dependency without verifying its certificate, so whoever answers at its address receives them, including any credentials. For a dependency with a self-signed or private-CA certificate; without it, unverifiable dependencies get a 502 from the proxy. Use only in test environments."),
 		Type:        action_kit_api.ActionParameterTypeBoolean, DefaultValue: extutil.Ptr("false"), Required: extutil.Ptr(false), Order: extutil.Ptr(order), Advanced: extutil.Ptr(true),
 	}
 }
 
-// SkipVerify reads the setting. It only applies to decrypted HTTPS, so it is
-// off without an interception CA.
-func SkipVerify(cfg map[string]any, interceptCA *proxyfault.TLSInterceptCA) bool {
-	return interceptCA != nil && extutil.ToBool(cfg[ParameterName])
+// UpstreamSkipVerify reads the setting. It only applies to decrypted HTTPS, so
+// it is off without an interception CA.
+func UpstreamSkipVerify(cfg map[string]any, interceptCA *proxyfault.TLSInterceptCA) bool {
+	return interceptCA != nil && extutil.ToBool(cfg[UpstreamSkipVerifyParameterName])
 }
 
-// Verifies reports whether the proxy forwards decrypted HTTPS and verifies the
-// dependency's certificate on the way.
-func Verifies(opts proxyfault.Opts) bool {
+// VerifiesUpstream reports whether the proxy forwards decrypted HTTPS and
+// verifies the dependency's certificate on the way.
+func VerifiesUpstream(opts proxyfault.Opts) bool {
 	return opts.TLSInterceptCA != nil && !opts.UpstreamInsecureSkipVerify
 }
 
-// CustomCAs sorts the custom CA paths the proxy inherits from the extension
-// (SSL_CERT_DIR / SSL_CERT_FILE, the exttls convention) into those holding at
-// least one PEM certificate and those that don't.
-func CustomCAs() (valid, invalid []string) {
+// UpstreamCustomCAs sorts the custom CA paths the proxy inherits from the
+// extension (SSL_CERT_DIR / SSL_CERT_FILE, the exttls convention) into those
+// holding at least one PEM certificate and those that don't.
+func UpstreamCustomCAs() (valid, invalid []string) {
 	paths := filepath.SplitList(os.Getenv("SSL_CERT_DIR"))
 	if file := os.Getenv("SSL_CERT_FILE"); file != "" {
 		paths = append(paths, file)
@@ -92,10 +95,10 @@ func holdsCertificate(path string) bool {
 	return false
 }
 
-// Messages are logged when the attack starts: that skipping verification is
-// unsafe, or which CAs verify the dependencies, so a forwarded request answered
-// with a 502 is not a surprise.
-func Messages(opts proxyfault.Opts, validCAs, invalidCAs []string) action_kit_api.Messages {
+// UpstreamTLSMessages are logged when the attack starts: that skipping
+// verification is unsafe, or which CAs verify the dependencies, so a forwarded
+// request answered with a 502 is not a surprise.
+func UpstreamTLSMessages(opts proxyfault.Opts, validCAs, invalidCAs []string) action_kit_api.Messages {
 	if opts.TLSInterceptCA == nil {
 		return nil
 	}
@@ -121,11 +124,11 @@ func Messages(opts proxyfault.Opts, validCAs, invalidCAs []string) action_kit_ap
 	return msgs
 }
 
-// ErrorTip explains failed forwards once they happen. They may be failed
-// connections, but with HTTPS decrypted they may as well be a dependency
-// certificate the proxy can't verify.
-func ErrorTip(opts proxyfault.Opts, validCAs []string, upstreamErrors int64) *action_kit_api.Message {
-	if upstreamErrors == 0 || !Verifies(opts) {
+// UpstreamErrorTip explains failed forwards once they happen. They may be
+// failed connections, but with HTTPS decrypted they may as well be a
+// dependency certificate the proxy can't verify.
+func UpstreamErrorTip(opts proxyfault.Opts, validCAs []string, upstreamErrors int64) *action_kit_api.Message {
+	if upstreamErrors == 0 || !VerifiesUpstream(opts) {
 		return nil
 	}
 	var tip string
