@@ -12,6 +12,7 @@ import (
 	"encoding/pem"
 	"math/big"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -30,7 +31,7 @@ func TestUpstreamSkipVerifyParameter(t *testing.T) {
 	require.Equal(t, UpstreamSkipVerifyParameterName, p.Name)
 	require.Equal(t, "false", *p.DefaultValue)
 	require.True(t, *p.Advanced)
-	require.Contains(t, *p.Description, "Unsafe")
+	require.True(t, strings.HasPrefix(*p.Description, "Unsafe, test environments only: "), *p.Description)
 }
 
 func TestUpstreamSkipVerify(t *testing.T) {
@@ -76,7 +77,8 @@ func TestUpstreamTLSMessages(t *testing.T) {
 	msgs := UpstreamTLSMessages(skipping, nil, []string{"/missing"})
 	require.Len(t, msgs, 1)
 	require.Equal(t, action_kit_api.Warn, *msgs[0].Level)
-	require.Contains(t, msgs[0].Message, "Unsafe: intercepted HTTPS requests are forwarded to the dependency without verifying its certificate")
+	require.True(t, strings.HasPrefix(msgs[0].Message, "Unsafe, test environments only: intercepted HTTPS requests are forwarded to the dependency without verifying its certificate"), msgs[0].Message)
+	require.Contains(t, msgs[0].Message, "including any credentials")
 
 	msgs = UpstreamTLSMessages(decrypting, nil, nil)
 	require.Len(t, msgs, 1)

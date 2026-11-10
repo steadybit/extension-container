@@ -30,7 +30,7 @@ func UpstreamSkipVerifyParameter(order int) action_kit_api.ActionParameter {
 	return action_kit_api.ActionParameter{
 		Name:        UpstreamSkipVerifyParameterName,
 		Label:       "Skip Dependency Certificate Verification",
-		Description: extutil.Ptr("Unsafe: forward intercepted HTTPS requests to the dependency without verifying its certificate, so whoever answers at its address receives them, including any credentials. For a dependency with a self-signed or private-CA certificate; without it, unverifiable dependencies get a 502 from the proxy. Use only in test environments."),
+		Description: extutil.Ptr("Unsafe, test environments only: forward intercepted HTTPS requests to the dependency without verifying its certificate, e.g. a self-signed or private-CA one."),
 		Type:        action_kit_api.ActionParameterTypeBoolean, DefaultValue: extutil.Ptr("false"), Required: extutil.Ptr(false), Order: extutil.Ptr(order), Advanced: extutil.Ptr(true),
 	}
 }
@@ -105,7 +105,7 @@ func UpstreamTLSMessages(opts proxyfault.Opts, validCAs, invalidCAs []string) ac
 	if opts.UpstreamInsecureSkipVerify {
 		return action_kit_api.Messages{{
 			Level:   extutil.Ptr(action_kit_api.Warn),
-			Message: "Unsafe: intercepted HTTPS requests are forwarded to the dependency without verifying its certificate, so whoever answers at its address receives them, including any credentials, and their responses are trusted. Use only in test environments.",
+			Message: "Unsafe, test environments only: intercepted HTTPS requests are forwarded to the dependency without verifying its certificate, so whoever answers at its address receives them, including any credentials, and their responses are trusted.",
 		}}
 	}
 	var msgs action_kit_api.Messages
