@@ -23,7 +23,7 @@ our [Reliability Hub](https://hub.steadybit.com/extension/com.steadybit.extensio
 | `STEADYBIT_EXTENSION_DISABLE_DISCOVERY_EXCLUDES`    | `discovery.disableExcludes`                                  | Ignore discovery excludes specified by `steadybit.com/discovery-disabled`                                                  | false    | `false` |
 | `STEADYBIT_EXTENSION_DISCOVERY_ATTRIBUTES_EXCLUDES` | `discovery.attributes.excludes`                              | List of Target Attributes which will be excluded during discovery. Checked by key equality and supporting trailing "*"     | false    |         |
 | `STEADYBIT_EXTENSION_HOSTNAME`                      |                                                              | Optional hostname for the targets to be reported. If not given will be read from the UTS namespace of the init process     | false    |         |
-| `STEADYBIT_EXTENSION_TLS_INTERCEPT_CA_CERT`         | `tlsIntercept.existingSecret`                                | PEM CA certificate enabling 'Intercept Outgoing HTTP Request' to synthesize responses for **HTTPS** dependencies. Test environments only — see below. | no      |         |
+| `STEADYBIT_EXTENSION_TLS_INTERCEPT_CA_CERT`         | `tlsIntercept.existingSecret`                                | PEM CA certificate enabling 'Intercept Outgoing HTTP Request' to synthesize responses for **HTTPS** dependencies, and 'Slow Outgoing HTTP(s) Dependency' to delay each HTTPS request. Test environments only — see below. | no      |         |
 | `STEADYBIT_EXTENSION_TLS_INTERCEPT_CA_KEY`          | `tlsIntercept.existingSecret`                                | PEM private key matching the CA certificate.                                                                              | no      |         |
 
 Beyond the settings above, this extension supports the configuration common to all Steadybit
@@ -207,8 +207,19 @@ The version and revision of the extension:
 `Intercept HTTP Request` normally synthesizes a response for **cleartext HTTP**
 only. Supplying a certificate authority lets it do the same for an **HTTPS**
 dependency: the proxy terminates the matched TLS connection with a certificate
-it mints for that hostname, and answers the request itself. The real dependency
-is never contacted.
+it mints for that hostname and handles it request by request, over HTTP/1.1 or
+HTTP/2. **Percentage** applies to each request, as on cleartext HTTP: a selected
+request is answered by the proxy, the others are forwarded to the real
+dependency over the proxy's own TLS connection, once the proxy has verified
+the dependency's certificate (see *Dependencies with a private CA* below). If
+it cannot, the request gets a `502` from the proxy itself: the TLS handshake to
+the dependency is aborted, so the dependency never sees the request, and it is
+not counted as a fault.
+
+The same CA lets `Slow Outgoing HTTP(s) Dependency` delay **each** HTTPS
+request, with **Percentage** per request. Without it, HTTPS connections are not
+decrypted, so the delay is decided once per connection and applies only before
+its first request.
 
 ```bash
 kubectl -n <ns> create secret generic intercept-ca \
@@ -218,10 +229,52 @@ helm upgrade ... --set tlsIntercept.existingSecret=intercept-ca
 ```
 
 **The CA is yours.** You generate it, choose how long it lives, and install it in
-the truststores of the workloads you want to fault — a workload that does not
-trust it fails the connection instead of receiving the synthesized response, and
-that is reported in the attack's statistics rather than silently doing nothing.
-Certificate pinning and mutual TLS cannot be intercepted.
+the truststores of the workloads you want to fault. For both attacks, every
+matched HTTPS connection is decrypted, whatever the **Percentage**, so a
+workload that does not trust the CA, or pins certificates, fails **all** its
+requests to the dependency, not only the selected share. That is reported in the attack's
+statistics rather than silently doing nothing.
+
+**Mutual TLS cannot be intercepted.** The proxy forwards without the workload's
+client certificate, so a dependency that requires one rejects the forwarded
+requests, and the workload gets a `502` for them. Do not target such
+dependencies with HTTPS interception.
+
+**Dependencies with a private CA.** A forwarded request reaches the dependency
+only if the proxy can verify its certificate. Public CAs are built in. For a
+dependency whose certificate comes from your own CA, trust that CA the same way
+as in every Steadybit extension: mount it and point `SSL_CERT_DIR` at it.
+Without it, or with a CA that did not sign the dependency's certificate, the
+requests that are not selected get a `502` instead of reaching the dependency.
+
+```shell
+kubectl create configmap -n steadybit-agent company-ca --from-file=./company-ca.crt
+```
+
+```yaml
+extraVolumeMounts:
+  - name: extra-certs
+    mountPath: /etc/ssl/extra-certs
+    readOnly: true
+extraVolumes:
+  - name: extra-certs
+    configMap:
+      name: company-ca
+extraEnv:
+  - name: SSL_CERT_DIR
+    value: /etc/ssl/extra-certs:/etc/ssl/certs
+```
+
+For test environments, an experiment can forward without verifying the
+dependency at all: enable **Skip Dependency Certificate Verification** in the
+attack's advanced settings. It applies to that experiment only;
+`STEADYBIT_EXTENSION_INSECURE_SKIP_VERIFY` does not affect the proxy.
+
+When the attack starts, the execution log warns if only public CAs verify the
+dependencies, or if a path in `SSL_CERT_DIR` / `SSL_CERT_FILE` is missing or
+holds no certificate. When forwarding fails during the attack, the statistics
+widget shows how often, and the execution log adds a tip on the dependency's
+certificate.
 
 > ⚠️ The private key can impersonate **any** HTTPS endpoint to anything that
 > trusts it. Keep this to test environments, and treat the Secret accordingly.

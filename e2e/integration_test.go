@@ -139,6 +139,10 @@ func TestWithMinikube(t *testing.T) {
 			Test: testNetworkDependencyFaultHTTPS,
 		},
 		{
+			Name: "network dependency fault percentage per request (HTTP and HTTPS)",
+			Test: testNetworkDependencyFaultPercentage,
+		},
+		{
 			Name: "network delay",
 			Test: testNetworkDelay,
 		},
@@ -1197,6 +1201,13 @@ func testNetworkDependencyFault(t *testing.T, m *e2e.Minikube, e *e2e.Extension)
 	})
 
 	t.Run("slow dependency adds latency to the container's calls", func(t *testing.T) {
+		// The suite configures an interception CA, so the attack decrypts HTTPS
+		// to delay each request: the workload has to trust the CA, as a
+		// customer's would.
+		_, err := m.PodExec(nginx.Pod, "nginx", "sh", "-c",
+			fmt.Sprintf("cat > /tmp/intercept-ca.crt <<'PEMEOF'\n%s\nPEMEOF", string(interceptCA.certPEM)))
+		require.NoError(t, err, "failed to place the CA in the target")
+
 		config := map[string]any{
 			"duration": 60000, "hostname": []string{host},
 			"percentage": 100, "port": "443", "delay": 2000,
@@ -1206,7 +1217,8 @@ func testNetworkDependencyFault(t *testing.T, m *e2e.Minikube, e *e2e.Extension)
 		defer func() { _ = action.Cancel() }()
 
 		e2e.Retry(t, 10, 1*time.Second, func(r *e2e.R) {
-			out, err := m.PodExec(nginx.Pod, "nginx", "curl", "--max-time", "10", "-s", "-o", "/dev/null", "-w", "%{time_total}", "https://"+host)
+			out, err := m.PodExec(nginx.Pod, "nginx", "curl", "--max-time", "10", "-s", "-o", "/dev/null", "-w", "%{time_total}",
+				"--cacert", "/tmp/intercept-ca.crt", "https://"+host)
 			if err != nil {
 				r.Failed = true
 				_, _ = fmt.Fprintf(r.Log, "request failed: %v", err)

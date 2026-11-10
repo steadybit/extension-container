@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/opencontainers/runtime-spec/specs-go"
@@ -26,6 +27,7 @@ import (
 	"github.com/steadybit/action-kit/go/action_kit_sdk"
 	"github.com/steadybit/extension-container/config"
 	"github.com/steadybit/extension-container/extcontainer/container/types"
+	"github.com/steadybit/extension-container/extcontainer/flags"
 	"github.com/steadybit/extension-kit/extbuild"
 	"github.com/steadybit/extension-kit/extutil"
 )
@@ -45,6 +47,10 @@ type dependencyFaultSpec struct {
 	// makes Prepare reject an explicit 443, since HTTPS/TLS cannot be aborted
 	// without terminating TLS.
 	cleartextHTTPOnly bool
+	// decryptsHTTPS marks a fault that needs the requests inside TLS to apply
+	// per request: with an interception CA configured, the proxy decrypts
+	// matched HTTPS for it. A reset needs no decryption, so it never asks.
+	decryptsHTTPS bool
 	// hint, when set, is rendered as an action-level hint in the UI (spanning all
 	// parameters) — e.g. warning that the synthesized status/body is HTTP-only.
 	hint *action_kit_api.ActionHint
@@ -73,6 +79,7 @@ var latencyFaultSpec = dependencyFaultSpec{
 		}
 		return proxyfault.Fault{Latency: d}, nil
 	},
+	decryptsHTTPS: true,
 }
 
 var httpAbortFaultSpec = dependencyFaultSpec{
@@ -117,6 +124,7 @@ var httpAbortFaultSpec = dependencyFaultSpec{
 		return proxyfault.Fault{HTTPStatus: status, HTTPBody: extutil.ToString(cfg["responseBody"]), HTTPHeaders: headers, Latency: delay}, nil
 	},
 	cleartextHTTPOnly: true,
+	decryptsHTTPS:     true,
 	hint: &action_kit_api.ActionHint{
 		Type:    action_kit_api.HintWarning,
 		Content: "Response status and body apply to **cleartext HTTP only** — HTTPS (port 443) isn't supported.",
@@ -144,6 +152,11 @@ type proxyHandle struct {
 	opts    proxyfault.Opts
 	sidecar ociruntime.LinuxProcessInfo
 	id      string
+	// upstreamCAs are the custom CA paths holding a certificate when the attack
+	// was prepared, for the tip on failed forwards.
+	upstreamCAs []string
+	// upstreamTipLogged makes that tip appear once per execution.
+	upstreamTipLogged atomic.Bool
 }
 
 var (
@@ -200,23 +213,32 @@ func (a *dependencyFaultAction) Describe() action_kit_api.ActionDescription {
 			},
 		}),
 		ParameterGroups: new([]action_kit_api.ParameterGroup{dependencyTrafficFilterGroup}),
-		Parameters:      append(commonDependencyParameters(), a.spec.extraParams...),
+		Parameters:      a.parameters(),
 	}
+}
+
+func (a *dependencyFaultAction) parameters() []action_kit_api.ActionParameter {
+	params := append(commonDependencyParameters(a.percentageDescription()), a.spec.extraParams...)
+	// Only meaningful when the proxy decrypts HTTPS and so opens its own TLS
+	// connection to the dependency.
+	if a.spec.decryptsHTTPS && config.Config.TLSInterceptEnabled() {
+		params = append(params, flags.UpstreamSkipVerifyParameter(16))
+	}
+	return params
 }
 
 // dependencyStatsMessageType ties the Status messages to the Markdown widget.
 const dependencyStatsMessageType = "dependency_fault_stats_markdown"
 
 // tlsInterceptCA returns the CA to hand the proxy, or nil to leave HTTPS
-// untouched. Only a cleartext-only fault (the synthesized HTTP response) has
-// anything to gain from decrypting; latency and reset already work on HTTPS at
-// L4, so they never ask for it.
+// untouched. A synthesized response needs it to act on HTTPS at all, and a
+// latency to delay every request rather than once per connection.
 //
 // A CA that is configured but unreadable is an error rather than a silent
 // downgrade: quietly falling back would let HTTPS traffic flow untouched while
 // the operator believes it is being faulted.
 func (a *dependencyFaultAction) tlsInterceptCA(ports []uint16) (*proxyfault.TLSInterceptCA, error) {
-	if !a.spec.cleartextHTTPOnly || !config.Config.TLSInterceptEnabled() {
+	if !a.spec.decryptsHTTPS || !config.Config.TLSInterceptEnabled() {
 		return nil, nil
 	}
 	// Only needed to decrypt 443 (or HTTPS on any port, when every port is
@@ -266,13 +288,27 @@ func (a *dependencyFaultAction) description() string {
 	return a.spec.description
 }
 
+// percentageDescription says what Percentage counts. The proxy decides per
+// request wherever it reads the requests — cleartext HTTP, and HTTPS when it
+// decrypts it with the interception CA — and per connection otherwise.
+func (a *dependencyFaultAction) percentageDescription() string {
+	switch {
+	case a.spec.decryptsHTTPS && config.Config.TLSInterceptEnabled():
+		return "Percentage of matching requests the fault is applied to. Each request is decided on its own, also on keep-alive connections, for cleartext HTTP and for HTTPS through the configured interception CA."
+	case a.spec.cleartextHTTPOnly:
+		return "Percentage of matching requests the fault is applied to. Each request is decided on its own, also on keep-alive connections."
+	default:
+		return "Percentage of matching requests the fault is applied to: per request for cleartext HTTP, per connection for HTTPS and other TCP traffic."
+	}
+}
+
 // hint adapts the action-level hint to whether HTTPS interception is available,
 // so the UI never warns about a limitation that no longer applies.
 func (a *dependencyFaultAction) hint() *action_kit_api.ActionHint {
-	if a.spec.cleartextHTTPOnly && config.Config.TLSInterceptEnabled() {
+	if a.spec.decryptsHTTPS && config.Config.TLSInterceptEnabled() {
 		return &action_kit_api.ActionHint{
 			Type:    action_kit_api.HintInfo,
-			Content: "HTTPS interception is enabled — the target's workloads must trust the configured CA, or their connections fail instead of receiving the response.",
+			Content: "HTTPS interception is enabled — every matched HTTPS connection is decrypted, so the target's workloads must trust the configured CA, or all their requests to the dependency fail, not only the selected percentage. Dependencies that require mutual TLS cannot be reached.",
 		}
 	}
 	return a.spec.hint
@@ -345,6 +381,8 @@ func (a *dependencyFaultAction) Prepare(ctx context.Context, state *DependencyFa
 		}}, nil
 	}
 	messages := interceptionMessages(opts, a.spec.cleartextHTTPOnly)
+	upstreamCAs, invalidUpstreamCAs := flags.UpstreamCustomCAs()
+	messages = append(messages, flags.UpstreamTLSMessages(opts, upstreamCAs, invalidUpstreamCAs)...)
 	if !opts.InterceptLoopback {
 		messages = append(messages, loopbackHostnameMessages(ctx, processInfo.Pid, opts.Fault.Hosts)...)
 	}
@@ -360,7 +398,7 @@ func (a *dependencyFaultAction) Prepare(ctx context.Context, state *DependencyFa
 		return nil, fmt.Errorf("failed to create transparent-proxy process: %w", err)
 	}
 
-	storeDependencyFaultHandle(state.ExecutionId, &proxyHandle{proxy: proxy, opts: opts, sidecar: processInfo, id: sidecarId})
+	storeDependencyFaultHandle(state.ExecutionId, &proxyHandle{proxy: proxy, opts: opts, sidecar: processInfo, id: sidecarId, upstreamCAs: upstreamCAs})
 
 	return &action_kit_api.PrepareResult{Messages: &messages}, nil
 }
@@ -461,9 +499,18 @@ func (a *dependencyFaultAction) Status(ctx context.Context, state *DependencyFau
 		// completion, not an error.
 		return &action_kit_api.StatusResult{Completed: true}, nil
 	}
+	messages := dependencyStatsMessages(handle.proxy, handle.opts)
+	if snap, ok := handle.proxy.Metrics(); ok {
+		if tip := flags.UpstreamErrorTip(handle.opts, handle.upstreamCAs, snap.UpstreamErrors); tip != nil && handle.upstreamTipLogged.CompareAndSwap(false, true) {
+			if messages == nil {
+				messages = &action_kit_api.Messages{}
+			}
+			*messages = append(*messages, *tip)
+		}
+	}
 	return &action_kit_api.StatusResult{
 		Completed: false,
-		Messages:  dependencyStatsMessages(handle.proxy, handle.opts),
+		Messages:  messages,
 	}, nil
 }
 
@@ -493,9 +540,18 @@ func formatDependencyStatsMarkdown(s proxyfault.Snapshot, opts proxyfault.Opts) 
 	var b strings.Builder
 	b.WriteString("### Interception\n")
 	fmt.Fprintf(&b, "- **Intercepting:** %s\n", interceptScope(opts))
-	fmt.Fprintf(&b, "- **Connections intercepted:** %d\n", s.ConnectionsMatched)
-	fmt.Fprintf(&b, "- **To a dependency hostname:** %d\n", toDependencies)
-	fmt.Fprintf(&b, "- **Connections faulted:** %d\n", s.ConnectionsFaulted)
+	// Where the proxy reads the requests (cleartext HTTP, or HTTPS it decrypts),
+	// each request is rolled on its own, so a keep-alive connection carrying many
+	// requests is one faulted connection; only the request counters show the
+	// share of requests that was faulted. Otherwise connections are what counts.
+	if s.RequestsMatched > 0 {
+		fmt.Fprintf(&b, "- **Requests to a dependency hostname:** %d\n", s.RequestsMatched)
+		fmt.Fprintf(&b, "- **Requests faulted:** %d (%s)\n", s.RequestsFaulted, percentOf(s.RequestsFaulted, s.RequestsMatched))
+	} else {
+		fmt.Fprintf(&b, "- **Connections intercepted:** %d\n", s.ConnectionsMatched)
+		fmt.Fprintf(&b, "- **To a dependency hostname:** %d\n", toDependencies)
+		fmt.Fprintf(&b, "- **Connections faulted:** %d\n", s.ConnectionsFaulted)
+	}
 	b.WriteString("\n### What was done\n")
 	fmt.Fprintf(&b, "- **Latency applied:** %d\n", s.LatencyApplied)
 	fmt.Fprintf(&b, "- **HTTP responses injected:** %d\n", s.HTTPResponsesInjected)
@@ -503,15 +559,30 @@ func formatDependencyStatsMarkdown(s proxyfault.Snapshot, opts proxyfault.Opts) 
 	fmt.Fprintf(&b, "- **Forwarded untouched:** %d\n", s.ConnectionsProxied)
 	if len(s.PerHost) > 0 {
 		b.WriteString("\n### By dependency\n")
-		b.WriteString("| Hostname | Matched | Faulted |\n|---|---|---|\n")
+		if s.RequestsMatched > 0 {
+			b.WriteString("| Hostname | Connections | Faulted | Requests | Requests faulted |\n|---|---|---|---|---|\n")
+		} else {
+			b.WriteString("| Hostname | Matched | Faulted |\n|---|---|---|\n")
+		}
 		for _, h := range s.SortedHosts() {
 			st := s.PerHost[h]
-			fmt.Fprintf(&b, "| %s | %d | %d |\n", h, st.Matched, st.Faulted)
+			if s.RequestsMatched > 0 {
+				fmt.Fprintf(&b, "| %s | %d | %d | %d | %d |\n", h, st.Matched, st.Faulted, st.RequestsMatched, st.RequestsFaulted)
+			} else {
+				fmt.Fprintf(&b, "| %s | %d | %d |\n", h, st.Matched, st.Faulted)
+			}
 		}
 	}
 	// A rejection means the client refused the certificate we minted for it, so
 	// the fault never applied. Surfacing it here is the difference between the
 	// operator seeing "the CA isn't trusted" and seeing an unexplained no-op.
+	if s.UpstreamErrors > 0 {
+		cause := "couldn't connect to the destination"
+		if flags.VerifiesUpstream(opts) {
+			cause += ", or couldn't verify the dependency's certificate"
+		}
+		fmt.Fprintf(&b, "\n_**Forwarding failed %d time(s).** The proxy %s._\n", s.UpstreamErrors, cause)
+	}
 	if s.TLSInterceptRejected > 0 {
 		fmt.Fprintf(&b, "\n_**%d HTTPS connection(s) rejected the injected certificate.** The target's workload must trust the configured CA — and it usually reads its truststore at startup, so it may need restarting after the CA was installed. Certificate pinning and mutual TLS cannot be intercepted._\n", s.TLSInterceptRejected)
 	}
@@ -522,6 +593,11 @@ func formatDependencyStatsMarkdown(s proxyfault.Snapshot, opts proxyfault.Opts) 
 		b.WriteString("\n_Connections are intercepted, but none to the dependency hostnames yet. If this stays at zero, check the hostnames (matched against the TLS SNI or HTTP Host header)._")
 	}
 	return b.String()
+}
+
+// percentOf formats part as a percentage of total, with one decimal.
+func percentOf(part, total int64) string {
+	return fmt.Sprintf("%.1f%%", float64(part)*100/float64(total))
 }
 
 func (a *dependencyFaultAction) Stop(ctx context.Context, state *DependencyFaultState) (*action_kit_api.StopResult, error) {
@@ -554,7 +630,7 @@ func (a *dependencyFaultAction) teardown(ctx context.Context, handle *proxyHandl
 
 // --- parameters & parsing ---
 
-func commonDependencyParameters() []action_kit_api.ActionParameter {
+func commonDependencyParameters(percentageDescription string) []action_kit_api.ActionParameter {
 	return []action_kit_api.ActionParameter{
 		{
 			Name: "hostname", Label: "Dependency Hostnames", Description: extutil.Ptr("Apply the fault to connections to these hosts (TLS SNI or HTTP Host, subdomain match)."),
@@ -565,7 +641,7 @@ func commonDependencyParameters() []action_kit_api.ActionParameter {
 			Type: action_kit_api.ActionParameterTypeDuration, DefaultValue: extutil.Ptr("30s"), Required: extutil.Ptr(true), Order: extutil.Ptr(1),
 		},
 		{
-			Name: "percentage", Label: "Percentage", Description: extutil.Ptr("Percentage of matching connections the fault is applied to."),
+			Name: "percentage", Label: "Percentage", Description: extutil.Ptr(percentageDescription),
 			Type: action_kit_api.ActionParameterTypePercentage, DefaultValue: extutil.Ptr("50"), Required: extutil.Ptr(true), Order: extutil.Ptr(2),
 			MinValue: extutil.Ptr(0), MaxValue: extutil.Ptr(100),
 		},
@@ -673,6 +749,8 @@ func (a *dependencyFaultAction) parseOpts(request action_kit_api.PrepareActionRe
 		Fault: fault,
 		// nil unless a CA is configured, so HTTPS stays untouched by default.
 		TLSInterceptCA: interceptCA,
+		// Only applies to decrypted HTTPS, and only when the experiment asks for it.
+		UpstreamInsecureSkipVerify: flags.UpstreamSkipVerify(cfg, interceptCA),
 	}, nil
 }
 

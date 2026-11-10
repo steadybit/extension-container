@@ -8,7 +8,11 @@
 - feat: dependency fault attacks report the intercepted ports in the execution log and the statistics widget
 - feat: Dependency Ports has no default anymore, so new dependency fault attacks intercept every port. Existing experiments keep the ports they were saved with.
 - **Behaviour change:** Reset TCP Connection in L7 mode with an empty Include Ports now intercepts every port instead of defaulting to 80,443. Resets still apply only to connections to the hostnames, but every outgoing TCP connection of the target passes through the proxy. Set Include Ports to `80,443` to keep the previous scope.
+- **Behaviour change:** with an interception CA configured, Slow Outgoing HTTP(s) Dependency now decrypts HTTPS to delay each request instead of the whole connection. Every matched HTTPS connection is decrypted, delayed or not: a workload that doesn't trust the CA fails all its requests to the dependency, a dependency whose certificate the proxy can't verify (only public CAs, unless SSL_CERT_DIR / SSL_CERT_FILE is set) gets a 502, and a dependency requiring mutual TLS can't be reached
 - chore(deps): bump transparent-proxy to v1.3.0-beta.1 and action_kit_commons to v1.15.0
+- fix: Percentage in the dependency fault attacks applies per request wherever the proxy reads the requests: on cleartext HTTP, also on keep-alive connections, and, with an interception CA configured, on HTTPS for Intercept Outgoing HTTP Request and Slow Outgoing HTTP(s) Dependency; per connection otherwise. The Dependency Fault Statistics widget then shows the requests to the dependency and the share faulted. With the CA, every matched HTTPS connection is decrypted, so a workload that doesn't trust it fails all its requests to the dependency, and dependencies requiring mutual TLS can't be reached
+- fix: with HTTPS decrypted, an experiment can turn on Skip Dependency Certificate Verification for a dependency whose certificate the proxy can't verify; it is unsafe, and the setting and the execution log say so. Otherwise the execution log warns when only public CAs verify the dependencies, when a custom CA path in SSL_CERT_DIR / SSL_CERT_FILE is missing or holds no certificate, and when forwarding to a dependency fails
+- chore(deps): bump transparent-proxy to v1.3.0
 
 ## v1.9.2
 
