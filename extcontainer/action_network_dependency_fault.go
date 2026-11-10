@@ -222,7 +222,7 @@ func (a *dependencyFaultAction) parameters() []action_kit_api.ActionParameter {
 	// Only meaningful when the proxy decrypts HTTPS and so opens its own TLS
 	// connection to the dependency.
 	if a.spec.decryptsHTTPS && config.Config.TLSInterceptEnabled() {
-		params = append(params, flags.UpstreamSkipVerifyParameter(16))
+		params = append(params, flags.UpstreamSkipVerifyParameter(16, groupTrafficFilter))
 	}
 	return params
 }
@@ -308,7 +308,7 @@ func (a *dependencyFaultAction) hint() *action_kit_api.ActionHint {
 	if a.spec.decryptsHTTPS && config.Config.TLSInterceptEnabled() {
 		return &action_kit_api.ActionHint{
 			Type:    action_kit_api.HintInfo,
-			Content: "HTTPS interception is enabled — every matched HTTPS connection is decrypted, so the target's workloads must trust the configured CA, or all their requests to the dependency fail, not only the selected percentage. Dependencies that require mutual TLS cannot be reached.",
+			Content: "HTTPS interception is enabled: matched HTTPS connections are decrypted, whatever the Percentage. The target's workloads must trust the configured CA, or all their requests to the dependency fail. Requests that aren't faulted reach the dependency only if the proxy can verify its certificate (public CAs, or a custom CA in SSL_CERT_DIR / SSL_CERT_FILE); otherwise they get a 502. Dependencies that require mutual TLS can't be reached.",
 		}
 	}
 	return a.spec.hint

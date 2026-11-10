@@ -27,7 +27,8 @@ var (
 )
 
 func TestUpstreamSkipVerifyParameter(t *testing.T) {
-	p := UpstreamSkipVerifyParameter(16)
+	p := UpstreamSkipVerifyParameter(16, "Traffic Filter")
+	require.Equal(t, "Traffic Filter", *p.Group)
 	require.Equal(t, UpstreamSkipVerifyParameterName, p.Name)
 	require.Equal(t, "false", *p.DefaultValue)
 	require.True(t, *p.Advanced)
