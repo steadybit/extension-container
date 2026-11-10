@@ -528,16 +528,17 @@ func formatDependencyStatsMarkdown(s proxyfault.Snapshot, opts proxyfault.Opts) 
 	var b strings.Builder
 	b.WriteString("### Interception\n")
 	fmt.Fprintf(&b, "- **Intercepting:** %s\n", interceptScope(opts))
-	fmt.Fprintf(&b, "- **Connections intercepted:** %d\n", s.ConnectionsMatched)
-	fmt.Fprintf(&b, "- **To a dependency hostname:** %d\n", toDependencies)
-	fmt.Fprintf(&b, "- **Connections faulted:** %d\n", s.ConnectionsFaulted)
-	// Cleartext HTTP is rolled per request, so a keep-alive connection carrying
-	// many requests is one faulted connection; only the request counters show
-	// the share of requests that was faulted.
+	// Where the proxy reads the requests (cleartext HTTP, or HTTPS it decrypts),
+	// each request is rolled on its own, so a keep-alive connection carrying many
+	// requests is one faulted connection; only the request counters show the
+	// share of requests that was faulted. Otherwise connections are what counts.
 	if s.RequestsMatched > 0 {
-		b.WriteString("\n### Requests (cleartext HTTP)\n")
 		fmt.Fprintf(&b, "- **Requests to a dependency hostname:** %d\n", s.RequestsMatched)
 		fmt.Fprintf(&b, "- **Requests faulted:** %d (%s)\n", s.RequestsFaulted, percentOf(s.RequestsFaulted, s.RequestsMatched))
+	} else {
+		fmt.Fprintf(&b, "- **Connections intercepted:** %d\n", s.ConnectionsMatched)
+		fmt.Fprintf(&b, "- **To a dependency hostname:** %d\n", toDependencies)
+		fmt.Fprintf(&b, "- **Connections faulted:** %d\n", s.ConnectionsFaulted)
 	}
 	b.WriteString("\n### What was done\n")
 	fmt.Fprintf(&b, "- **Latency applied:** %d\n", s.LatencyApplied)

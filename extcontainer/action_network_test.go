@@ -663,9 +663,15 @@ func Test_formatDependencyStatsMarkdown_requests(t *testing.T) {
 		PerHost: map[string]proxyfault.HostStat{
 			"api.example.com": {Matched: 1, Faulted: 1, RequestsMatched: 10, RequestsFaulted: 4},
 		},
-	}, proxyfault.Opts{})
-	require.Contains(t, md, "- **Requests to a dependency hostname:** 10")
-	require.Contains(t, md, "- **Requests faulted:** 4 (40.0%)")
+	}, proxyfault.Opts{Ports: []uint16{443}})
+	// The request counters replace the connection ones in the summary.
+	require.Contains(t, md, "### Interception\n"+
+		"- **Intercepting:** ports 443 (localhost excluded)\n"+
+		"- **Requests to a dependency hostname:** 10\n"+
+		"- **Requests faulted:** 4 (40.0%)\n\n### What was done\n")
+	require.NotContains(t, md, "Connections intercepted")
+	require.NotContains(t, md, "Connections faulted")
+	require.NotContains(t, md, "cleartext HTTP")
 	require.Contains(t, md, "| api.example.com | 1 | 1 | 10 | 4 |")
 
 	// No cleartext HTTP requests (HTTPS or other TCP only): no request section
@@ -676,6 +682,7 @@ func Test_formatDependencyStatsMarkdown_requests(t *testing.T) {
 		PerHost:            map[string]proxyfault.HostStat{"api.example.com": {Matched: 1, Faulted: 1}},
 	}, proxyfault.Opts{})
 	require.NotContains(t, md, "Requests")
+	require.Contains(t, md, "- **Connections faulted:** 1")
 	require.Contains(t, md, "| api.example.com | 1 | 1 |\n")
 }
 
