@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2026 Steadybit GmbH
 
-package extcontainer
+// Package upstreamtls covers the proxy's TLS connection to the dependency when
+// it forwards a decrypted HTTPS request: the experiment setting to skip
+// verifying the dependency's certificate, the custom CAs it is verified
+// against, and the warnings for when that is unsafe or can fail.
+package upstreamtls
 
 import (
 	"crypto/x509"
@@ -15,26 +19,35 @@ import (
 	"github.com/steadybit/extension-kit/extutil"
 )
 
-// The proxy verifies the dependency's certificate when it forwards a decrypted
-// HTTPS request: against the public CAs, and the custom CAs it inherits from
-// the extension. This file holds the setting to skip that, and the warnings
-// for when it can fail.
+const ParameterName = "upstreamInsecureSkipVerify"
 
-// upstreamInsecureSkipVerifyParameter lets an experiment forward intercepted
-// HTTPS requests to a dependency whose certificate the proxy cannot verify.
-func upstreamInsecureSkipVerifyParameter(order int) action_kit_api.ActionParameter {
+// Parameter lets an experiment forward intercepted HTTPS requests to a
+// dependency whose certificate the proxy cannot verify.
+func Parameter(order int) action_kit_api.ActionParameter {
 	return action_kit_api.ActionParameter{
-		Name:        "upstreamInsecureSkipVerify",
+		Name:        ParameterName,
 		Label:       "Skip Dependency Certificate Verification",
 		Description: extutil.Ptr("Unsafe: forward intercepted HTTPS requests to the dependency without verifying its certificate, so whoever answers at its address receives them, including any credentials. For a dependency with a self-signed or private-CA certificate; without it, unverifiable dependencies get a 502 from the proxy. Use only in test environments."),
 		Type:        action_kit_api.ActionParameterTypeBoolean, DefaultValue: extutil.Ptr("false"), Required: extutil.Ptr(false), Order: extutil.Ptr(order), Advanced: extutil.Ptr(true),
 	}
 }
 
-// upstreamCustomCAs sorts the custom CA paths the proxy inherits from the
-// extension (SSL_CERT_DIR / SSL_CERT_FILE, the exttls convention) into those
-// holding at least one PEM certificate and those that don't.
-func upstreamCustomCAs() (valid, invalid []string) {
+// SkipVerify reads the setting. It only applies to decrypted HTTPS, so it is
+// off without an interception CA.
+func SkipVerify(cfg map[string]any, interceptCA *proxyfault.TLSInterceptCA) bool {
+	return interceptCA != nil && extutil.ToBool(cfg[ParameterName])
+}
+
+// Verifies reports whether the proxy forwards decrypted HTTPS and verifies the
+// dependency's certificate on the way.
+func Verifies(opts proxyfault.Opts) bool {
+	return opts.TLSInterceptCA != nil && !opts.UpstreamInsecureSkipVerify
+}
+
+// CustomCAs sorts the custom CA paths the proxy inherits from the extension
+// (SSL_CERT_DIR / SSL_CERT_FILE, the exttls convention) into those holding at
+// least one PEM certificate and those that don't.
+func CustomCAs() (valid, invalid []string) {
 	paths := filepath.SplitList(os.Getenv("SSL_CERT_DIR"))
 	if file := os.Getenv("SSL_CERT_FILE"); file != "" {
 		paths = append(paths, file)
@@ -79,26 +92,27 @@ func holdsCertificate(path string) bool {
 	return false
 }
 
-// verifiesUpstream reports whether the proxy forwards decrypted HTTPS and
-// verifies the dependency's certificate on the way.
-func verifiesUpstream(opts proxyfault.Opts) bool {
-	return opts.TLSInterceptCA != nil && !opts.UpstreamInsecureSkipVerify
-}
-
-// upstreamTrustMessages says which CAs verify the dependencies, so a forwarded
-// request answered with a 502 is not a surprise.
-func upstreamTrustMessages(opts proxyfault.Opts, valid, invalid []string) action_kit_api.Messages {
-	if !verifiesUpstream(opts) {
+// Messages are logged when the attack starts: that skipping verification is
+// unsafe, or which CAs verify the dependencies, so a forwarded request answered
+// with a 502 is not a surprise.
+func Messages(opts proxyfault.Opts, validCAs, invalidCAs []string) action_kit_api.Messages {
+	if opts.TLSInterceptCA == nil {
 		return nil
 	}
+	if opts.UpstreamInsecureSkipVerify {
+		return action_kit_api.Messages{{
+			Level:   extutil.Ptr(action_kit_api.Warn),
+			Message: "Unsafe: intercepted HTTPS requests are forwarded to the dependency without verifying its certificate, so whoever answers at its address receives them, including any credentials, and their responses are trusted. Use only in test environments.",
+		}}
+	}
 	var msgs action_kit_api.Messages
-	for _, p := range invalid {
+	for _, p := range invalidCAs {
 		msgs = append(msgs, action_kit_api.Message{
 			Level:   extutil.Ptr(action_kit_api.Warn),
 			Message: fmt.Sprintf("The custom CA path %s (SSL_CERT_DIR / SSL_CERT_FILE) is missing or holds no PEM certificate, so it can't verify dependencies.", p),
 		})
 	}
-	if len(valid) == 0 {
+	if len(validCAs) == 0 {
 		msgs = append(msgs, action_kit_api.Message{
 			Level:   extutil.Ptr(action_kit_api.Warn),
 			Message: "Only public CAs verify the dependencies' certificates: no custom CA is configured (SSL_CERT_DIR / SSL_CERT_FILE). Forwarded HTTPS requests to a dependency with a private-CA certificate get a 502; configure its CA, or turn on Skip Dependency Certificate Verification.",
@@ -107,18 +121,18 @@ func upstreamTrustMessages(opts proxyfault.Opts, valid, invalid []string) action
 	return msgs
 }
 
-// upstreamErrorTip explains failed forwards once they happen. They may be
-// failed connections, but with HTTPS decrypted they may as well be a dependency
+// ErrorTip explains failed forwards once they happen. They may be failed
+// connections, but with HTTPS decrypted they may as well be a dependency
 // certificate the proxy can't verify.
-func upstreamErrorTip(opts proxyfault.Opts, upstreamCAs []string, upstreamErrors int64) *action_kit_api.Message {
-	if upstreamErrors == 0 || !verifiesUpstream(opts) {
+func ErrorTip(opts proxyfault.Opts, validCAs []string, upstreamErrors int64) *action_kit_api.Message {
+	if upstreamErrors == 0 || !Verifies(opts) {
 		return nil
 	}
 	var tip string
-	if len(upstreamCAs) == 0 {
+	if len(validCAs) == 0 {
 		tip = "Only public CAs verify the dependencies' certificates, so a dependency with a private-CA certificate fails"
 	} else {
-		tip = fmt.Sprintf("Custom CAs are configured (%s), but they may not include the CA of the dependency's certificate", strings.Join(upstreamCAs, ", "))
+		tip = fmt.Sprintf("Custom CAs are configured (%s), but they may not include the CA of the dependency's certificate", strings.Join(validCAs, ", "))
 	}
 	return &action_kit_api.Message{
 		Level: extutil.Ptr(action_kit_api.Warn),

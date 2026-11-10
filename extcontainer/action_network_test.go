@@ -32,6 +32,7 @@ import (
 	"math/rand/v2"
 	"os/exec"
 	"slices"
+	"strings"
 	"syscall"
 	"testing"
 	"time"
@@ -936,6 +937,48 @@ func Test_dependencyFault_parseOpts_upstreamInsecureSkipVerify(t *testing.T) {
 	require.NoError(t, err)
 	require.False(t, unset.UpstreamInsecureSkipVerify)
 
-	msgs := interceptionMessages(opts, false)
-	require.Contains(t, msgs[len(msgs)-2].Message, "without verifying its certificate")
+}
+
+type upstreamErrorsProxy struct {
+	fakeProxy
+	errors int64
+}
+
+func (p upstreamErrorsProxy) Metrics() (proxyfault.Snapshot, bool) {
+	return proxyfault.Snapshot{UpstreamErrors: p.errors}, true
+}
+
+func Test_dependencyFault_Status_logsUpstreamErrorTipOnce(t *testing.T) {
+	executionId := uuid.NewString()
+	storeDependencyFaultHandle(executionId, &proxyHandle{
+		proxy: upstreamErrorsProxy{errors: 2},
+		opts:  proxyfault.Opts{TLSInterceptCA: &proxyfault.TLSInterceptCA{}},
+	})
+	t.Cleanup(func() { removeDependencyFaultHandle(executionId) })
+	a := &dependencyFaultAction{spec: latencyFaultSpec}
+
+	tips := func() int {
+		res, err := a.Status(context.Background(), &DependencyFaultState{ExecutionId: executionId})
+		require.NoError(t, err)
+		n := 0
+		for _, m := range *res.Messages {
+			if strings.Contains(m.Message, "failed to forward") {
+				n++
+			}
+		}
+		return n
+	}
+	require.Equal(t, 1, tips())
+	require.Equal(t, 0, tips(), "the tip is logged once per execution")
+}
+
+func Test_formatDependencyStatsMarkdown_upstreamErrors(t *testing.T) {
+	md := formatDependencyStatsMarkdown(proxyfault.Snapshot{ConnectionsMatched: 1}, proxyfault.Opts{})
+	require.NotContains(t, md, "Forwarding failed")
+
+	md = formatDependencyStatsMarkdown(proxyfault.Snapshot{ConnectionsMatched: 1, UpstreamErrors: 2}, proxyfault.Opts{})
+	require.Contains(t, md, "Forwarding failed 2 time(s).** The proxy couldn't connect to the destination._")
+
+	md = formatDependencyStatsMarkdown(proxyfault.Snapshot{ConnectionsMatched: 1, UpstreamErrors: 2}, proxyfault.Opts{TLSInterceptCA: &proxyfault.TLSInterceptCA{}})
+	require.Contains(t, md, "or couldn't verify the dependency's certificate")
 }
