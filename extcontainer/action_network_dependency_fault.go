@@ -222,7 +222,7 @@ func (a *dependencyFaultAction) parameters() []action_kit_api.ActionParameter {
 	// Only meaningful when the proxy decrypts HTTPS and so opens its own TLS
 	// connection to the dependency.
 	if a.spec.decryptsHTTPS && config.Config.TLSInterceptEnabled() {
-		params = append(params, flags.UpstreamSkipVerifyParameter(16))
+		params = append(params, flags.UpstreamSkipVerifyParameter(16, groupTrafficFilter))
 	}
 	return params
 }
@@ -308,7 +308,7 @@ func (a *dependencyFaultAction) hint() *action_kit_api.ActionHint {
 	if a.spec.decryptsHTTPS && config.Config.TLSInterceptEnabled() {
 		return &action_kit_api.ActionHint{
 			Type:    action_kit_api.HintInfo,
-			Content: "HTTPS interception is enabled — every matched HTTPS connection is decrypted, so the target's workloads must trust the configured CA, or all their requests to the dependency fail, not only the selected percentage. Dependencies that require mutual TLS cannot be reached.",
+			Content: "HTTPS interception is enabled: every matched HTTPS connection is decrypted, whatever the Percentage. Workloads that don't trust the configured CA fail all their requests to the dependency. Unfaulted requests get a 502 if the extension can't verify the dependency's certificate. Mutual TLS isn't supported.",
 		}
 	}
 	return a.spec.hint
@@ -673,7 +673,7 @@ func attackLocalhostParameter(order int) action_kit_api.ActionParameter {
 		Name:        "attackLocalhost",
 		Label:       "Attack Localhost Traffic",
 		Description: extutil.Ptr("Also intercept localhost (127.0.0.0/8), e.g. sidecars. Its connections may be reset when the attack starts and ends."),
-		Type:        action_kit_api.ActionParameterTypeBoolean, DefaultValue: extutil.Ptr("false"), Required: extutil.Ptr(false), Order: extutil.Ptr(order), Advanced: extutil.Ptr(true), Group: extutil.Ptr(groupTrafficFilter),
+		Type:        action_kit_api.ActionParameterTypeBoolean, DefaultValue: extutil.Ptr("false"), Required: extutil.Ptr(true), Order: extutil.Ptr(order), Advanced: extutil.Ptr(true), Group: extutil.Ptr(groupTrafficFilter),
 	}
 }
 

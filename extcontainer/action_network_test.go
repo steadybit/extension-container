@@ -25,6 +25,7 @@ import (
 	"github.com/steadybit/action-kit/go/action_kit_commons/ociruntime"
 	"github.com/steadybit/extension-container/config"
 	"github.com/steadybit/extension-container/extcontainer/container/types"
+	"github.com/steadybit/extension-container/extcontainer/flags"
 	"github.com/steadybit/extension-kit/extconversion"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -609,6 +610,9 @@ func Test_dependencyFault_hint_withInterceptCA(t *testing.T) {
 	require.Equal(t, action_kit_api.HintInfo, hint.Type)
 	require.Contains(t, hint.Content, "trust the configured CA")
 	require.NotContains(t, hint.Content, "cleartext HTTP only")
+	// Requests that aren't faulted are forwarded, so the dependency's certificate
+	// must verify too.
+	require.Contains(t, hint.Content, "can't verify the dependency's certificate")
 
 	// Latency decrypts too, so the same constraint applies.
 	require.Equal(t, hint, (&dependencyFaultAction{spec: latencyFaultSpec}).hint())
@@ -981,4 +985,16 @@ func Test_formatDependencyStatsMarkdown_upstreamErrors(t *testing.T) {
 
 	md = formatDependencyStatsMarkdown(proxyfault.Snapshot{ConnectionsMatched: 1, UpstreamErrors: 2}, proxyfault.Opts{TLSInterceptCA: &proxyfault.TLSInterceptCA{}})
 	require.Contains(t, md, "or couldn't verify the dependency's certificate")
+}
+
+func Test_dependencyFault_upstreamSkipVerifyInTrafficFilter(t *testing.T) {
+	// The setting only exists with a CA; it belongs with the other interception
+	// settings rather than in the platform's "Additional Settings" fallback.
+	withInterceptCA(t)
+	for _, spec := range []dependencyFaultSpec{latencyFaultSpec, httpAbortFaultSpec} {
+		params := (&dependencyFaultAction{spec: spec}).Describe().Parameters
+		i := slices.IndexFunc(params, func(p action_kit_api.ActionParameter) bool { return p.Name == flags.UpstreamSkipVerifyParameterName })
+		require.NotEqual(t, -1, i, spec.id)
+		require.Equal(t, groupTrafficFilter, *params[i].Group, spec.id)
+	}
 }

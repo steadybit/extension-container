@@ -12,6 +12,7 @@
 - chore(deps): bump transparent-proxy to v1.3.0-beta.1 and action_kit_commons to v1.15.0
 - fix: Percentage in the dependency fault attacks applies per request wherever the proxy reads the requests: on cleartext HTTP, also on keep-alive connections, and, with an interception CA configured, on HTTPS for Intercept Outgoing HTTP Request and Slow Outgoing HTTP(s) Dependency; per connection otherwise. The Dependency Fault Statistics widget then shows the requests to the dependency and the share faulted. With the CA, every matched HTTPS connection is decrypted, so a workload that doesn't trust it fails all its requests to the dependency, and dependencies requiring mutual TLS can't be reached
 - fix: with HTTPS decrypted, an experiment can turn on Skip Dependency Certificate Verification for a dependency whose certificate the proxy can't verify; it is unsafe, and the setting and the execution log say so. Otherwise the execution log warns when only public CAs verify the dependencies, when a custom CA path in SSL_CERT_DIR / SSL_CERT_FILE is missing or holds no certificate, and when forwarding to a dependency fails
+- fix: with an interception CA configured, the dependency fault attacks' hint says that every matched HTTPS connection is decrypted whatever the Percentage, that workloads not trusting the CA fail, that unfaulted requests get a 502 if the dependency's certificate can't be verified, and that mutual TLS isn't supported
 - chore(deps): bump transparent-proxy to v1.3.0
 
 ## v1.9.2
