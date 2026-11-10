@@ -13,6 +13,7 @@
 - feat: with an interception CA configured, Intercept Outgoing HTTP Request and Slow Outgoing HTTP(s) Dependency apply Percentage per request on HTTPS too. Every matched HTTPS connection is then decrypted, so a workload that doesn't trust the CA fails all its requests to the dependency, and dependencies requiring mutual TLS can't be reached
 - chore(deps): bump transparent-proxy to v1.3.0
 - feat: with an interception CA configured, Intercept Outgoing HTTP Request and Slow Outgoing HTTP(s) Dependency have a Skip Dependency Certificate Verification setting, so an experiment can forward intercepted HTTPS requests to a dependency whose certificate the proxy can't verify
+- feat: dependency fault attacks that decrypt HTTPS warn in the execution log when only public CAs verify the dependencies, or when a custom CA path in SSL_CERT_DIR / SSL_CERT_FILE is missing or holds no certificate. Failed forwards are shown in the Dependency Fault Statistics widget, with a tip on the dependency's certificate in the execution log
 
 ## v1.9.2
 

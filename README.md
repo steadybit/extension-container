@@ -270,5 +270,11 @@ dependency at all: enable **Skip Dependency Certificate Verification** in the
 attack's advanced settings. It applies to that experiment only;
 `STEADYBIT_EXTENSION_INSECURE_SKIP_VERIFY` does not affect the proxy.
 
+When the attack starts, the execution log warns if only public CAs verify the
+dependencies, or if a path in `SSL_CERT_DIR` / `SSL_CERT_FILE` is missing or
+holds no certificate. When forwarding fails during the attack, the statistics
+widget shows how often, and the execution log adds a tip on the dependency's
+certificate.
+
 > ⚠️ The private key can impersonate **any** HTTPS endpoint to anything that
 > trusts it. Keep this to test environments, and treat the Secret accordingly.

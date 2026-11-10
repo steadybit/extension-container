@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/opencontainers/runtime-spec/specs-go"
@@ -150,6 +151,11 @@ type proxyHandle struct {
 	opts    proxyfault.Opts
 	sidecar ociruntime.LinuxProcessInfo
 	id      string
+	// upstreamCAs are the custom CA paths holding a certificate when the attack
+	// was prepared, for the tip on failed forwards.
+	upstreamCAs []string
+	// upstreamTipLogged makes that tip appear once per execution.
+	upstreamTipLogged atomic.Bool
 }
 
 var (
@@ -374,6 +380,8 @@ func (a *dependencyFaultAction) Prepare(ctx context.Context, state *DependencyFa
 		}}, nil
 	}
 	messages := interceptionMessages(opts, a.spec.cleartextHTTPOnly)
+	upstreamCAs, invalidUpstreamCAs := upstreamCustomCAs()
+	messages = append(messages, upstreamTrustMessages(opts, upstreamCAs, invalidUpstreamCAs)...)
 	if !opts.InterceptLoopback {
 		messages = append(messages, loopbackHostnameMessages(ctx, processInfo.Pid, opts.Fault.Hosts)...)
 	}
@@ -389,7 +397,7 @@ func (a *dependencyFaultAction) Prepare(ctx context.Context, state *DependencyFa
 		return nil, fmt.Errorf("failed to create transparent-proxy process: %w", err)
 	}
 
-	storeDependencyFaultHandle(state.ExecutionId, &proxyHandle{proxy: proxy, opts: opts, sidecar: processInfo, id: sidecarId})
+	storeDependencyFaultHandle(state.ExecutionId, &proxyHandle{proxy: proxy, opts: opts, sidecar: processInfo, id: sidecarId, upstreamCAs: upstreamCAs})
 
 	return &action_kit_api.PrepareResult{Messages: &messages}, nil
 }
@@ -437,7 +445,7 @@ func interceptionMessages(opts proxyfault.Opts, cleartextHTTPOnly bool) action_k
 	if opts.UpstreamInsecureSkipVerify {
 		msgs = append(msgs, action_kit_api.Message{
 			Level:   extutil.Ptr(action_kit_api.Warn),
-			Message: "Intercepted HTTPS requests are forwarded to the dependency without verifying its certificate.",
+			Message: "Unsafe: intercepted HTTPS requests are forwarded to the dependency without verifying its certificate, so whoever answers at its address receives them, including any credentials, and their responses are trusted. Use only in test environments.",
 		})
 	}
 	if len(opts.Ports) > 0 {
@@ -496,9 +504,18 @@ func (a *dependencyFaultAction) Status(ctx context.Context, state *DependencyFau
 		// completion, not an error.
 		return &action_kit_api.StatusResult{Completed: true}, nil
 	}
+	messages := dependencyStatsMessages(handle.proxy, handle.opts)
+	if snap, ok := handle.proxy.Metrics(); ok {
+		if tip := upstreamErrorTip(handle.opts, handle.upstreamCAs, snap.UpstreamErrors); tip != nil && handle.upstreamTipLogged.CompareAndSwap(false, true) {
+			if messages == nil {
+				messages = &action_kit_api.Messages{}
+			}
+			*messages = append(*messages, *tip)
+		}
+	}
 	return &action_kit_api.StatusResult{
 		Completed: false,
-		Messages:  dependencyStatsMessages(handle.proxy, handle.opts),
+		Messages:  messages,
 	}, nil
 }
 
@@ -564,6 +581,13 @@ func formatDependencyStatsMarkdown(s proxyfault.Snapshot, opts proxyfault.Opts) 
 	// A rejection means the client refused the certificate we minted for it, so
 	// the fault never applied. Surfacing it here is the difference between the
 	// operator seeing "the CA isn't trusted" and seeing an unexplained no-op.
+	if s.UpstreamErrors > 0 {
+		cause := "couldn't connect to the destination"
+		if verifiesUpstream(opts) {
+			cause += ", or couldn't verify the dependency's certificate"
+		}
+		fmt.Fprintf(&b, "\n_**Forwarding failed %d time(s).** The proxy %s._\n", s.UpstreamErrors, cause)
+	}
 	if s.TLSInterceptRejected > 0 {
 		fmt.Fprintf(&b, "\n_**%d HTTPS connection(s) rejected the injected certificate.** The target's workload must trust the configured CA — and it usually reads its truststore at startup, so it may need restarting after the CA was installed. Certificate pinning and mutual TLS cannot be intercepted._\n", s.TLSInterceptRejected)
 	}
@@ -655,17 +679,6 @@ func attackLocalhostParameter(order int) action_kit_api.ActionParameter {
 		Label:       "Attack Localhost Traffic",
 		Description: extutil.Ptr("Also intercept localhost (127.0.0.0/8), e.g. sidecars. Its connections may be reset when the attack starts and ends."),
 		Type:        action_kit_api.ActionParameterTypeBoolean, DefaultValue: extutil.Ptr("false"), Required: extutil.Ptr(false), Order: extutil.Ptr(order), Advanced: extutil.Ptr(true), Group: extutil.Ptr(groupTrafficFilter),
-	}
-}
-
-// upstreamInsecureSkipVerifyParameter lets an experiment forward intercepted
-// HTTPS requests to a dependency whose certificate the proxy cannot verify.
-func upstreamInsecureSkipVerifyParameter(order int) action_kit_api.ActionParameter {
-	return action_kit_api.ActionParameter{
-		Name:        "upstreamInsecureSkipVerify",
-		Label:       "Skip Dependency Certificate Verification",
-		Description: extutil.Ptr("Forward intercepted HTTPS requests to the dependency without verifying its certificate, e.g. for a dependency with a self-signed or private-CA certificate. Without it, unverifiable dependencies get a 502 from the proxy. Test environments only."),
-		Type:        action_kit_api.ActionParameterTypeBoolean, DefaultValue: extutil.Ptr("false"), Required: extutil.Ptr(false), Order: extutil.Ptr(order), Advanced: extutil.Ptr(true),
 	}
 }
 
