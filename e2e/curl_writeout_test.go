@@ -19,4 +19,9 @@ func Test_parseCurlWriteOut(t *testing.T) {
 	// Plain "\n", and noise that is not a write-out line, work too.
 	got = parseCurlWriteOut("200 1\n\ncurl: (28) timed out\n503 1\n")
 	require.Equal(t, keepAliveResult{responses: 2, faulted: 1, connects: 2}, got)
+
+	// A reset request gets no response: 000, and curl opens a new connection
+	// for the next one.
+	got = parseCurlWriteOut("200 1\r\n000 1\r\n200 1\r\n")
+	require.Equal(t, keepAliveResult{responses: 3, reset: 1, connects: 3}, got)
 }

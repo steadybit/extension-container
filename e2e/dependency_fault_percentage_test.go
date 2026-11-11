@@ -18,8 +18,9 @@ import (
 )
 
 // testNetworkDependencyFaultPercentage checks that Percentage applies per
-// request on a keep-alive connection: on cleartext HTTP, and on HTTPS that the
-// proxy decrypts with the interception CA.
+// request on a keep-alive connection, for Intercept Outgoing HTTP Request and
+// the L7 reset: on cleartext HTTP, and on HTTPS that the proxy decrypts with
+// the interception CA.
 func testNetworkDependencyFaultPercentage(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
 	if m.Runtime == "cri-o" && m.Driver == "docker" {
 		t.Skip("Due to https://github.com/kubernetes/minikube/issues/16371 this test is skipped for cri-o")
@@ -75,6 +76,38 @@ func testNetworkDependencyFaultPercentage(t *testing.T, m *e2e.Minikube, e *e2e.
 			})
 			require.NoError(t, action.Cancel())
 		})
+
+		t.Run("L7 reset applies the percentage per request on a keep-alive connection over "+tt.name, func(t *testing.T) {
+			config := map[string]any{
+				"duration": 60000, "l7": true, "hostname": []string{host},
+				"percentage": 50, "port": []string{tt.port},
+			}
+			action, err := e.RunAction(fmt.Sprintf("%s.network_tcp_reset", extcontainer.BaseActionID), target, config, &action_kit_api.ExecutionContext{})
+			require.NoError(t, err)
+			defer func() { _ = action.Cancel() }()
+
+			// A reset request gets no response (000). Each reset ends the connection,
+			// and curl resends a request whose reused connection ended without a
+			// reply, so about a third of the requests fail rather than half. Rolled
+			// per connection instead, curl would reconnect until one connection was
+			// spared and send the rest over it: a handful of failures at most.
+			// 15..60 keeps clear of both.
+			const requests = 100
+			e2e.Retry(t, 10, 1*time.Second, func(r *e2e.R) {
+				got, err := curlKeepAliveAllowingResets(m, nginx.Pod, tt.url, requests, tt.curlArgs...)
+				if err != nil {
+					r.Failed = true
+					_, _ = fmt.Fprintf(r.Log, "curl failed: %v", err)
+					return
+				}
+				if got.responses != requests || got.reset < 15 || got.reset > 60 || got.faulted != 0 {
+					r.Failed = true
+					_, _ = fmt.Fprintf(r.Log, "expected %d requests, about a third reset and none answered with a 503; got %d, %d reset, %d with a 503",
+						requests, got.responses, got.reset, got.faulted)
+				}
+			})
+			require.NoError(t, action.Cancel())
+		})
 	}
 	requireAllSidecarsCleanedUp(t, m, e)
 }
@@ -83,21 +116,41 @@ func testNetworkDependencyFaultPercentage(t *testing.T, m *e2e.Minikube, e *e2e.
 // one connection open for all of them, and summarizes the responses. extraArgs
 // go before the URLs, e.g. --cacert for HTTPS.
 func curlKeepAlive(m *e2e.Minikube, pod metav1.Object, url string, n int, extraArgs ...string) (keepAliveResult, error) {
-	args := append([]string{"curl", "--max-time", "30", "-s", "-w", "%{http_code} %{num_connects}\n"}, extraArgs...)
-	for range n {
-		args = append(args, "-o", "/dev/null", url)
-	}
-	out, err := m.PodExec(pod, "nginx", args...)
+	out, err := m.PodExec(pod, "nginx", curlKeepAliveArgs(url, n, extraArgs...)...)
 	if err != nil {
 		return keepAliveResult{}, err
 	}
 	return parseCurlWriteOut(out), nil
 }
 
-// keepAliveResult summarizes curlKeepAlive: how many responses arrived, how
-// many were the injected 503, and how many connections curl had to open.
+// curlKeepAliveAllowingResets is curlKeepAlive for requests that may get no
+// response. curl exits non-zero when its last request is reset, but the
+// write-out still has a line per request, so the exit code is ignored.
+func curlKeepAliveAllowingResets(m *e2e.Minikube, pod metav1.Object, url string, n int, extraArgs ...string) (keepAliveResult, error) {
+	args := curlKeepAliveArgs(url, n, extraArgs...)
+	for i, a := range args {
+		args[i] = "'" + a + "'"
+	}
+	out, err := m.PodExec(pod, "nginx", "sh", "-c", strings.Join(args, " ")+" || true")
+	if err != nil {
+		return keepAliveResult{}, err
+	}
+	return parseCurlWriteOut(out), nil
+}
+
+func curlKeepAliveArgs(url string, n int, extraArgs ...string) []string {
+	args := append([]string{"curl", "--max-time", "30", "-s", "-w", "%{http_code} %{num_connects}\n"}, extraArgs...)
+	for range n {
+		args = append(args, "-o", "/dev/null", url)
+	}
+	return args
+}
+
+// keepAliveResult summarizes curlKeepAlive: how many requests curl reported,
+// how many got the injected 503, how many got no response at all (000, e.g.
+// reset), and how many connections curl had to open.
 type keepAliveResult struct {
-	responses, faulted, connects int
+	responses, faulted, reset, connects int
 }
 
 // parseCurlWriteOut reads curl's "-w '%{http_code} %{num_connects}\n'" output.
@@ -111,8 +164,11 @@ func parseCurlWriteOut(out string) keepAliveResult {
 			continue
 		}
 		r.responses++
-		if fields[0] == "503" {
+		switch fields[0] {
+		case "503":
 			r.faulted++
+		case "000":
+			r.reset++
 		}
 		if c, err := strconv.Atoi(fields[1]); err == nil {
 			r.connects += c

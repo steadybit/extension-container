@@ -139,7 +139,7 @@ func TestWithMinikube(t *testing.T) {
 			Test: testNetworkDependencyFaultHTTPS,
 		},
 		{
-			Name: "network dependency fault percentage per request (HTTP and HTTPS)",
+			Name: "network dependency fault percentage per request (HTTP and HTTPS, intercept and L7 reset)",
 			Test: testNetworkDependencyFaultPercentage,
 		},
 		{
