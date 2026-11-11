@@ -2657,6 +2657,9 @@ func testFillDiskFreedWhenExtensionKilled(t *testing.T, m *e2e.Minikube, e *e2e.
 	defer func() {
 		require.NoError(t, e.ResetConfig())
 		_ = action.Cancel()
+		// The killed extension could not delete the sidecar's bundle, and /tmp is an emptyDir that survives the restart.
+		out, err := m.PodExec(e.Pod, "extension", "sh", "-c", "rm -rf /tmp/steadybit/containers/*")
+		require.NoError(t, err, out)
 	}()
 	assertHeldFillSize(t, m, 512, 0)
 
