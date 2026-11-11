@@ -116,3 +116,45 @@ vulnerabilities:
       - usr/sbin/runc
     statement: "waiting for runc release with golang.org/x/net >= 0.62.0"
     expired_at: 2027-02-01
+  - id: CVE-2026-71199
+    statement: Waiting for debian upstream fix
+    expired_at: 2027-05-01
+  - id: CVE-2026-71200
+    statement: Waiting for debian upstream fix
+    expired_at: 2027-05-01
+  - id: CVE-2026-107364
+    statement: Waiting for debian upstream fix
+    expired_at: 2027-05-01
+  - id: CVE-2026-112315
+    statement: Waiting for debian upstream fix
+    expired_at: 2027-05-01
+  - id: CVE-2026-112316
+    statement: Waiting for debian upstream fix
+    expired_at: 2027-05-01
+  - id: CVE-2026-112317
+    statement: Waiting for debian upstream fix
+    expired_at: 2027-05-01
+  - id: CVE-2026-112318
+    statement: Waiting for debian upstream fix
+    expired_at: 2027-05-01
+  - id: CVE-2026-112319
+    statement: Waiting for debian upstream fix
+    expired_at: 2027-05-01
+  - id: CVE-2026-112320
+    statement: Waiting for debian upstream fix
+    expired_at: 2027-05-01
+  - id: CVE-2026-112321
+    statement: Waiting for debian upstream fix
+    expired_at: 2027-05-01
+  - id: CVE-2026-112322
+    statement: Waiting for debian upstream fix
+    expired_at: 2027-05-01
+  - id: CVE-2026-112323
+    statement: Waiting for debian upstream fix
+    expired_at: 2027-05-01
+  - id: CVE-2026-118380
+    statement: Waiting for debian upstream fix
+    expired_at: 2027-05-01
+  - id: CVE-2026-119079
+    statement: Waiting for debian upstream fix
+    expired_at: 2027-05-01
