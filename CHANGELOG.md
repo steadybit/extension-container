@@ -15,6 +15,7 @@
 - fix: with an interception CA configured, the dependency fault attacks' hint says that every matched HTTPS connection is decrypted whatever the Percentage, that workloads not trusting the CA fail, that unfaulted requests get a 502 if the dependency's certificate can't be verified, and that mutual TLS isn't supported
 - chore(deps): bump transparent-proxy to v1.3.0
 - **Behaviour change:** with an interception CA configured, Reset TCP/HTTP(s) Connection in L7 mode now decrypts HTTPS to reset each request instead of once per connection, so Percentage applies per request on keep-alive connections too. Every matched HTTPS connection is decrypted, reset or not: a workload that doesn't trust the CA fails all its requests to the dependency, unreset requests to a dependency whose certificate the proxy can't verify get a 502, and a dependency requiring mutual TLS can't be reached. The attack now shows the CA hint and Skip Dependency Certificate Verification, like the other dependency fault attacks
+- chore(deps): bump transparent-proxy to v1.3.1
 
 ## v1.9.2
 
