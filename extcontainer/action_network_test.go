@@ -593,6 +593,7 @@ func Test_dependencyFault_percentageDescription(t *testing.T) {
 	require.NotContains(t, httpAbort.percentageDescription(), "HTTPS")
 	require.Contains(t, latency.percentageDescription(), "per connection for HTTPS")
 	require.Contains(t, tcpResetPercentageDescription(), "per connection for HTTPS")
+	require.Contains(t, tcpResetPercentageDescription(), percentageScope(latencyFaultSpec))
 
 	// With the CA, every attack reads HTTPS requests, so they are decided per
 	// request.
@@ -600,6 +601,8 @@ func Test_dependencyFault_percentageDescription(t *testing.T) {
 	require.Contains(t, httpAbort.percentageDescription(), "HTTPS through the configured interception CA")
 	require.Contains(t, latency.percentageDescription(), "HTTPS through the configured interception CA")
 	require.Contains(t, tcpResetPercentageDescription(), "HTTPS through the configured interception CA")
+	// The reset describes Percentage with the same sentence as the others.
+	require.Contains(t, tcpResetPercentageDescription(), percentageScope(latencyFaultSpec))
 }
 
 func Test_tcpReset_hint(t *testing.T) {

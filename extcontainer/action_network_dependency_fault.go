@@ -294,14 +294,24 @@ func (a *dependencyFaultAction) description() string {
 // request wherever it reads the requests — cleartext HTTP, and HTTPS when it
 // decrypts it with the interception CA — and per connection otherwise.
 func (a *dependencyFaultAction) percentageDescription() string {
-	switch {
-	case a.spec.decryptsHTTPS && config.Config.TLSInterceptEnabled():
-		return "Percentage of matching requests the fault is applied to. Each request is decided on its own, also on keep-alive connections, for cleartext HTTP and for HTTPS through the configured interception CA."
-	case a.spec.cleartextHTTPOnly:
+	if a.spec.cleartextHTTPOnly && !decryptsWithCA(a.spec) {
 		return "Percentage of matching requests the fault is applied to. Each request is decided on its own, also on keep-alive connections."
-	default:
-		return "Percentage of matching requests the fault is applied to: per request for cleartext HTTP, per connection for HTTPS and other TCP traffic."
 	}
+	return "Percentage of matching requests the fault is applied to. " + percentageScope(a.spec)
+}
+
+// percentageScope says what a fault's Percentage is decided per. Shared with
+// the L7 mode of the TCP reset, so the attacks describe it the same way.
+func percentageScope(spec dependencyFaultSpec) string {
+	if decryptsWithCA(spec) {
+		return "Each request is decided on its own, also on keep-alive connections, for cleartext HTTP and for HTTPS through the configured interception CA."
+	}
+	return "Per request for cleartext HTTP, per connection for HTTPS and other TCP traffic."
+}
+
+// decryptsWithCA reports whether the proxy decrypts HTTPS for the fault.
+func decryptsWithCA(spec dependencyFaultSpec) bool {
+	return spec.decryptsHTTPS && config.Config.TLSInterceptEnabled()
 }
 
 // httpsInterceptionHint is what decrypting HTTPS means for the workloads.

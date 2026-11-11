@@ -118,10 +118,7 @@ func tcpResetHint() *action_kit_api.ActionHint {
 // request wherever the proxy reads the requests, as for the other dependency
 // faults.
 func tcpResetPercentageDescription() string {
-	if config.Config.TLSInterceptEnabled() {
-		return "L7 mode only: percentage of matching requests to reset. Each request is decided on its own, also on keep-alive connections, for cleartext HTTP and for HTTPS through the configured interception CA. Ignored in packet-level mode."
-	}
-	return "L7 mode only: percentage of matching requests to reset: per request for cleartext HTTP, per connection for HTTPS and other TCP traffic. Ignored in packet-level mode."
+	return "L7 mode only: percentage of matching requests to reset. " + percentageScope(resetFaultSpec) + " Ignored in packet-level mode."
 }
 
 // tcpResetParameters is the merged parameter set for both modes. Because action
