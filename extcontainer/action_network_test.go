@@ -580,10 +580,10 @@ func Test_dependencyFault_tlsInterceptCA(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, lca)
 
-	// A reset needs no decryption.
+	// A reset decrypts too, to reset each HTTPS request.
 	rca, err := (&dependencyFaultAction{spec: resetFaultSpec}).tlsInterceptCA([]uint16{443})
 	require.NoError(t, err)
-	require.Nil(t, rca)
+	require.NotNil(t, rca)
 }
 
 func Test_dependencyFault_percentageDescription(t *testing.T) {
@@ -592,12 +592,25 @@ func Test_dependencyFault_percentageDescription(t *testing.T) {
 
 	require.NotContains(t, httpAbort.percentageDescription(), "HTTPS")
 	require.Contains(t, latency.percentageDescription(), "per connection for HTTPS")
+	require.Contains(t, tcpResetPercentageDescription(), "per connection for HTTPS")
 
-	// With the CA, both attacks read HTTPS requests, so they are decided per
+	// With the CA, every attack reads HTTPS requests, so they are decided per
 	// request.
 	withInterceptCA(t)
 	require.Contains(t, httpAbort.percentageDescription(), "HTTPS through the configured interception CA")
 	require.Contains(t, latency.percentageDescription(), "HTTPS through the configured interception CA")
+	require.Contains(t, tcpResetPercentageDescription(), "HTTPS through the configured interception CA")
+}
+
+func Test_tcpReset_hint(t *testing.T) {
+	// Without a CA, L7 mode never decrypts, so there is nothing to warn about.
+	require.Nil(t, NewNetworkTcpResetContainerAction(nil, nil).Describe().Hint)
+
+	withInterceptCA(t)
+	hint := NewNetworkTcpResetContainerAction(nil, nil).Describe().Hint
+	require.NotNil(t, hint)
+	require.Contains(t, hint.Content, "L7 mode")
+	require.Contains(t, hint.Content, "every matched HTTPS connection is decrypted")
 }
 
 func Test_dependencyFault_hint_withInterceptCA(t *testing.T) {
@@ -902,14 +915,20 @@ func Test_dependencyFault_upstreamInsecureSkipVerifyParameter(t *testing.T) {
 			return p.Name == "upstreamInsecureSkipVerify"
 		})
 	}
+	hasTcpReset := func() bool {
+		return slices.ContainsFunc(NewNetworkTcpResetContainerAction(nil, nil).Describe().Parameters, func(p action_kit_api.ActionParameter) bool {
+			return p.Name == "upstreamInsecureSkipVerify"
+		})
+	}
 	// Without a CA nothing is decrypted, so there is no upstream TLS to verify.
 	require.False(t, has(latencyFaultSpec))
 	require.False(t, has(httpAbortFaultSpec))
+	require.False(t, hasTcpReset())
 
 	withInterceptCA(t)
 	require.True(t, has(latencyFaultSpec))
 	require.True(t, has(httpAbortFaultSpec))
-	require.False(t, has(resetFaultSpec))
+	require.True(t, hasTcpReset())
 }
 
 func Test_dependencyFault_parseOpts_upstreamInsecureSkipVerify(t *testing.T) {

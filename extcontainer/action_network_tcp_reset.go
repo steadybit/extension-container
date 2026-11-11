@@ -15,7 +15,9 @@ import (
 	"github.com/steadybit/action-kit/go/action_kit_commons/network/netfault"
 	"github.com/steadybit/action-kit/go/action_kit_commons/ociruntime"
 	"github.com/steadybit/action-kit/go/action_kit_sdk"
+	"github.com/steadybit/extension-container/config"
 	"github.com/steadybit/extension-container/extcontainer/container/types"
+	"github.com/steadybit/extension-container/extcontainer/flags"
 	"github.com/steadybit/extension-kit/extbuild"
 	"github.com/steadybit/extension-kit/extutil"
 )
@@ -73,6 +75,7 @@ func (a *networkTcpResetAction) Describe() action_kit_api.ActionDescription {
 		Id:          fmt.Sprintf("%s.network_tcp_reset", BaseActionID),
 		Label:       "Reset TCP/HTTP(s) Connection",
 		Description: "Injects TCP resets for matching connections. By default this is a packet-level reset by IP/port (incoming and outgoing). Enable 'Reset at L7 by hostname' to instead reset connections to a named dependency selected by TLS SNI / HTTP Host — which also works over HTTPS and for shared/rotating IPs.",
+		Hint:        tcpResetHint(),
 		Version:     extbuild.GetSemverVersionStringOrUnknown(),
 		Icon:        extutil.Ptr(tcpResetIcon),
 		TargetSelection: &action_kit_api.TargetSelection{
@@ -99,11 +102,33 @@ func (a *networkTcpResetAction) Describe() action_kit_api.ActionDescription {
 	}
 }
 
+// tcpResetHint warns, like the other dependency faults, that L7 mode decrypts
+// HTTPS when an interception CA is configured.
+func tcpResetHint() *action_kit_api.ActionHint {
+	if !config.Config.TLSInterceptEnabled() {
+		return nil
+	}
+	return &action_kit_api.ActionHint{
+		Type:    action_kit_api.HintInfo,
+		Content: "HTTPS interception is enabled for L7 mode: " + httpsInterceptionHint,
+	}
+}
+
+// tcpResetPercentageDescription says what Percentage counts in L7 mode: per
+// request wherever the proxy reads the requests, as for the other dependency
+// faults.
+func tcpResetPercentageDescription() string {
+	if config.Config.TLSInterceptEnabled() {
+		return "L7 mode only: percentage of matching requests to reset. Each request is decided on its own, also on keep-alive connections, for cleartext HTTP and for HTTPS through the configured interception CA. Ignored in packet-level mode."
+	}
+	return "L7 mode only: percentage of matching requests to reset: per request for cleartext HTTP, per connection for HTTPS and other TCP traffic. Ignored in packet-level mode."
+}
+
 // tcpResetParameters is the merged parameter set for both modes. Because action
 // parameters cannot be shown/hidden by a checkbox, the two modes' parameters
 // coexist; each mode ignores the ones it does not use (documented per field).
 func tcpResetParameters() []action_kit_api.ActionParameter {
-	return []action_kit_api.ActionParameter{
+	params := []action_kit_api.ActionParameter{
 		{
 			Name: "duration", Label: "Duration", Description: extutil.Ptr("How long should connections be reset?"),
 			Type: action_kit_api.ActionParameterTypeDuration, DefaultValue: extutil.Ptr("30s"), Required: extutil.Ptr(true), Order: extutil.Ptr(0),
@@ -123,7 +148,7 @@ func tcpResetParameters() []action_kit_api.ActionParameter {
 			Type: action_kit_api.ActionParameterTypeStringArray, Required: extutil.Ptr(false), Order: extutil.Ptr(2),
 		},
 		{
-			Name: "percentage", Label: "Percentage (L7 mode)", Description: extutil.Ptr("L7 mode only: percentage of matching requests to reset: per request for cleartext HTTP, per connection for HTTPS and other TCP traffic. Ignored in packet-level mode."),
+			Name: "percentage", Label: "Percentage (L7 mode)", Description: extutil.Ptr(tcpResetPercentageDescription()),
 			Type: action_kit_api.ActionParameterTypePercentage, DefaultValue: extutil.Ptr("100"), Required: extutil.Ptr(false), Order: extutil.Ptr(3),
 			MinValue: extutil.Ptr(0), MaxValue: extutil.Ptr(100),
 		},
@@ -153,6 +178,14 @@ func tcpResetParameters() []action_kit_api.ActionParameter {
 		},
 		l7AttackLocalhostParameter(),
 	}
+	// L7 mode decrypts HTTPS with the interception CA, and so opens its own TLS
+	// connection to the dependency.
+	if config.Config.TLSInterceptEnabled() {
+		p := flags.UpstreamSkipVerifyParameter(108, groupTrafficFilter)
+		p.Description = extutil.Ptr("L7 mode only: " + *p.Description)
+		params = append(params, p)
+	}
+	return params
 }
 
 // l7AttackLocalhostParameter is the dependency faults' localhost opt-in; it

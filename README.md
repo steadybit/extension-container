@@ -23,7 +23,7 @@ our [Reliability Hub](https://hub.steadybit.com/extension/com.steadybit.extensio
 | `STEADYBIT_EXTENSION_DISABLE_DISCOVERY_EXCLUDES`    | `discovery.disableExcludes`                                  | Ignore discovery excludes specified by `steadybit.com/discovery-disabled`                                                  | false    | `false` |
 | `STEADYBIT_EXTENSION_DISCOVERY_ATTRIBUTES_EXCLUDES` | `discovery.attributes.excludes`                              | List of Target Attributes which will be excluded during discovery. Checked by key equality and supporting trailing "*"     | false    |         |
 | `STEADYBIT_EXTENSION_HOSTNAME`                      |                                                              | Optional hostname for the targets to be reported. If not given will be read from the UTS namespace of the init process     | false    |         |
-| `STEADYBIT_EXTENSION_TLS_INTERCEPT_CA_CERT`         | `tlsIntercept.existingSecret`                                | PEM CA certificate enabling 'Intercept Outgoing HTTP Request' to synthesize responses for **HTTPS** dependencies, and 'Slow Outgoing HTTP(s) Dependency' to delay each HTTPS request. Test environments only — see below. | no      |         |
+| `STEADYBIT_EXTENSION_TLS_INTERCEPT_CA_CERT`         | `tlsIntercept.existingSecret`                                | PEM CA certificate enabling 'Intercept Outgoing HTTP Request' to synthesize responses for **HTTPS** dependencies, 'Slow Outgoing HTTP(s) Dependency' to delay each HTTPS request, and the L7 mode of 'Reset TCP/HTTP(s) Connection' to reset each HTTPS request. Test environments only — see below. | no      |         |
 | `STEADYBIT_EXTENSION_TLS_INTERCEPT_CA_KEY`          | `tlsIntercept.existingSecret`                                | PEM private key matching the CA certificate.                                                                              | no      |         |
 
 Beyond the settings above, this extension supports the configuration common to all Steadybit
@@ -221,6 +221,15 @@ request, with **Percentage** per request. Without it, HTTPS connections are not
 decrypted, so the delay is decided once per connection and applies only before
 its first request.
 
+It also lets the L7 mode of `Reset TCP/HTTP(s) Connection` reset **each** HTTPS
+request, with **Percentage** per request: on HTTP/2 the request's stream is
+reset and the connection stays open, on HTTP/1.1 the connection is closed.
+Most HTTP/1.1 clients silently resend a request whose reused connection closed
+without a reply, so the workload may see fewer failures than the
+**Percentage**; the statistics count every reset. Without the CA, the reset is
+decided once per HTTPS connection, so a keep-alive client is reset only until
+one connection is spared, which then carries every later request.
+
 ```bash
 kubectl -n <ns> create secret generic intercept-ca \
   --from-file=ca.crt=ca.crt --from-file=ca.key=ca.key
@@ -229,7 +238,7 @@ helm upgrade ... --set tlsIntercept.existingSecret=intercept-ca
 ```
 
 **The CA is yours.** You generate it, choose how long it lives, and install it in
-the truststores of the workloads you want to fault. For both attacks, every
+the truststores of the workloads you want to fault. For every attack using it, every
 matched HTTPS connection is decrypted, whatever the **Percentage**, so a
 workload that does not trust the CA, or pins certificates, fails **all** its
 requests to the dependency, not only the selected share. That is reported in the attack's
