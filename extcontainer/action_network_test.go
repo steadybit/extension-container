@@ -1009,14 +1009,14 @@ func Test_formatDependencyStatsMarkdown_upstreamErrors(t *testing.T) {
 	require.Contains(t, md, "or couldn't verify the dependency's certificate")
 }
 
-func Test_dependencyFault_upstreamSkipVerifyInTrafficFilter(t *testing.T) {
-	// The setting only exists with a CA; it belongs with the other interception
-	// settings rather than in the platform's "Additional Settings" fallback.
+func Test_dependencyFault_upstreamSkipVerifyNotInTrafficFilter(t *testing.T) {
+	// The setting only exists with a CA; it doesn't filter traffic, so it stays
+	// out of the Traffic Filter group.
 	withInterceptCA(t)
 	for _, spec := range []dependencyFaultSpec{latencyFaultSpec, httpAbortFaultSpec} {
 		params := (&dependencyFaultAction{spec: spec}).Describe().Parameters
 		i := slices.IndexFunc(params, func(p action_kit_api.ActionParameter) bool { return p.Name == flags.UpstreamSkipVerifyParameterName })
 		require.NotEqual(t, -1, i, spec.id)
-		require.Equal(t, groupTrafficFilter, *params[i].Group, spec.id)
+		require.Nil(t, params[i].Group, spec.id)
 	}
 }

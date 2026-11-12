@@ -25,14 +25,14 @@ import (
 const UpstreamSkipVerifyParameterName = "upstreamInsecureSkipVerify"
 
 // UpstreamSkipVerifyParameter lets an experiment forward intercepted HTTPS
-// requests to a dependency whose certificate the proxy cannot verify. It is
-// shown in the given parameter group.
-func UpstreamSkipVerifyParameter(order int, group string) action_kit_api.ActionParameter {
+// requests to a dependency whose certificate the proxy cannot verify. It is no
+// traffic filter, so it stays out of that group, in the advanced settings.
+func UpstreamSkipVerifyParameter(order int) action_kit_api.ActionParameter {
 	return action_kit_api.ActionParameter{
 		Name:        UpstreamSkipVerifyParameterName,
 		Label:       "Skip Dependency Certificate Verification",
 		Description: extutil.Ptr("Unsafe, test environments only: forward intercepted HTTPS requests to the dependency without verifying its certificate, e.g. a self-signed or private-CA one."),
-		Type:        action_kit_api.ActionParameterTypeBoolean, DefaultValue: extutil.Ptr("false"), Required: extutil.Ptr(true), Order: extutil.Ptr(order), Advanced: extutil.Ptr(true), Group: extutil.Ptr(group),
+		Type:        action_kit_api.ActionParameterTypeBoolean, DefaultValue: extutil.Ptr("false"), Required: extutil.Ptr(true), Order: extutil.Ptr(order), Advanced: extutil.Ptr(true),
 	}
 }
 

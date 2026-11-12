@@ -68,7 +68,7 @@ var latencyFaultSpec = dependencyFaultSpec{
 		{
 			Name:        "resetExisting",
 			Label:       "Reset existing connections",
-			Description: extutil.Ptr("Reset existing keep-alive/pooled connections at start so they reconnect through the proxy and feel the latency immediately. Off = only new connections are affected."),
+			Description: extutil.Ptr("Reset existing keep-alive/pooled connections at start so they reconnect through the proxy and feel the latency immediately. Off: only new connections are affected."),
 			Type:        action_kit_api.ActionParameterTypeBoolean, DefaultValue: extutil.Ptr("true"), Required: extutil.Ptr(false), Order: extutil.Ptr(4),
 		},
 	},
@@ -92,15 +92,15 @@ var httpAbortFaultSpec = dependencyFaultSpec{
 			Type: action_kit_api.ActionParameterTypeInteger, DefaultValue: extutil.Ptr("503"), Required: extutil.Ptr(true), Order: extutil.Ptr(3),
 		},
 		{
-			Name: "responseHeaders", Label: "Response Headers", Description: extutil.Ptr("Optional headers to return (e.g. Content-Type, Retry-After)."),
+			Name: "responseHeaders", Label: "Response Headers", Description: extutil.Ptr("Headers to return (e.g. Content-Type, Retry-After)."),
 			Type: action_kit_api.ActionParameterTypeKeyValue, Required: extutil.Ptr(false), Order: extutil.Ptr(4), Group: extutil.Ptr(groupResponseDetails),
 		},
 		{
-			Name: "responseBody", Label: "Response Body", Description: extutil.Ptr("Optional body to return. Leave empty for a default message. Content-Length is set automatically."),
+			Name: "responseBody", Label: "Response Body", Description: extutil.Ptr("Body to return. Empty returns a default message. Content-Length is set automatically."),
 			Type: action_kit_api.ActionParameterTypeTextarea, Required: extutil.Ptr(false), Order: extutil.Ptr(5), Group: extutil.Ptr(groupResponseDetails),
 		},
 		{
-			Name: "responseDelay", Label: "Response Delay (ms)", Description: extutil.Ptr("Optional delay in milliseconds before returning the synthesized response, to mimic a slow-then-failing dependency and produce more realistic fake responses."),
+			Name: "responseDelay", Label: "Response Delay (ms)", Description: extutil.Ptr("Delay before returning the response, e.g. to mimic a slow-then-failing dependency."),
 			Type: action_kit_api.ActionParameterTypeInteger, DefaultValue: extutil.Ptr("0"), Required: extutil.Ptr(false), Order: extutil.Ptr(6), MinValue: extutil.Ptr(0), Group: extutil.Ptr(groupResponseDetails),
 		},
 	},
@@ -223,7 +223,7 @@ func (a *dependencyFaultAction) parameters() []action_kit_api.ActionParameter {
 	// Only meaningful when the proxy decrypts HTTPS and so opens its own TLS
 	// connection to the dependency.
 	if a.spec.decryptsHTTPS && config.Config.TLSInterceptEnabled() {
-		params = append(params, flags.UpstreamSkipVerifyParameter(16, groupTrafficFilter))
+		params = append(params, flags.UpstreamSkipVerifyParameter(16))
 	}
 	return params
 }
@@ -290,21 +290,24 @@ func (a *dependencyFaultAction) description() string {
 	return a.spec.description
 }
 
-// percentageDescription says what Percentage counts. The proxy decides per
-// request wherever it reads the requests — cleartext HTTP, and HTTPS when it
+// percentageDescription says what Fault Probability counts. The proxy decides
+// per request wherever it reads the requests — cleartext HTTP, and HTTPS when it
 // decrypts it with the interception CA — and per connection otherwise.
 func (a *dependencyFaultAction) percentageDescription() string {
 	if a.spec.cleartextHTTPOnly && !decryptsWithCA(a.spec) {
-		return "Percentage of matching requests the fault is applied to. Each request is decided on its own, also on keep-alive connections."
+		return "The chance that each matching request gets the fault. Every request is decided on its own, also on keep-alive connections, so over a short attack the observed rate can be above or below this value."
 	}
-	return "Percentage of matching requests the fault is applied to. " + percentageScope(a.spec)
+	return "The chance that each matching request gets the fault. " + percentageScope(a.spec) + " " + observedRateHint
 }
 
-// percentageScope says what a fault's Percentage is decided per. Shared with
-// the L7 mode of the TCP reset, so the attacks describe it the same way.
+// observedRateHint says that Fault Probability is a chance, not an exact share.
+const observedRateHint = "Over a short attack the observed rate can be above or below this value."
+
+// percentageScope says what a fault's Fault Probability is decided per. Shared
+// with the L7 mode of the TCP reset, so the attacks describe it the same way.
 func percentageScope(spec dependencyFaultSpec) string {
 	if decryptsWithCA(spec) {
-		return "Each request is decided on its own, also on keep-alive connections, for cleartext HTTP and for HTTPS through the configured interception CA."
+		return "Every request is decided on its own, also on keep-alive connections, for cleartext HTTP and for HTTPS through the configured interception CA."
 	}
 	return "Per request for cleartext HTTP, per connection for HTTPS and other TCP traffic."
 }
@@ -315,7 +318,7 @@ func decryptsWithCA(spec dependencyFaultSpec) bool {
 }
 
 // httpsInterceptionHint is what decrypting HTTPS means for the workloads.
-const httpsInterceptionHint = "every matched HTTPS connection is decrypted, whatever the Percentage. Workloads that don't trust the configured CA fail all their requests to the dependency. Unfaulted requests get a 502 if the extension can't verify the dependency's certificate. Mutual TLS isn't supported."
+const httpsInterceptionHint = "every matched HTTPS connection is decrypted, whatever the Fault Probability. Workloads that don't trust the configured CA fail all their requests to the dependency. Unfaulted requests get a 502 if the extension can't verify the dependency's certificate. Mutual TLS isn't supported."
 
 // hint adapts the action-level hint to whether HTTPS interception is available,
 // so the UI never warns about a limitation that no longer applies.
@@ -648,20 +651,20 @@ func (a *dependencyFaultAction) teardown(ctx context.Context, handle *proxyHandl
 func commonDependencyParameters(percentageDescription string) []action_kit_api.ActionParameter {
 	return []action_kit_api.ActionParameter{
 		{
-			Name: "hostname", Label: "Dependency Hostnames", Description: extutil.Ptr("Apply the fault to connections to these hosts (TLS SNI or HTTP Host, subdomain match)."),
+			Name: "hostname", Label: "Dependency Hostnames", Description: extutil.Ptr("Apply the fault to connections to these hosts, matched by TLS SNI / HTTP Host (subdomain match)."),
 			Type: action_kit_api.ActionParameterTypeStringArray, Required: extutil.Ptr(true), Order: extutil.Ptr(0),
 		},
 		{
-			Name: "duration", Label: "Duration", Description: extutil.Ptr("How long to inject the fault."),
+			Name: "duration", Label: "Duration", Description: extutil.Ptr("How long should the fault be injected?"),
 			Type: action_kit_api.ActionParameterTypeDuration, DefaultValue: extutil.Ptr("30s"), Required: extutil.Ptr(true), Order: extutil.Ptr(1),
 		},
 		{
-			Name: "percentage", Label: "Percentage", Description: extutil.Ptr(percentageDescription),
+			Name: "percentage", Label: "Fault Probability", Description: extutil.Ptr(percentageDescription),
 			Type: action_kit_api.ActionParameterTypePercentage, DefaultValue: extutil.Ptr("50"), Required: extutil.Ptr(true), Order: extutil.Ptr(2),
 			MinValue: extutil.Ptr(0), MaxValue: extutil.Ptr(100),
 		},
 		{
-			Name: "ip", Label: "Dependency CIDRs", Description: extutil.Ptr("Intercept traffic destined for these IP CIDRs. Defaults to all destinations. Note: interception is currently IPv4 only."),
+			Name: "ip", Label: "Dependency IPs/CIDRs", Description: extutil.Ptr("Intercept traffic to these IP addresses or CIDR blocks. Empty intercepts all destinations. Interception is IPv4 only."),
 			Type: action_kit_api.ActionParameterTypeStringArray, Required: extutil.Ptr(false), Order: extutil.Ptr(11), Advanced: extutil.Ptr(true), Group: extutil.Ptr(groupTrafficFilter),
 		},
 		{
@@ -670,11 +673,11 @@ func commonDependencyParameters(percentageDescription string) []action_kit_api.A
 			Type: action_kit_api.ActionParameterTypeString, Required: extutil.Ptr(false), Order: extutil.Ptr(12), Advanced: extutil.Ptr(true), Group: extutil.Ptr(groupTrafficFilter),
 		},
 		{
-			Name: "excludeIp", Label: "Exclude CIDRs", Description: extutil.Ptr("Never intercept traffic to these CIDRs (in addition to the automatically protected agent/extension endpoints)."),
+			Name: "excludeIp", Label: "Exclude IPs/CIDRs", Description: extutil.Ptr("Never intercept traffic to these IP addresses or CIDR blocks, in addition to the automatically protected agent/extension endpoints. Excludes take precedence over includes."),
 			Type: action_kit_api.ActionParameterTypeStringArray, Required: extutil.Ptr(false), Order: extutil.Ptr(13), Advanced: extutil.Ptr(true), Group: extutil.Ptr(groupTrafficFilter),
 		},
 		{
-			Name: "failOnHostNetwork", Label: "Fail on Host Network", Description: extutil.Ptr("Fail if the target container uses the host network."),
+			Name: "failOnHostNetwork", Label: "Fail on Host Network", Description: extutil.Ptr("Should the action fail if the container is using host network?"),
 			Type: action_kit_api.ActionParameterTypeBoolean, DefaultValue: extutil.Ptr("true"), Required: extutil.Ptr(false), Order: extutil.Ptr(14),
 		},
 		attackLocalhostParameter(15),
@@ -713,7 +716,7 @@ func (a *dependencyFaultAction) parseOpts(request action_kit_api.PrepareActionRe
 	// quietly narrowing the fault's scope below what they configured.
 	filtered := filterIPv4CIDRs(includeCIDRs)
 	if userProvidedCIDRs && len(filtered) < len(includeCIDRs) {
-		return proxyfault.Opts{}, fmt.Errorf("dependency CIDRs include IPv6, but interception is currently IPv4-only; remove the IPv6 CIDRs")
+		return proxyfault.Opts{}, fmt.Errorf("dependency IPs/CIDRs include IPv6, but interception is IPv4 only; remove the IPv6 entries")
 	}
 	includeCIDRs = filtered
 
