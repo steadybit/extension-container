@@ -114,11 +114,11 @@ func tcpResetHint() *action_kit_api.ActionHint {
 	}
 }
 
-// tcpResetPercentageDescription says what Percentage counts in L7 mode: per
+// tcpResetPercentageDescription says what Fault Probability counts in L7 mode: per
 // request wherever the proxy reads the requests, as for the other dependency
 // faults.
 func tcpResetPercentageDescription() string {
-	return "L7 mode only: percentage of matching requests to reset. " + percentageScope(resetFaultSpec) + " Ignored in packet-level mode."
+	return "L7 mode only: the chance that each matching request gets reset. " + percentageScope(resetFaultSpec) + " " + observedRateHint + " Ignored in packet-level mode."
 }
 
 // tcpResetParameters is the merged parameter set for both modes. Because action
@@ -145,7 +145,7 @@ func tcpResetParameters() []action_kit_api.ActionParameter {
 			Type: action_kit_api.ActionParameterTypeStringArray, Required: extutil.Ptr(false), Order: extutil.Ptr(2),
 		},
 		{
-			Name: "percentage", Label: "Percentage (L7 mode)", Description: extutil.Ptr(tcpResetPercentageDescription()),
+			Name: "percentage", Label: "Fault Probability (L7 mode)", Description: extutil.Ptr(tcpResetPercentageDescription()),
 			Type: action_kit_api.ActionParameterTypePercentage, DefaultValue: extutil.Ptr("100"), Required: extutil.Ptr(false), Order: extutil.Ptr(3),
 			MinValue: extutil.Ptr(0), MaxValue: extutil.Ptr(100),
 		},
@@ -178,7 +178,7 @@ func tcpResetParameters() []action_kit_api.ActionParameter {
 	// L7 mode decrypts HTTPS with the interception CA, and so opens its own TLS
 	// connection to the dependency.
 	if config.Config.TLSInterceptEnabled() {
-		p := flags.UpstreamSkipVerifyParameter(108, groupTrafficFilter)
+		p := flags.UpstreamSkipVerifyParameter(108)
 		p.Description = extutil.Ptr("L7 mode only: " + *p.Description)
 		params = append(params, p)
 	}

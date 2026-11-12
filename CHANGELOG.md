@@ -16,6 +16,7 @@
 - chore(deps): bump transparent-proxy to v1.3.0
 - **Behaviour change:** with an interception CA configured, Reset TCP/HTTP(s) Connection in L7 mode now decrypts HTTPS to reset each request instead of once per connection, so Percentage applies per request on keep-alive connections too. Every matched HTTPS connection is decrypted, reset or not: a workload that doesn't trust the CA fails all its requests to the dependency, unreset requests to a dependency whose certificate the proxy can't verify get a 502, and a dependency requiring mutual TLS can't be reached. The attack now shows the CA hint and Skip Dependency Certificate Verification, like the other dependency fault attacks
 - chore(deps): bump transparent-proxy to v1.3.1
+- feat: dependency fault attacks relabel Percentage as Fault Probability and the CIDR filters as IPs/CIDRs, move Skip Dependency Certificate Verification out of Traffic Filter, and align their tooltips
 
 ## v1.9.2
 
