@@ -150,7 +150,7 @@ func (a *dnsErrorInjectionAction) Start(_ context.Context, state *DNSErrorInject
 func (a *dnsErrorInjectionAction) Status(_ context.Context, state *DNSErrorInjectionState) (*action_kit_api.StatusResult, error) {
 	handle, ok := getDNSInjectHandle(state.ExecutionId)
 	if !ok {
-		return &action_kit_api.StatusResult{Completed: true}, nil
+		return unknownExecutionStatus(), nil
 	}
 
 	if exited, err := handle.Exited(); exited {

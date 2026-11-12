@@ -126,7 +126,11 @@ func (a *stressAction) Start(ctx context.Context, state *StressActionState) (*ac
 }
 
 func (a *stressAction) Status(ctx context.Context, state *StressActionState) (*action_kit_api.StatusResult, error) {
-	exited, err := a.stressExited(state.ExecutionId)
+	s, ok := a.stresses.Load(state.ExecutionId)
+	if !ok {
+		return unknownExecutionStatus(), nil
+	}
+	exited, err := s.(stress.Stress).Exited()
 	if !exited {
 		return &action_kit_api.StatusResult{Completed: false}, nil
 	}
@@ -211,14 +215,6 @@ func (a *stressAction) Stop(_ context.Context, state *StressActionState) (*actio
 	return &action_kit_api.StopResult{
 		Messages: &messages,
 	}, nil
-}
-
-func (a *stressAction) stressExited(executionId uuid.UUID) (bool, error) {
-	s, ok := a.stresses.Load(executionId)
-	if !ok {
-		return true, nil
-	}
-	return s.(stress.Stress).Exited()
 }
 
 func (a *stressAction) stopStressContainer(executionId uuid.UUID) bool {
