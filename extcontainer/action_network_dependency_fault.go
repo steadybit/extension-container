@@ -498,7 +498,7 @@ func (a *dependencyFaultAction) Start(ctx context.Context, state *DependencyFaul
 func (a *dependencyFaultAction) Status(ctx context.Context, state *DependencyFaultState) (*action_kit_api.StatusResult, error) {
 	handle, ok := getDependencyFaultHandle(state.ExecutionId)
 	if !ok {
-		return &action_kit_api.StatusResult{Completed: true}, nil
+		return unknownExecutionStatus(), nil
 	}
 	if exited, err := handle.proxy.Exited(); exited {
 		// The proxy is gone; still run the out-of-band revert so a proxy that

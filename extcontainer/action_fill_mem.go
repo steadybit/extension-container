@@ -206,7 +206,11 @@ func (a *fillMemoryAction) Start(_ context.Context, state *FillMemoryActionState
 }
 
 func (a *fillMemoryAction) Status(ctx context.Context, state *FillMemoryActionState) (*action_kit_api.StatusResult, error) {
-	exited, err := a.fillMemoryExited(state.ExecutionId)
+	s, ok := a.memfills.Load(state.ExecutionId)
+	if !ok {
+		return unknownExecutionStatus(), nil
+	}
+	exited, err := s.(memfill.Memfill).Exited()
 	if !exited {
 		return &action_kit_api.StatusResult{Completed: false}, nil
 	}
@@ -293,14 +297,6 @@ func (a *fillMemoryAction) Stop(_ context.Context, state *FillMemoryActionState)
 	return &action_kit_api.StopResult{
 		Messages: &messages,
 	}, nil
-}
-
-func (a *fillMemoryAction) fillMemoryExited(executionId uuid.UUID) (bool, error) {
-	s, ok := a.memfills.Load(executionId)
-	if !ok {
-		return true, nil
-	}
-	return s.(memfill.Memfill).Exited()
 }
 
 func (a *fillMemoryAction) stopFillMemoryContainer(executionId uuid.UUID) bool {
