@@ -31,7 +31,7 @@ func TestUpstreamSkipVerifyParameter(t *testing.T) {
 	require.Nil(t, p.Group)
 	require.Equal(t, UpstreamSkipVerifyParameterName, p.Name)
 	require.Equal(t, "false", *p.DefaultValue)
-	require.True(t, *p.Advanced)
+	require.Nil(t, p.Advanced)
 	require.True(t, strings.HasPrefix(*p.Description, "Unsafe, test environments only: "), *p.Description)
 }
 
