@@ -2,26 +2,26 @@
 
 ## v1.10.0
 
+- **Behaviour change:** Reset TCP Connection in L7 mode with an empty Include Ports now intercepts every port instead of defaulting to 80,443. Resets still apply only to connections to the hostnames, but every outgoing TCP connection of the target passes through the proxy. Set Include Ports to `80,443` to keep the previous scope.
+- **Behaviour change:** with an interception CA configured, Slow Outgoing HTTP(s) Dependency now decrypts HTTPS to delay each request instead of the whole connection. Every matched HTTPS connection is decrypted, delayed or not: a workload that doesn't trust the CA fails all its requests to the dependency, a dependency whose certificate the proxy can't verify (only public CAs, unless SSL_CERT_DIR / SSL_CERT_FILE is set) gets a 502, and a dependency requiring mutual TLS can't be reached
+- **Behaviour change:** with an interception CA configured, Reset TCP/HTTP(s) Connection in L7 mode now decrypts HTTPS to reset each request instead of once per connection, so Percentage applies per request on keep-alive connections too. Every matched HTTPS connection is decrypted, reset or not: a workload that doesn't trust the CA fails all its requests to the dependency, unreset requests to a dependency whose certificate the proxy can't verify get a 502, and a dependency requiring mutual TLS can't be reached. The attack now shows the CA hint and Skip Dependency Certificate Verification, like the other dependency fault attacks
 - feat: network attacks show their traffic filters in a "Traffic Filter" group, Fill Disk its method settings in a "Fill Behavior" group and Intercept Outgoing HTTP Request its optional response fields in a "Response Details" group, on platforms that support parameter groups
 - feat: dependency fault attacks show Fail on Host Network instead of hiding it in Additional Settings, like the other network attacks
 - feat: dependency fault attacks intercept every port when Dependency Ports is empty; only HTTP(S) connections to the dependency hostnames are faulted, all other traffic is forwarded untouched
 - feat: dependency fault attacks report the intercepted ports in the execution log and the statistics widget
 - feat: Dependency Ports has no default anymore, so new dependency fault attacks intercept every port. Existing experiments keep the ports they were saved with.
-- **Behaviour change:** Reset TCP Connection in L7 mode with an empty Include Ports now intercepts every port instead of defaulting to 80,443. Resets still apply only to connections to the hostnames, but every outgoing TCP connection of the target passes through the proxy. Set Include Ports to `80,443` to keep the previous scope.
-- **Behaviour change:** with an interception CA configured, Slow Outgoing HTTP(s) Dependency now decrypts HTTPS to delay each request instead of the whole connection. Every matched HTTPS connection is decrypted, delayed or not: a workload that doesn't trust the CA fails all its requests to the dependency, a dependency whose certificate the proxy can't verify (only public CAs, unless SSL_CERT_DIR / SSL_CERT_FILE is set) gets a 502, and a dependency requiring mutual TLS can't be reached
-- chore(deps): bump transparent-proxy to v1.3.0-beta.1 and action_kit_commons to v1.15.0
+- feat: dependency fault attacks relabel Percentage as Fault Probability and the CIDR filters as IPs/CIDRs, show Skip Dependency Certificate Verification inline next to the other toggles instead of in Traffic Filter, and align their tooltips
+- feat: the Helm chart accepts `extraVolumes` / `extraVolumeMounts`, so operators can mount a CA and point `SSL_CERT_DIR` at it for the transparent-proxy to verify dependencies
+- feat: add 'Attack Localhost Traffic' to the proxy-based dependency attacks
 - fix: Percentage in the dependency fault attacks applies per request wherever the proxy reads the requests: on cleartext HTTP, also on keep-alive connections, and, with an interception CA configured, on HTTPS for Intercept Outgoing HTTP Request and Slow Outgoing HTTP(s) Dependency; per connection otherwise. The Dependency Fault Statistics widget then shows the requests to the dependency and the share faulted. With the CA, every matched HTTPS connection is decrypted, so a workload that doesn't trust it fails all its requests to the dependency, and dependencies requiring mutual TLS can't be reached
 - fix: with HTTPS decrypted, an experiment can turn on Skip Dependency Certificate Verification for a dependency whose certificate the proxy can't verify; it is unsafe, and the setting and the execution log say so. Otherwise the execution log warns when only public CAs verify the dependencies, when a custom CA path in SSL_CERT_DIR / SSL_CERT_FILE is missing or holds no certificate, and when forwarding to a dependency fails
 - fix: with an interception CA configured, the dependency fault attacks' hint says that every matched HTTPS connection is decrypted whatever the Percentage, that workloads not trusting the CA fail, that unfaulted requests get a 502 if the dependency's certificate can't be verified, and that mutual TLS isn't supported
-- chore(deps): bump transparent-proxy to v1.3.0
-- **Behaviour change:** with an interception CA configured, Reset TCP/HTTP(s) Connection in L7 mode now decrypts HTTPS to reset each request instead of once per connection, so Percentage applies per request on keep-alive connections too. Every matched HTTPS connection is decrypted, reset or not: a workload that doesn't trust the CA fails all its requests to the dependency, unreset requests to a dependency whose certificate the proxy can't verify get a 502, and a dependency requiring mutual TLS can't be reached. The attack now shows the CA hint and Skip Dependency Certificate Verification, like the other dependency fault attacks
-- chore(deps): bump transparent-proxy to v1.3.1
-- feat: dependency fault attacks relabel Percentage as Fault Probability and the CIDR filters as IPs/CIDRs, show Skip Dependency Certificate Verification inline next to the other toggles instead of in Traffic Filter, and align their tooltips
-- feat: let operators mount a custom CA for the transparent-proxy
-- feat: add 'Attack Localhost Traffic' to the proxy-based dependency attacks
 - fix: free the fill disk space when the extension is terminated
 - fix: report attacks lost by an extension restart as errored
 - refa: rename the fill memory Megabytes unit label to MiB
+- chore(deps): bump transparent-proxy to v1.3.0-beta.1 and action_kit_commons to v1.15.0
+- chore(deps): bump transparent-proxy to v1.3.0
+- chore(deps): bump transparent-proxy to v1.3.1
 - chore(deps): update dns-inject to v0.2.12, crun to 1.30.1, golang.org/x/net to v0.62.0
 
 ## v1.9.2
