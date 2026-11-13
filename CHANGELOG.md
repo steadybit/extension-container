@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v1.10.0
 
 - feat: network attacks show their traffic filters in a "Traffic Filter" group, Fill Disk its method settings in a "Fill Behavior" group and Intercept Outgoing HTTP Request its optional response fields in a "Response Details" group, on platforms that support parameter groups
 - feat: dependency fault attacks show Fail on Host Network instead of hiding it in Additional Settings, like the other network attacks
@@ -17,6 +17,12 @@
 - **Behaviour change:** with an interception CA configured, Reset TCP/HTTP(s) Connection in L7 mode now decrypts HTTPS to reset each request instead of once per connection, so Percentage applies per request on keep-alive connections too. Every matched HTTPS connection is decrypted, reset or not: a workload that doesn't trust the CA fails all its requests to the dependency, unreset requests to a dependency whose certificate the proxy can't verify get a 502, and a dependency requiring mutual TLS can't be reached. The attack now shows the CA hint and Skip Dependency Certificate Verification, like the other dependency fault attacks
 - chore(deps): bump transparent-proxy to v1.3.1
 - feat: dependency fault attacks relabel Percentage as Fault Probability and the CIDR filters as IPs/CIDRs, show Skip Dependency Certificate Verification inline next to the other toggles instead of in Traffic Filter, and align their tooltips
+- feat: let operators mount a custom CA for the transparent-proxy
+- feat: add 'Attack Localhost Traffic' to the proxy-based dependency attacks
+- fix: free the fill disk space when the extension is terminated
+- fix: report attacks lost by an extension restart as errored
+- refa: rename the fill memory Megabytes unit label to MiB
+- chore(deps): update dns-inject to v0.2.12, crun to 1.30.1, golang.org/x/net to v0.62.0
 
 ## v1.9.2
 
