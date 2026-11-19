@@ -16,23 +16,8 @@ vulnerabilities:
       - usr/sbin/runc
     statement: waiting for runc release
     expired_at: 2027-02-01
-  - id: CVE-2026-78667
-    statement: waiting for runc release built with go >= 1.26.9
-    expired_at: 2026-12-01
-    paths:
-      - usr/sbin/runc
   - id: CVE-2026-78669
-    statement: waiting for runc release built with go >= 1.26.9
-    expired_at: 2026-12-01
-    paths:
-      - usr/sbin/runc
-  - id: CVE-2026-97031
-    statement: waiting for runc release built with go >= 1.26.9
-    expired_at: 2026-12-01
-    paths:
-      - usr/sbin/runc
-  - id: CVE-2026-111943
-    statement: waiting for runc release built with go >= 1.26.10
+    statement: "waiting for runc release with golang.org/x/net >= 0.60.0"
     expired_at: 2027-02-01
     paths:
       - usr/sbin/runc
