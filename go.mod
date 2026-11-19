@@ -16,7 +16,7 @@ require (
 	github.com/kataras/iris/v12 v12.2.12
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/moby/moby/api v1.57.0
-	github.com/moby/moby/client v0.6.2
+	github.com/moby/moby/client v0.6.3
 	github.com/novln/docker-parser v1.0.0
 	github.com/opencontainers/runtime-spec v1.3.0
 	github.com/rs/zerolog v1.35.1
