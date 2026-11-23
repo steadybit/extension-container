@@ -2,6 +2,32 @@ apiVersion: v1
 entries:
   steadybit-extension-container:
   - annotations:
+      artifacthub.io/links: |-
+        - name: Steadybit website
+          url: https://www.steadybit.com
+        - name: Steadybit reliability hub
+          url: https://hub.steadybit.com
+    apiVersion: v2
+    appVersion: v1.10.2
+    created: "2026-11-23T10:00:34.383941593Z"
+    dependencies:
+    - name: extensionlib
+      repository: https://steadybit.github.io/helm-charts
+      version: ^1.6.0
+    description: Steadybit container extension Helm chart for Kubernetes.
+    digest: f31d6ff8eefd206e8ba73588bacb04f454513be279aab7f9776d612934db28af
+    home: https://www.steadybit.com/
+    icon: https://steadybit-website-assets.s3.amazonaws.com/logo-symbol-transparent.png
+    maintainers:
+    - email: johannes.edmeier@steadybit.com
+      name: joshiste
+    name: steadybit-extension-container
+    sources:
+    - https://github.com/steadybit/extension-container
+    urls:
+    - https://github.com/steadybit/extension-container/releases/download/steadybit-extension-container-1.5.41/steadybit-extension-container-1.5.41.tgz
+    version: 1.5.41
+  - annotations:
       artifacthub.io/images: |
         - name: logo
           image: https://steadybit-website-assets.s3.amazonaws.com/logo-symbol-transparent.png
@@ -4264,4 +4290,4 @@ entries:
     urls:
     - https://github.com/steadybit/extension-container/releases/download/steadybit-extension-container-1.0.5/steadybit-extension-container-1.0.5.tgz
     version: 1.0.5
-generated: "2026-11-23T06:56:02.577925281Z"
+generated: "2026-11-23T10:00:34.384216727Z"
