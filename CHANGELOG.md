@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.10.2
+
+- build(deps): bump github.com/KimMachineGun/automemlimit
+- build(deps): bump github.com/kataras/iris/v12 from 12.2.11 to 12.2.12
+- build(deps): bump github.com/moby/moby/api from 1.56.1 to 1.57.0
+- build(deps): bump github.com/moby/moby/client from 0.6.2 to 0.6.3
+
 ## v1.10.1
 
 - chore: update runc to v1.5.3 and dns-inject to v0.2.13
