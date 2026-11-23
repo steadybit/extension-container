@@ -1,7 +1,7 @@
 apiVersion: v2
 name: steadybit-extension-container
 description: Steadybit container extension Helm chart for Kubernetes.
-version: 1.5.40
+version: 1.5.41
 appVersion: v1.10.2
 home: https://www.steadybit.com/
 icon: https://steadybit-website-assets.s3.amazonaws.com/logo-symbol-transparent.png
@@ -11,9 +11,6 @@ maintainers:
 sources:
   - https://github.com/steadybit/extension-container
 annotations:
-  artifacthub.io/images: |
-    - name: logo
-      image: https://steadybit-website-assets.s3.amazonaws.com/logo-symbol-transparent.png
   artifacthub.io/links: |-
     - name: Steadybit website
       url: https://www.steadybit.com
