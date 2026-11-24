@@ -26,3 +26,8 @@ vulnerabilities:
       - usr/sbin/runc
     statement: "waiting for runc release with golang.org/x/net >= 0.62.0"
     expired_at: 2027-02-01
+  - id: CVE-2026-39821
+    paths:
+      - usr/sbin/runc
+    statement: "waiting for a stable runc release with golang.org/x/net >= 0.57.0 (v1.5.3 ships v0.55.0, only v1.6.0-rc.2 has the fix)"
+    expired_at: 2027-02-01
