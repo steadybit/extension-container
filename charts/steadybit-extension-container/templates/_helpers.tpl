@@ -47,3 +47,19 @@ will omit attribute from the passed in object depending on the KubeVersion
 {{- $dict | toYaml -}}
 {{- end -}}
 
+{{- /*
+dynatrace.podAnnotations renders .Values.podAnnotations, preceded by the annotations that opt the pod out of
+Dynatrace Operator injection unless .Values.dynatrace.inject is true. Keys set in podAnnotations win.
+*/}}
+{{- define "dynatrace.podAnnotations" -}}
+{{- $annotations := dict -}}
+{{- if not (dig "inject" false (.Values.dynatrace | default dict)) -}}
+{{- $_ := set $annotations "dynatrace.com/inject" "false" -}}
+{{- $_ := set $annotations "oneagent.dynatrace.com/inject" "false" -}}
+{{- $_ := set $annotations "metadata-enrichment.dynatrace.com/inject" "false" -}}
+{{- end -}}
+{{- $annotations = merge (deepCopy (.Values.podAnnotations | default dict)) $annotations -}}
+{{- if $annotations -}}
+{{- toYaml $annotations -}}
+{{- end -}}
+{{- end -}}

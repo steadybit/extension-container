@@ -101,6 +101,12 @@ extraLabels: {}
 # podAnnotations -- Additional annotations to be added to the pods.
 podAnnotations: {}
 
+dynatrace:
+  # dynatrace.inject -- Allow the Dynatrace Operator to inject OneAgent / metadata enrichment into the extension pods.
+  # By default the pods opt out of the injection (`dynatrace.com/inject: "false"`): the injected init container is
+  # rejected by the SecurityContextConstraint on OpenShift and the OneAgent is not supported inside the extension.
+  inject: false
+
 # podLabels -- Additional labels to be added to the pods.
 podLabels: {}
 
