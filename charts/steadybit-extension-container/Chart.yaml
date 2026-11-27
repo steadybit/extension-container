@@ -18,5 +18,5 @@ annotations:
       url: https://hub.steadybit.com
 dependencies:
   - name: extensionlib
-    version: ^1.6.0
+    version: ^1.7.0
     repository: https://steadybit.github.io/helm-charts

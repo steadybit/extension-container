@@ -47,21 +47,3 @@ will omit attribute from the passed in object depending on the KubeVersion
 {{- $dict | toYaml -}}
 {{- end -}}
 
-{{- /*
-steadybit-extension-container.podAnnotations renders .Values.podAnnotations together with the annotations that opt
-the pod out of Dynatrace Operator injection, unless .Values.dynatrace.inject is true. Keys set in podAnnotations win.
-*/}}
-{{- define "steadybit-extension-container.podAnnotations" -}}
-{{- $annotations := dict -}}
-{{- if ne (toString (dig "inject" false (.Values.dynatrace | default dict))) "true" -}}
-{{- $_ := set $annotations "dynatrace.com/inject" "false" -}}
-{{- $_ := set $annotations "oneagent.dynatrace.com/inject" "false" -}}
-{{- $_ := set $annotations "metadata-enrichment.dynatrace.com/inject" "false" -}}
-{{- end -}}
-{{- range $key, $value := (.Values.podAnnotations | default dict) -}}
-{{- $_ := set $annotations $key $value -}}
-{{- end -}}
-{{- range $key, $value := $annotations }}
-{{ $key | quote }}: {{ ternary "" (toString $value) (kindIs "invalid" $value) | quote }}
-{{- end -}}
-{{- end -}}
