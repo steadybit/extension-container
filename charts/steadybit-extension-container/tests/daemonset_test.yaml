@@ -269,14 +269,26 @@ tests:
       - equal:
           path: spec.template.metadata.annotations["some-annotation"]
           value: "some-annotation-value"
-  - it: should let podAnnotations override the dynatrace opt out
+  - it: should keep the dynatrace opt out when dynatrace.inject is the string "false"
     set:
-      podAnnotations:
-        metadata-enrichment.dynatrace.com/inject: "true"
+      dynatrace:
+        inject: "false"
     asserts:
       - equal:
-          path: spec.template.metadata.annotations["metadata-enrichment.dynatrace.com/inject"]
-          value: "true"
+          path: spec.template.metadata.annotations["dynatrace.com/inject"]
+          value: "false"
+  - it: should let podAnnotations override the dynatrace opt out and quote non-string values
+    set:
+      podAnnotations:
+        dynatrace.com/inject: true
+        oneagent.dynatrace.com/inject: ""
+    asserts:
       - equal:
           path: spec.template.metadata.annotations["dynatrace.com/inject"]
+          value: "true"
+      - equal:
+          path: spec.template.metadata.annotations["oneagent.dynatrace.com/inject"]
+          value: ""
+      - equal:
+          path: spec.template.metadata.annotations["metadata-enrichment.dynatrace.com/inject"]
           value: "false"

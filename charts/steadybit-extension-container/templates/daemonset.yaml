@@ -42,7 +42,7 @@ spec:
         {{if eq .Values.platform "gke-autopilot" -}}
         "autopilot.gke.io/no-connect": "true"
         {{- end }}
-        {{- with (include "dynatrace.podAnnotations" .) }}
+        {{- with (include "steadybit-extension-container.podAnnotations" . | trim) }}
         {{- . | nindent 8 }}
         {{- end }}
     spec:
