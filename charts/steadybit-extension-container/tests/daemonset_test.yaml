@@ -242,3 +242,53 @@ tests:
             name: extra-certs
             mountPath: /etc/ssl/extra-certs
             readOnly: true
+  - it: should opt out of dynatrace injection by default
+    asserts:
+      - equal:
+          path: spec.template.metadata.annotations["dynatrace.com/inject"]
+          value: "false"
+      - equal:
+          path: spec.template.metadata.annotations["oneagent.dynatrace.com/inject"]
+          value: "false"
+      - equal:
+          path: spec.template.metadata.annotations["metadata-enrichment.dynatrace.com/inject"]
+          value: "false"
+  - it: should not opt out of dynatrace injection when dynatrace.inject is true
+    set:
+      dynatrace:
+        inject: true
+      podAnnotations:
+        some-annotation: "some-annotation-value"
+    asserts:
+      - notExists:
+          path: spec.template.metadata.annotations["dynatrace.com/inject"]
+      - notExists:
+          path: spec.template.metadata.annotations["oneagent.dynatrace.com/inject"]
+      - notExists:
+          path: spec.template.metadata.annotations["metadata-enrichment.dynatrace.com/inject"]
+      - equal:
+          path: spec.template.metadata.annotations["some-annotation"]
+          value: "some-annotation-value"
+  - it: should keep the dynatrace opt out when dynatrace.inject is the string "false"
+    set:
+      dynatrace:
+        inject: "false"
+    asserts:
+      - equal:
+          path: spec.template.metadata.annotations["dynatrace.com/inject"]
+          value: "false"
+  - it: should let podAnnotations override the dynatrace opt out and quote non-string values
+    set:
+      podAnnotations:
+        dynatrace.com/inject: true
+        oneagent.dynatrace.com/inject: ""
+    asserts:
+      - equal:
+          path: spec.template.metadata.annotations["dynatrace.com/inject"]
+          value: "true"
+      - equal:
+          path: spec.template.metadata.annotations["oneagent.dynatrace.com/inject"]
+          value: ""
+      - equal:
+          path: spec.template.metadata.annotations["metadata-enrichment.dynatrace.com/inject"]
+          value: "false"
